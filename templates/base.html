@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mi Gran Proyecto</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body class="bg-gray-100 p-10">
+    <h1 class="text-3xl font-bold text-blue-600">¡Todo funciona!</h1>
+    <div id="mensaje">Aquí aparecerá algo mágico...</div>
+
+    <button hx-get="/saludo"
+            hx-target="#mensaje"
+            class="mt-4 bg-green-500 text-white px-4 py-2 rounded shadow">
+        Haz clic para probar HTMX
+    </button>
+</body>
+</html>

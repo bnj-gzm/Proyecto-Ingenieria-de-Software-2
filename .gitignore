@@ -1,0 +1,10 @@
+# Entorno virtual de Python
+.venv/
+env/
+__pycache__/
+
+# Configuraciones de PyCharm
+.idea/
+
+# Archivos de entorno (si llegas a usar contraseñas más adelante)
+.env
