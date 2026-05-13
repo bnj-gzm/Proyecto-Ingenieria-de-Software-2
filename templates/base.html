@@ -21,6 +21,15 @@
                 <a href="/art/nueva" class="rounded-2xl bg-cyan-500 px-4 py-2 font-semibold text-slate-950 hover:bg-cyan-400">
                     Nueva ART
                 </a>
+                <a href="/perfil" class="rounded-2xl border border-white/10 px-4 py-2 hover:border-cyan-400/40 hover:text-cyan-300">Perfil</a>
+                {% if user.rol == 'admin' %}
+                <a href="/admin/art" class="relative rounded-2xl border border-white/10 px-4 py-2 bg-white/5 hover:border-cyan-400/40 hover:text-cyan-300">
+                    Admin
+                    {% if user.pendientes and user.pendientes > 0 %}
+                    <span class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full">{{ user.pendientes }}</span>
+                    {% endif %}
+                </a>
+                {% endif %}
                 <a href="/logout" class="rounded-2xl border border-white/10 px-4 py-2 hover:border-cyan-400/40 hover:text-cyan-300">Salir</a>
                 {% else %}
                 <a href="/login" class="rounded-2xl border border-white/10 px-4 py-2 hover:border-cyan-400/40 hover:text-cyan-300">Iniciar sesión</a>

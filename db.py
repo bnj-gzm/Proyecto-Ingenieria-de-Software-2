@@ -106,6 +106,11 @@ def init_db() -> None:
             """
         )
 
+        # Ensure new columns exist (safe for upgrades)
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS nombre TEXT DEFAULT ''")
+        cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT DEFAULT ''")
+        cursor.execute("ALTER TABLE art_records ADD COLUMN IF NOT EXISTS estado TEXT DEFAULT 'pendiente'")
+
         # Migrate from JSON files if tables are empty
         cursor.execute("SELECT COUNT(*) FROM users")
         user_count = cursor.fetchone()[0]
@@ -137,7 +142,7 @@ def init_db() -> None:
                         INSERT INTO art_records (
                             id, empresa, trabajador, area, fecha, tipo_tarea, descripcion,
                             supervisor, checklist_json, epp_json, riesgos_json,
-                            observaciones, evidencia_json, creado_en
+                            observaciones, evidencia_json, creado_en, estado
                         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """,
                         (
@@ -155,6 +160,7 @@ def init_db() -> None:
                             record.get("observaciones", ""),
                             _dump_json(record.get("evidencia", [])),
                             record.get("creado_en", ""),
+                            record.get("estado", "pendiente"),
                         ),
                     )
                 except psycopg2.errors.UniqueViolation:
@@ -174,7 +180,7 @@ def cargar_usuarios() -> list[dict[str, Any]]:
 
     try:
         cursor.execute(
-            "SELECT id, username, password_hash, rol, created_at FROM users ORDER BY id ASC"
+            "SELECT id, username, password_hash, rol, nombre, email, created_at FROM users ORDER BY id ASC"
         )
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
@@ -190,7 +196,7 @@ def obtener_usuario(username: str) -> dict[str, Any] | None:
 
     try:
         cursor.execute(
-            "SELECT id, username, password_hash, rol, created_at FROM users WHERE username = %s",
+            "SELECT id, username, password_hash, rol, nombre, email, created_at FROM users WHERE username = %s",
             (username,),
         )
         row = cursor.fetchone()
@@ -207,8 +213,24 @@ def guardar_usuario(username: str, password_hash: str, rol: str) -> None:
 
     try:
         cursor.execute(
-            "INSERT INTO users (username, password_hash, rol) VALUES (%s, %s, %s)",
-            (username, password_hash, rol),
+            "INSERT INTO users (username, password_hash, rol, nombre, email) VALUES (%s, %s, %s, %s, %s)",
+            (username, password_hash, rol, '', ''),
+        )
+        connection.commit()
+    finally:
+        cursor.close()
+        connection.close()
+
+
+def actualizar_password(username: str, new_password_hash: str) -> None:
+    """Update an existing user's password hash."""
+    connection = _connect()
+    cursor = connection.cursor()
+
+    try:
+        cursor.execute(
+            "UPDATE users SET password_hash = %s WHERE username = %s",
+            (new_password_hash, username),
         )
         connection.commit()
     finally:
@@ -226,7 +248,7 @@ def cargar_registros() -> list[dict[str, Any]]:
             """
             SELECT id, empresa, trabajador, area, fecha, tipo_tarea, descripcion,
                    supervisor, checklist_json, epp_json, riesgos_json,
-                   observaciones, evidencia_json, creado_en
+                   observaciones, evidencia_json, creado_en, estado
             FROM art_records
             ORDER BY creado_en DESC, id DESC
             """
@@ -257,7 +279,7 @@ def obtener_registro(id_art: str) -> dict[str, Any] | None:
             """
             SELECT id, empresa, trabajador, area, fecha, tipo_tarea, descripcion,
                    supervisor, checklist_json, epp_json, riesgos_json,
-                   observaciones, evidencia_json, creado_en
+                   observaciones, evidencia_json, creado_en, estado
             FROM art_records
             WHERE id = %s
             """,
@@ -290,7 +312,7 @@ def guardar_registro(registro: dict[str, Any]) -> None:
             INSERT INTO art_records (
                 id, empresa, trabajador, area, fecha, tipo_tarea, descripcion,
                 supervisor, checklist_json, epp_json, riesgos_json,
-                observaciones, evidencia_json, creado_en
+                observaciones, evidencia_json, creado_en, estado
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
@@ -308,9 +330,55 @@ def guardar_registro(registro: dict[str, Any]) -> None:
                 registro.get("observaciones", ""),
                 _dump_json(registro.get("evidencia", [])),
                 registro["creado_en"],
+                registro.get("estado", "pendiente"),
             ),
         )
         connection.commit()
+    finally:
+        cursor.close()
+        connection.close()
+
+
+def actualizar_perfil(username: str, nombre: str, email: str) -> None:
+    """Update name and email for a user."""
+    connection = _connect()
+    cursor = connection.cursor()
+
+    try:
+        cursor.execute(
+            "UPDATE users SET nombre = %s, email = %s WHERE username = %s",
+            (nombre, email, username),
+        )
+        connection.commit()
+    finally:
+        cursor.close()
+        connection.close()
+
+
+def actualizar_estado_art(id_art: str, estado: str) -> None:
+    """Set estado for an ART record."""
+    connection = _connect()
+    cursor = connection.cursor()
+
+    try:
+        cursor.execute(
+            "UPDATE art_records SET estado = %s WHERE id = %s",
+            (estado, id_art),
+        )
+        connection.commit()
+    finally:
+        cursor.close()
+        connection.close()
+
+
+def contar_art_pendientes() -> int:
+    """Return count of art_records with estado = 'pendiente'."""
+    connection = _connect()
+    cursor = connection.cursor()
+
+    try:
+        cursor.execute("SELECT COUNT(*) FROM art_records WHERE estado = %s", ("pendiente",))
+        return cursor.fetchone()[0]
     finally:
         cursor.close()
         connection.close()

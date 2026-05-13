@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+  <h1 class="text-3xl font-bold mb-4">Revisar ARTs</h1>
+  <div class="grid grid-cols-1 gap-4">
+    {% for r in registros %}
+    <div class="bg-white p-4 rounded shadow flex justify-between items-center">
+      <div>
+        <div class="text-lg font-semibold">{{ r.empresa }} — {{ r.trabajador }}</div>
+        <div class="text-sm text-gray-600">{{ r.tipo_tarea }} — {{ r.fecha }}</div>
+        <div class="text-sm mt-1">Estado: <strong>{{ r.estado }}</strong></div>
+      </div>
+      <div class="flex gap-2">
+        <a href="/art/{{ r.id }}" class="bg-cyan-500 text-white px-3 py-2 rounded">Ver</a>
+        <form method="post" action="/admin/art/{{ r.id }}/estado" class="inline">
+          {% if r.estado == 'pendiente' %}
+          <input type="hidden" name="estado" value="revisado" />
+          <button type="submit" class="bg-green-500 text-white px-3 py-2 rounded">Marcar revisado</button>
+          {% else %}
+          <input type="hidden" name="estado" value="pendiente" />
+          <button type="submit" class="bg-yellow-500 text-white px-3 py-2 rounded">Marcar pendiente</button>
+          {% endif %}
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <div class="bg-white p-4 rounded shadow">No hay registros</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

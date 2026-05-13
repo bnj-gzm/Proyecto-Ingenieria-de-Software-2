@@ -37,7 +37,18 @@ def get_current_user(request: Request):
     username = request.cookies.get("user")
     if not username:
         return None
-    return obtener_usuario(username)
+    user = obtener_usuario(username)
+    if not user:
+        return None
+    # If admin, add pending count for navbar
+    try:
+        if user.get("rol") == "admin":
+            from db import contar_art_pendientes
+
+            user["pendientes"] = contar_art_pendientes()
+    except Exception:
+        user["pendientes"] = 0
+    return user
 
 # ---------------------
 # LOGIN / LOGOUT
@@ -78,6 +89,60 @@ def registro(request: Request, username: str = Form(...), password: str = Form(.
     response.set_cookie("user", username)
     return response
 
+
+@app.get("/perfil", response_class=HTMLResponse)
+def perfil_form(request: Request, user=Depends(get_current_user)):
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    return templates.TemplateResponse(request, "profile.html", {"request": request, "user": user, "title": "Mi perfil"})
+
+
+@app.post("/perfil")
+def perfil_update(request: Request, password: str = Form(...), user=Depends(get_current_user)):
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    # actualizar nombre/email y contraseña opcional
+    form = request.form()
+    # form is a Starlette UploadFile/ form mapping when executed sync; use request.form() in threadpool
+    try:
+        data = request._form if hasattr(request, '_form') else None
+    except Exception:
+        data = None
+    # safer: read via request.form() synchronously by using dependents; but simplest: accept fields from parameters
+    nombre = request.form().get('nombre') if request.form() else None
+    email = request.form().get('email') if request.form() else None
+    pwd = request.form().get('password') if request.form() else None
+    from db import actualizar_perfil, actualizar_password
+
+    if nombre is not None or email is not None:
+        actualizar_perfil(user["username"], nombre or "", email or "")
+    if pwd:
+        new_hash = pwd_context.hash(pwd)
+        actualizar_password(user["username"], new_hash)
+    response = RedirectResponse("/dashboard", status_code=303)
+    return response
+
+
+@app.post("/admin/art/{id_art}/estado")
+def admin_change_estado(id_art: str, estado: str = Form(...), user=Depends(get_current_user)):
+    if not user:
+        return RedirectResponse('/login', status_code=303)
+    if user.get('rol') != 'admin':
+        return RedirectResponse('/', status_code=303)
+    from db import actualizar_estado_art
+    actualizar_estado_art(id_art, estado)
+    return RedirectResponse('/admin/art', status_code=303)
+
+
+@app.get("/admin/art", response_class=HTMLResponse)
+def admin_list_art(request: Request, user=Depends(get_current_user)):
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    if user.get("rol") != "admin":
+        return RedirectResponse("/", status_code=303)
+    registros = cargar_registros()
+    return templates.TemplateResponse(request, "admin_art_list.html", {"request": request, "user": user, "registros": registros, "title": "Revisar ARTs"})
+
 # ---------------------
 # DASHBOARD
 # ---------------------
@@ -94,6 +159,8 @@ def dashboard(request: Request, user=Depends(get_current_user)):
 @app.get("/", response_class=HTMLResponse)
 def inicio(request: Request):
     user = get_current_user(request)
+    if user:
+        return RedirectResponse("/dashboard", status_code=303)
     return templates.TemplateResponse(request, "portada.html", {"request": request, "user": user, "title": "D.A.R.T"})
 
 @app.get("/art/nueva", response_class=HTMLResponse)
