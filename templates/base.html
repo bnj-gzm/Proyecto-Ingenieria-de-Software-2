@@ -2,18 +2,40 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Mi Gran Proyecto</title>
+    <title>{{ title if title else "D.A.R.T" }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 </head>
-<body class="bg-gray-100 p-10">
-    <h1 class="text-3xl font-bold text-blue-600">¡Todo funciona!</h1>
-    <div id="mensaje">Aquí aparecerá algo mágico...</div>
 
-    <button hx-get="/saludo"
-            hx-target="#mensaje"
-            class="mt-4 bg-green-500 text-white px-4 py-2 rounded shadow">
-        Haz clic para probar HTMX
-    </button>
+<body class="bg-slate-100 text-slate-900 min-h-screen">
+
+    <nav class="bg-slate-950 text-white px-8 py-4 shadow-lg">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <a href="/" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-2xl font-bold tracking-tight backdrop-blur hover:bg-white/10">
+                D.A.R.T
+            </a>
+
+            <div class="flex items-center gap-3 text-sm">
+                <a href="/" class="rounded-2xl border border-white/10 px-4 py-2 hover:border-cyan-400/40 hover:text-cyan-300">Inicio</a>
+                {% if user %}
+                <a href="/art/nueva" class="rounded-2xl bg-cyan-500 px-4 py-2 font-semibold text-slate-950 hover:bg-cyan-400">
+                    Nueva ART
+                </a>
+                <a href="/logout" class="rounded-2xl border border-white/10 px-4 py-2 hover:border-cyan-400/40 hover:text-cyan-300">Salir</a>
+                {% else %}
+                <a href="/login" class="rounded-2xl border border-white/10 px-4 py-2 hover:border-cyan-400/40 hover:text-cyan-300">Iniciar sesión</a>
+                <a href="/registro" class="rounded-2xl bg-cyan-500 px-4 py-2 font-semibold text-slate-950 hover:bg-cyan-400">
+                    Crear cuenta
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 py-8">
+        {% block content %}
+        {% endblock %}
+    </main>
+
 </body>
 </html>

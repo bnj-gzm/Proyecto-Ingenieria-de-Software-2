@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="mb-8">
+    <div class="bg-white rounded-2xl shadow p-8 border border-slate-200">
+        <p class="text-sm font-semibold text-cyan-600 uppercase">Pre-Alpha</p>
+        <h1 class="text-4xl font-bold mt-2">Sistema digital de ART/AST</h1>
+        <p class="text-slate-600 mt-4 max-w-3xl">
+            Plataforma para digitalizar permisos de trabajo, análisis de riesgo,
+            checklist de seguridad, uso de EPP, riesgos, controles y evidencias.
+        </p>
+
+        <div class="mt-6 flex gap-3">
+            <a href="/art/nueva"
+               class="bg-cyan-600 hover:bg-cyan-700 text-white px-5 py-3 rounded-xl font-semibold">
+                Crear nueva ART
+            </a>
+
+            <button hx-post="/saludo"
+                    hx-target="#respuesta-backend"
+                    class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-3 rounded-xl font-semibold">
+                Probar HTMX
+            </button>
+        </div>
+
+        <div id="respuesta-backend"></div>
+    </div>
+</section>
+
+<section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white rounded-2xl shadow p-6 border border-slate-200">
+        <p class="text-slate-500 text-sm">ART/AST registradas</p>
+        <h2 class="text-4xl font-bold text-slate-900 mt-2">{{ total }}</h2>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow p-6 border border-slate-200">
+        <p class="text-slate-500 text-sm">Tareas rutinarias</p>
+        <h2 class="text-4xl font-bold text-green-600 mt-2">{{ rutinarias }}</h2>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow p-6 border border-slate-200">
+        <p class="text-slate-500 text-sm">Tareas no rutinarias</p>
+        <h2 class="text-4xl font-bold text-red-600 mt-2">{{ no_rutinarias }}</h2>
+    </div>
+</section>
+
+<section class="bg-white rounded-2xl shadow border border-slate-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+        <h2 class="text-xl font-bold">Registros recientes</h2>
+        <a href="/art/nueva" class="text-cyan-600 font-semibold hover:underline">Nuevo registro</a>
+    </div>
+
+    {% if registros %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-slate-100 text-slate-700">
+                    <tr>
+                        <th class="text-left px-6 py-3">ID</th>
+                        <th class="text-left px-6 py-3">Empresa</th>
+                        <th class="text-left px-6 py-3">Trabajador</th>
+                        <th class="text-left px-6 py-3">Área</th>
+                        <th class="text-left px-6 py-3">Tipo</th>
+                        <th class="text-left px-6 py-3">Fecha</th>
+                        <th class="text-left px-6 py-3">Acción</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for registro in registros %}
+                    <tr class="border-t border-slate-200 hover:bg-slate-50">
+                        <td class="px-6 py-4 font-mono">{{ registro.id }}</td>
+                        <td class="px-6 py-4">{{ registro.empresa }}</td>
+                        <td class="px-6 py-4">{{ registro.trabajador }}</td>
+                        <td class="px-6 py-4">{{ registro.area }}</td>
+                        <td class="px-6 py-4">
+                            {% if registro.tipo_tarea == "Rutinaria" %}
+                                <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">
+                                    Rutinaria
+                                </span>
+                            {% else %}
+                                <span class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold">
+                                    No rutinaria
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">{{ registro.fecha }}</td>
+                        <td class="px-6 py-4">
+                            <a href="/art/{{ registro.id }}" class="text-cyan-600 font-semibold hover:underline">
+                                Ver detalle
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="p-8 text-center text-slate-500">
+            Todavía no hay ART/AST registradas.
+        </div>
+    {% endif %}
+</section>
+
+{% endblock %}

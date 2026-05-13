@@ -8,3 +8,6 @@ __pycache__/
 
 # Archivos de entorno (si llegas a usar contraseñas más adelante)
 .env
+
+# Datos generados por la app
+data/*.json

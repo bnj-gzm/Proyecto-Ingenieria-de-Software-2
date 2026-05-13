@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="mb-6">
+    <a href="/" class="text-cyan-600 hover:underline font-semibold">
+        ← Volver al dashboard
+    </a>
+</div>
+
+{% if not registro %}
+
+<div class="bg-white rounded-2xl shadow p-8 border border-slate-200">
+    <h1 class="text-2xl font-bold text-red-600">Registro no encontrado</h1>
+    <p class="text-slate-600 mt-2">La ART/AST solicitada no existe.</p>
+</div>
+
+{% else %}
+
+<section class="bg-white rounded-2xl shadow border border-slate-200 overflow-hidden">
+
+    <div class="bg-slate-950 text-white px-8 py-6">
+        <p class="text-cyan-300 font-semibold">ART/AST Digital N° {{ registro.id }}</p>
+        <h1 class="text-3xl font-bold mt-2">{{ registro.descripcion }}</h1>
+        <p class="text-slate-300 mt-2">Creado el {{ registro.creado_en }}</p>
+    </div>
+
+    <div class="p-8 space-y-8">
+
+        <section>
+            <h2 class="text-xl font-bold mb-4">A) Antecedentes</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-slate-50 rounded-xl p-4 border">
+                    <p class="text-sm text-slate-500">Empresa</p>
+                    <p class="font-semibold">{{ registro.empresa }}</p>
+                </div>
+
+                <div class="bg-slate-50 rounded-xl p-4 border">
+                    <p class="text-sm text-slate-500">Trabajador</p>
+                    <p class="font-semibold">{{ registro.trabajador }}</p>
+                </div>
+
+                <div class="bg-slate-50 rounded-xl p-4 border">
+                    <p class="text-sm text-slate-500">Área</p>
+                    <p class="font-semibold">{{ registro.area }}</p>
+                </div>
+
+                <div class="bg-slate-50 rounded-xl p-4 border">
+                    <p class="text-sm text-slate-500">Fecha</p>
+                    <p class="font-semibold">{{ registro.fecha }}</p>
+                </div>
+
+                <div class="bg-slate-50 rounded-xl p-4 border">
+                    <p class="text-sm text-slate-500">Tipo de tarea</p>
+                    <p class="font-semibold">{{ registro.tipo_tarea }}</p>
+                </div>
+
+                <div class="bg-slate-50 rounded-xl p-4 border">
+                    <p class="text-sm text-slate-500">Supervisor</p>
+                    <p class="font-semibold">{{ registro.supervisor }}</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2 class="text-xl font-bold mb-4">B) Checklist respondido</h2>
+
+            {% if registro.checklist %}
+                <ul class="space-y-2">
+                    {% for item in registro.checklist %}
+                    <li class="bg-green-50 border border-green-200 text-green-800 rounded-xl p-3">
+                        ✅ {{ item }}
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-slate-500">No se marcaron ítems del checklist.</p>
+            {% endif %}
+        </section>
+
+        <section>
+            <h2 class="text-xl font-bold mb-4">C) EPP seleccionados</h2>
+
+            {% if registro.epp %}
+                <div class="flex flex-wrap gap-3">
+                    {% for item in registro.epp %}
+                    <span class="bg-cyan-100 text-cyan-800 px-4 py-2 rounded-full font-semibold">
+                        {{ item }}
+                    </span>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-slate-500">No se seleccionaron EPP.</p>
+            {% endif %}
+        </section>
+
+        <section>
+            <h2 class="text-xl font-bold mb-4">D) Riesgos y controles</h2>
+
+            {% if registro.riesgos %}
+                <div class="overflow-x-auto border rounded-xl">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-100">
+                            <tr>
+                                <th class="text-left px-4 py-3">Secuencia</th>
+                                <th class="text-left px-4 py-3">Riesgo</th>
+                                <th class="text-left px-4 py-3">Control</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for item in registro.riesgos %}
+                            <tr class="border-t">
+                                <td class="px-4 py-3">{{ item.secuencia }}</td>
+                                <td class="px-4 py-3">{{ item.riesgo }}</td>
+                                <td class="px-4 py-3">{{ item.control }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-slate-500">No se agregaron riesgos.</p>
+            {% endif %}
+        </section>
+
+        <section>
+            <h2 class="text-xl font-bold mb-4">E) Observaciones</h2>
+
+            {% if registro.observaciones %}
+                <div class="bg-slate-50 border rounded-xl p-4">
+                    {{ registro.observaciones }}
+                </div>
+            {% else %}
+                <p class="text-slate-500">Sin observaciones.</p>
+            {% endif %}
+        </section>
+
+        <section>
+            <h2 class="text-xl font-bold mb-4">F) Evidencia fotográfica</h2>
+
+            {% if registro.evidencia %}
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {% for imagen in registro.evidencia %}
+                    <a href="/static/uploads/{{ imagen }}" target="_blank">
+                        <img src="/static/uploads/{{ imagen }}"
+                             class="rounded-xl border shadow object-cover w-full h-56">
+                    </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-slate-500">No se adjuntaron imágenes.</p>
+            {% endif %}
+        </section>
+
+    </div>
+</section>
+
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard ART/AST</title>
+<link href="/static/tailwind.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+<nav class="bg-black p-4 flex justify-between text-white">
+  <div>ART/AST Digital</div>
+  <div>
+    <span class="mr-4">Hola, {{ user.username }} ({{ user.rol }})</span>
+    <a href="/logout" class="bg-red-500 px-2 py-1 rounded">Salir</a>
+  </div>
+</nav>
+<div class="p-8">
+  <h1 class="text-3xl font-bold mb-4">Dashboard</h1>
+  {% if user.rol == "admin" %}
+  <div class="bg-yellow-100 p-4 mb-4">Sección admin: puedes ver todos los usuarios y ART</div>
+  {% endif %}
+  <div class="bg-white p-4 rounded shadow">
+    <p>Resumen de ART/AST y controles.</p>
+    <a href="/art/nueva" class="bg-blue-500 text-white px-3 py-2 rounded">Nueva ART</a>
+  </div>
+</div>
+</body>
+</html>
