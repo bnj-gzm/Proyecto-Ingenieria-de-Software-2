@@ -6,8 +6,17 @@ from fastapi.staticfiles import StaticFiles
 from passlib.context import CryptContext
 from pathlib import Path
 from typing import List, Optional
-import uuid, shutil, json
+import uuid, shutil
 from datetime import datetime
+from db import (
+    cargar_registros,
+    guardar_registro,
+    cargar_usuarios,
+    guardar_usuario,
+    init_db,
+    obtener_registro,
+    obtener_usuario,
+)
 
 app = FastAPI(title="ART/AST Digital")
 
@@ -18,42 +27,17 @@ UPLOAD_DIR = BASE_DIR / "static" / "uploads"
 DATA_DIR.mkdir(exist_ok=True)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-ART_FILE = DATA_DIR / "art_records.json"
-USERS_FILE = DATA_DIR / "usuarios.json"
-
-ART_FILE.write_text("[]", encoding="utf-8") if not ART_FILE.exists() else None
-USERS_FILE.write_text("[]", encoding="utf-8") if not USERS_FILE.exists() else None
-
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# ---------------------
-# UTILIDADES
-# ---------------------
-def cargar_registros():
-    with open(ART_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def guardar_registros(registros):
-    with open(ART_FILE, "w", encoding="utf-8") as f:
-        json.dump(registros, f, ensure_ascii=False, indent=4)
-
-def cargar_usuarios():
-    with open(USERS_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def guardar_usuarios(usuarios):
-    with open(USERS_FILE, "w", encoding="utf-8") as f:
-        json.dump(usuarios, f, ensure_ascii=False, indent=4)
+init_db()
 
 def get_current_user(request: Request):
     username = request.cookies.get("user")
     if not username:
         return None
-    usuarios = cargar_usuarios()
-    return next((u for u in usuarios if u["username"] == username), None)
+    return obtener_usuario(username)
 
 # ---------------------
 # LOGIN / LOGOUT
@@ -64,9 +48,8 @@ def login_form(request: Request):
 
 @app.post("/login")
 def login(request: Request, username: str = Form(...), password: str = Form(...)):
-    usuarios = cargar_usuarios()
-    user = next((u for u in usuarios if u["username"] == username), None)
-    if not user or not pwd_context.verify(password, user["password"]):
+    user = obtener_usuario(username)
+    if not user or not pwd_context.verify(password, user["password_hash"]):
         return templates.TemplateResponse(request, "login.html", {"request": request, "error": "Usuario o contraseña incorrectos", "title": "Iniciar sesión"})
     response = RedirectResponse("/", status_code=303)
     response.set_cookie("user", username)
@@ -87,12 +70,10 @@ def registro_form(request: Request):
 
 @app.post("/registro")
 def registro(request: Request, username: str = Form(...), password: str = Form(...), rol: str = Form(...)):
-    usuarios = cargar_usuarios()
-    if any(u["username"] == username for u in usuarios):
+    if obtener_usuario(username):
         return templates.TemplateResponse(request, "registro.html", {"request": request, "error": "El usuario ya existe", "title": "Crear cuenta"})
     hash_password = pwd_context.hash(password)
-    usuarios.append({"username": username, "password": hash_password, "rol": rol})
-    guardar_usuarios(usuarios)
+    guardar_usuario(username, hash_password, rol)
     response = RedirectResponse("/", status_code=303)
     response.set_cookie("user", username)
     return response
@@ -151,9 +132,8 @@ async def guardar_art(
     checklist: Optional[List[str]] = Form(None),
     epp: Optional[List[str]] = Form(None),
 ):
-    registros = cargar_registros()
     id_art = str(uuid.uuid4())[:8]
-    registros.insert(0, {
+    guardar_registro({
         "id": id_art,
         "empresa": empresa,
         "trabajador": trabajador,
@@ -166,13 +146,11 @@ async def guardar_art(
         "epp": epp or [],
         "creado_en": datetime.now().strftime("%Y-%m-%d %H:%M"),
     })
-    guardar_registros(registros)
     return RedirectResponse(f"/art/{id_art}", status_code=303)
 
 @app.get("/art/{id_art}", response_class=HTMLResponse)
 def detalle_art(request: Request, id_art: str, user=Depends(get_current_user)):
     if not user:
         return RedirectResponse("/login", status_code=303)
-    registros = cargar_registros()
-    registro = next((r for r in registros if r["id"] == id_art), None)
+    registro = obtener_registro(id_art)
     return templates.TemplateResponse(request, "detalle_art.html", {"request": request, "registro": registro, "user": user})
