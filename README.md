@@ -13,3 +13,6 @@ Aplicación web desarrollada con un enfoque centrado en la simplicidad, velocida
    ```bash
    git clone <URL_DEL_REPOSITORIO>
    cd <NOMBRE_DE_LA_CARPETA>
+
+
+
