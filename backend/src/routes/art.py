@@ -7,7 +7,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from backend.src.config.frontend import templates
 from backend.src.middleware.auth import get_current_user
+from backend.src.services.art_service import eliminar_registro
 from backend.src.services.art_service import cargar_registros, guardar_registro, obtener_registro
+
 
 router = APIRouter()
 
@@ -103,4 +105,24 @@ def detalle_art(request: Request, id_art: str, user=Depends(get_current_user)):
     registro = obtener_registro(id_art)
     return templates.TemplateResponse(
         request, "detalle_art.html", {"request": request, "registro": registro, "user": user}
+    )
+
+
+@router.post("/art/{id_art}/eliminar")
+def borrar_art(id_art: str, user=Depends(get_current_user)):
+    # 1. Seguridad: Verificar que el usuario tenga sesión
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+
+    # 2. Ejecutar el borrado
+    eliminar_registro(id_art)
+
+    # 3. Redirigir de vuelta al panel principal
+    return RedirectResponse("/dashboard", status_code=303)
+
+@router.get("/partials/riesgo-row", response_class=HTMLResponse)
+def agregar_fila_riesgo(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/riesgo_row.html"
     )

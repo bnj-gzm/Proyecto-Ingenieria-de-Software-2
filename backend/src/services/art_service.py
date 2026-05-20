@@ -104,3 +104,13 @@ def contar_art_pendientes() -> int:
     finally:
         cur.close()
         conn.close()
+
+def eliminar_registro(id_art: str) -> None:
+    conn = _connect()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM art_records WHERE id = %s", (id_art,))
+        conn.commit()
+    finally:
+        cur.close()
+        conn.close()

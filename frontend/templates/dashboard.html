@@ -5,7 +5,7 @@
   <div class="flex items-center justify-between mb-6">
     <div>
       <h1 class="text-3xl font-bold">Panel</h1>
-      <p class="text-sm text-slate-500">Bienvenido, <strong>{{ user.nombre or user.username }}</strong> — <span class="uppercase text-xs tracking-wider">{{ user.rol }}</span></p>
+      <p class="text-sm text-slate-500">Bienvenido, <strong>{{ user.nombre or user.username }}</strong> — <span class="uppercase text-xs tracking-wider">{% if user.rol == 'admin' %}Administrador{% else %}Supervisor{% endif %}</span></p>
     </div>
     <div class="flex items-center gap-3">
       <a href="/art/nueva" class="rounded-2xl bg-cyan-500 px-4 py-2 font-semibold text-slate-950 hover:bg-cyan-400">Nueva ART</a>
@@ -24,7 +24,7 @@
     </div>
     <div class="bg-white p-6 rounded-lg shadow">
       <div class="text-sm text-slate-400">Tu rol</div>
-      <div class="text-2xl font-bold">{{ user.rol }}</div>
+      <div class="text-2xl font-bold">{% if user.rol == 'admin' %}Administrador{% else %}Supervisor{% endif %}</div>
     </div>
   </div>
 
