@@ -4,7 +4,7 @@
 
 <div class="mb-6">
     <a href="/" class="text-cyan-600 hover:underline font-semibold">
-        ← Volver al dashboard
+        ← Volver
     </a>
 </div>
 
@@ -12,6 +12,7 @@
       method="post"
       enctype="multipart/form-data"
       class="bg-white rounded-2xl shadow border border-slate-200 overflow-hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
     <div class="bg-cyan-700 text-white px-8 py-6">
         <h1 class="text-3xl font-bold">Nueva ART/AST Digital</h1>
@@ -34,10 +35,15 @@
                 </div>
 
                 <div>
-                    <label class="font-semibold">Trabajador responsable</label>
-                    <input name="trabajador" required
-                           class="mt-1 w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500 outline-none"
-                           placeholder="Nombre del trabajador">
+                    <label class="font-semibold">Trabajador asignado</label>
+                    <select name="asignado_a" required
+                            class="mt-1 w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500 outline-none">
+                        {% for trabajador in trabajadores %}
+                        <option value="{{ trabajador.username }}">
+                            {{ trabajador.nombre or trabajador.username }}{% if trabajador.cargo %} — {{ trabajador.cargo }}{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
                 </div>
 
                 <div>
@@ -63,12 +69,23 @@
                 </div>
 
                 <div>
-                    <label class="font-semibold">Supervisor</label>
-                    <input name="supervisor" required
-                           class="mt-1 w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500 outline-none"
-                           placeholder="Nombre supervisor">
+                    <label class="font-semibold">Supervisor asignado</label>
+                    <select name="supervisor_asignado" required
+                            class="mt-1 w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500 outline-none">
+                        {% for supervisor in supervisores %}
+                        <option value="{{ supervisor.username }}">
+                            {{ supervisor.nombre or supervisor.username }}{% if supervisor.area %} — {{ supervisor.area }}{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
                 </div>
             </div>
+
+            {% if not trabajadores or not supervisores %}
+            <div class="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-800">
+                Para crear ART completas debe existir al menos un usuario normal y un supervisor registrado.
+            </div>
+            {% endif %}
 
             <div class="mt-5">
                 <label class="font-semibold">Descripción de la tarea</label>
@@ -87,6 +104,7 @@
                     <input type="checkbox"
                            name="checklist"
                            value="{{ item }}"
+                           required
                            class="mt-1 w-5 h-5">
                     <span>{{ item }}</span>
                 </label>
@@ -136,17 +154,17 @@
                     <tbody id="riesgos-body">
                         <tr class="border-t">
                             <td class="p-3">
-                                <textarea name="secuencia" rows="3"
+                                <textarea name="secuencia" rows="3" required
                                           class="w-full border rounded-lg px-3 py-2"
                                           placeholder="Ej: Traslado al área"></textarea>
                             </td>
                             <td class="p-3">
-                                <textarea name="riesgo" rows="3"
+                                <textarea name="riesgo" rows="3" required
                                           class="w-full border rounded-lg px-3 py-2"
                                           placeholder="Ej: Caídas, golpes, atrapamiento"></textarea>
                             </td>
                             <td class="p-3">
-                                <textarea name="control" rows="3"
+                                <textarea name="control" rows="3" required
                                           class="w-full border rounded-lg px-3 py-2"
                                           placeholder="Ej: Uso de EPP, señalización, bloqueo"></textarea>
                             </td>
@@ -165,6 +183,7 @@
                     <input type="file"
                            name="evidencia"
                            multiple
+                           required
                            accept="image/*"
                            class="mt-1 w-full border rounded-xl px-4 py-3 bg-white">
                     <p class="text-sm text-slate-500 mt-2">
@@ -174,7 +193,7 @@
 
                 <div>
                     <label class="font-semibold">Observaciones</label>
-                    <textarea name="observaciones" rows="5"
+                    <textarea name="observaciones" rows="5" required
                               class="mt-1 w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500 outline-none"
                               placeholder="Observaciones adicionales..."></textarea>
                 </div>
@@ -196,6 +215,7 @@
             </a>
 
             <button type="submit"
+                    {% if not trabajadores or not supervisores %}disabled{% endif %}
                     class="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-3 rounded-xl font-bold">
                 Guardar ART/AST
             </button>

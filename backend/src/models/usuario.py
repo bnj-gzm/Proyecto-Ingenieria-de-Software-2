@@ -6,7 +6,14 @@ from datetime import datetime
 class UsuarioCreate(BaseModel):
     username: str
     password: str
-    rol: str
+    rol: str = "user"
+    nombre: str = ""
+    email: str = ""
+    rut: str = ""
+    telefono: str = ""
+    cargo: str = ""
+    empresa: str = ""
+    area: str = ""
 
 
 class UsuarioResponse(BaseModel):
@@ -15,6 +22,11 @@ class UsuarioResponse(BaseModel):
     rol: str
     nombre: Optional[str] = ""
     email: Optional[str] = ""
+    rut: Optional[str] = ""
+    telefono: Optional[str] = ""
+    cargo: Optional[str] = ""
+    empresa: Optional[str] = ""
+    area: Optional[str] = ""
     created_at: Optional[datetime] = None
 
     class Config:

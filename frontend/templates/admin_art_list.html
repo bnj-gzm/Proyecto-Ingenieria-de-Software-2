@@ -1,32 +1,63 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto">
-  <h1 class="text-3xl font-bold mb-4">Revisar ARTs</h1>
-  <div class="grid grid-cols-1 gap-4">
-    {% for r in registros %}
-    <div class="bg-white p-4 rounded shadow flex justify-between items-center">
-      <div>
-        <div class="text-lg font-semibold">{{ r.empresa }} — {{ r.trabajador }}</div>
-        <div class="text-sm text-gray-600">{{ r.tipo_tarea }} — {{ r.fecha }}</div>
-        <div class="text-sm mt-1">Estado: <strong>{{ r.estado }}</strong></div>
-      </div>
-      <div class="flex gap-2">
-        <a href="/art/{{ r.id }}" class="bg-cyan-500 text-white px-3 py-2 rounded">Ver</a>
-        <form method="post" action="/admin/art/{{ r.id }}/estado" class="inline">
-          {% if r.estado == 'pendiente' %}
-          <input type="hidden" name="estado" value="revisado" />
-          <button type="submit" class="bg-green-500 text-white px-3 py-2 rounded">Marcar revisado</button>
-          {% else %}
-          <input type="hidden" name="estado" value="pendiente" />
-          <button type="submit" class="bg-yellow-500 text-white px-3 py-2 rounded">Marcar pendiente</button>
-          {% endif %}
-        </form>
-      </div>
+<div class="max-w-7xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-3xl font-bold">Revisar ARTs</h1>
+      <p class="text-sm text-slate-500 mt-1">Los supervisores revisan y cambian el estado de las ART.</p>
     </div>
-    {% else %}
-    <div class="bg-white p-4 rounded shadow">No hay registros</div>
-    {% endfor %}
+    <div class="flex items-center gap-3">
+      <input placeholder="Filtrar por estado" class="rounded border border-slate-200 px-3 py-2 text-sm" />
+      {% if can_manage_users %}
+      <a href="/admin/usuarios" class="rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-700">Gestionar usuarios</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="bg-white rounded shadow overflow-hidden">
+    <table class="w-full text-sm border-collapse">
+      <thead class="bg-slate-50 text-slate-600 text-left">
+        <tr>
+          <th class="px-4 py-3">ID</th>
+          <th class="px-4 py-3">Trabajador</th>
+          <th class="px-4 py-3">Empresa</th>
+          <th class="px-4 py-3">Tipo tarea</th>
+          <th class="px-4 py-3">Fecha</th>
+          <th class="px-4 py-3">Estado</th>
+          <th class="px-4 py-3">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in registros %}
+        <tr class="border-t hover:bg-slate-50">
+          <td class="px-4 py-3">{{ r.id }}</td>
+          <td class="px-4 py-3">{{ r.trabajador }}</td>
+          <td class="px-4 py-3">{{ r.empresa }}</td>
+          <td class="px-4 py-3">{{ r.tipo_tarea }}</td>
+          <td class="px-4 py-3">{{ r.fecha }}</td>
+          <td class="px-4 py-3">
+            {% if r.estado == 'aprobada' %}
+              <span class="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800 font-semibold">Aprobada</span>
+            {% elif r.estado == 'rechazada' %}
+              <span class="inline-flex items-center px-3 py-1 rounded-full bg-red-100 text-red-800 font-semibold">Rechazada</span>
+            {% elif r.estado == 'corregir' %}
+              <span class="inline-flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-800 font-semibold">Corregir</span>
+            {% else %}
+              <span class="inline-flex items-center px-3 py-1 rounded-full bg-slate-100 text-slate-800 font-semibold">Pendiente</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3">
+            <a href="/art/{{ r.id }}" class="inline-flex items-center px-3 py-2 rounded bg-cyan-600 text-white font-semibold">Ver y revisar</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="px-4 py-6 text-center text-slate-500">No hay registros</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
 {% endblock %}
