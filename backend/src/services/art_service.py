@@ -114,6 +114,53 @@ def guardar_registro(registro: dict[str, Any]) -> None:
         conn.close()
 
 
+def actualizar_registro(id_art: str, registro: dict[str, Any]) -> None:
+    conn = _connect()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            UPDATE art_records SET
+                empresa = %s,
+                trabajador = %s,
+                area = %s,
+                fecha = %s,
+                tipo_tarea = %s,
+                descripcion = %s,
+                supervisor = %s,
+                checklist_json = %s,
+                epp_json = %s,
+                riesgos_json = %s,
+                observaciones = %s,
+                evidencia_json = %s,
+                asignado_a = %s,
+                supervisor_asignado = %s
+            WHERE id = %s
+            """,
+            (
+                registro["empresa"],
+                registro["trabajador"],
+                registro["area"],
+                registro["fecha"],
+                registro["tipo_tarea"],
+                registro["descripcion"],
+                registro["supervisor"],
+                _dump_json(registro.get("checklist", [])),
+                _dump_json(registro.get("epp", [])),
+                _dump_json(registro.get("riesgos", [])),
+                registro.get("observaciones", ""),
+                _dump_json(registro.get("evidencia", [])),
+                registro.get("asignado_a", ""),
+                registro.get("supervisor_asignado", ""),
+                id_art,
+            ),
+        )
+        conn.commit()
+    finally:
+        cur.close()
+        conn.close()
+
+
 def actualizar_revision_art(id_art: str, estado: str, comentario: str, revisado_por: str, revisado_en: str) -> None:
     conn = _connect()
     cur = conn.cursor()

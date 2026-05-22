@@ -16,6 +16,7 @@ from backend.src.services.art_service import (
     eliminar_registro,
     guardar_registro,
     obtener_registro,
+    actualizar_registro,
 )
 from backend.src.services.pdf_service import generar_art_pdf
 from backend.src.services.usuario_service import cargar_usuarios_por_rol
@@ -220,6 +221,129 @@ def detalle_art(request: Request, id_art: str, user=Depends(get_current_user)):
     )
     set_csrf_cookie(response, csrf_token)
     return response
+
+
+@router.get("/art/{id_art}/editar", response_class=HTMLResponse)
+def editar_art_view(request: Request, id_art: str, user=Depends(get_current_user)):
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    registro = obtener_registro(id_art)
+    if not registro:
+        return RedirectResponse("/dashboard", status_code=303)
+    
+    if registro.get("creado_por") != user["username"]:
+        return RedirectResponse("/dashboard", status_code=303)
+    if registro.get("estado") not in {"pendiente", "corregir"}:
+        return RedirectResponse(f"/art/{id_art}", status_code=303)
+        
+    csrf_token = create_csrf_token()
+    trabajadores = cargar_usuarios_por_rol(USER)
+    supervisores = cargar_usuarios_por_rol(SUPERVISOR)
+    
+    response = templates.TemplateResponse(
+        request,
+        "editar_art.html",
+        {
+            "request": request,
+            "checklist": _CHECKLIST,
+            "epp": _EPP,
+            "user": user,
+            "trabajadores": trabajadores,
+            "supervisores": supervisores,
+            "csrf_token": csrf_token,
+            "registro": registro,
+        },
+    )
+    set_csrf_cookie(response, csrf_token)
+    return response
+
+
+@router.post("/art/{id_art}/editar")
+async def editar_art_post(
+    request: Request,
+    id_art: str,
+    empresa: str = Form(...),
+    asignado_a: str = Form(...),
+    area: str = Form(...),
+    fecha: str = Form(...),
+    tipo_tarea: str = Form(...),
+    descripcion: str = Form(...),
+    supervisor_asignado: str = Form(...),
+    checklist: Optional[List[str]] = Form(None),
+    epp: Optional[List[str]] = Form(None),
+    secuencia: Optional[List[str]] = Form(None),
+    riesgo: Optional[List[str]] = Form(None),
+    control: Optional[List[str]] = Form(None),
+    observaciones: str = Form(""),
+    evidencia: Optional[List[UploadFile]] = File(None),
+    csrf_token: str = Form(...),
+    user=Depends(get_current_user),
+):
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    validate_csrf_token(request, csrf_token)
+    
+    registro_existente = obtener_registro(id_art)
+    if not registro_existente:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+    if registro_existente.get("creado_por") != user["username"]:
+        raise HTTPException(status_code=403, detail="No tienes permiso para editar esta ART")
+    if registro_existente.get("estado") not in {"pendiente", "corregir"}:
+        raise HTTPException(status_code=400, detail="Esta ART no se puede editar en su estado actual")
+        
+    if len(checklist or []) != len(_CHECKLIST):
+        raise HTTPException(status_code=400, detail="Debes completar todo el checklist de seguridad")
+    if not epp:
+        raise HTTPException(status_code=400, detail="Debes seleccionar al menos un EPP")
+    if not observaciones.strip():
+        raise HTTPException(status_code=400, detail="Debes ingresar observaciones")
+        
+    trabajador_user = next((u for u in cargar_usuarios_por_rol(USER) if u["username"] == asignado_a), None)
+    supervisor_user = next((u for u in cargar_usuarios_por_rol(SUPERVISOR) if u["username"] == supervisor_asignado), None)
+    trabajador = (trabajador_user or {}).get("nombre") or asignado_a
+    supervisor = (supervisor_user or {}).get("nombre") or supervisor_asignado
+    
+    riesgos = []
+    for seq, risk, ctrl in zip(secuencia or [], riesgo or [], control or []):
+        if seq.strip() or risk.strip() or ctrl.strip():
+            riesgos.append({"secuencia": seq.strip(), "riesgo": risk.strip(), "control": ctrl.strip()})
+    if not riesgos or any(not item["secuencia"] or not item["riesgo"] or not item["control"] for item in riesgos):
+        raise HTTPException(status_code=400, detail="Debes completar secuencia, riesgo y control")
+        
+    archivos = registro_existente.get("evidencia", []).copy()
+    upload_dir = request.app.state.upload_dir
+    for archivo in evidencia or []:
+        if not archivo.filename:
+            continue
+        if archivo.content_type not in ALLOWED_IMAGE_TYPES:
+            raise HTTPException(status_code=400, detail="Solo se permiten imágenes JPG, PNG o WEBP")
+        contenido = await archivo.read()
+        if len(contenido) > MAX_IMAGE_BYTES:
+            raise HTTPException(status_code=400, detail="Cada imagen debe pesar máximo 5 MB")
+        extension = ALLOWED_IMAGE_TYPES[archivo.content_type]
+        nombre_archivo = f"{uuid.uuid4().hex}.{extension}"
+        (upload_dir / nombre_archivo).write_bytes(contenido)
+        archivos.append(nombre_archivo)
+        
+    registro_actualizado = {
+        "empresa": empresa,
+        "trabajador": trabajador,
+        "area": area,
+        "fecha": fecha,
+        "tipo_tarea": tipo_tarea,
+        "descripcion": descripcion,
+        "supervisor": supervisor,
+        "checklist": checklist or [],
+        "epp": epp or [],
+        "riesgos": riesgos,
+        "observaciones": observaciones,
+        "evidencia": archivos,
+        "asignado_a": asignado_a,
+        "supervisor_asignado": supervisor_asignado,
+    }
+    
+    actualizar_registro(id_art, registro_actualizado)
+    return RedirectResponse(f"/art/{id_art}", status_code=303)
 
 
 @router.get("/art/{id_art}/pdf")
