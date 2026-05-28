@@ -1,20 +1,12 @@
 from __future__ import annotations
 
 import json
-import os
 import psycopg2
-from psycopg2.extras import RealDictCursor
-from pathlib import Path
 from typing import Any
-from dotenv import load_dotenv
 
-_ROOT = Path(__file__).resolve().parents[3]
-load_dotenv(_ROOT / ".env")
+from backend.src.config.settings import settings
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://neondb_owner:npg_PFNcgyuH3Wj8@ep-nameless-leaf-apj3nj50-pooler.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
-)
+DATABASE_URL = settings.database_url
 
 
 def _connect() -> psycopg2.extensions.connection:
@@ -77,12 +69,24 @@ def init_db() -> None:
                 riesgos_json TEXT NOT NULL DEFAULT '[]',
                 observaciones TEXT NOT NULL DEFAULT '',
                 evidencia_json TEXT NOT NULL DEFAULT '[]',
-                creado_en TEXT NOT NULL
+                creado_en TEXT NOT NULL,
+                creado_por TEXT NOT NULL DEFAULT ''
             )
         """)
         cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS nombre TEXT DEFAULT ''")
         cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT DEFAULT ''")
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS rut TEXT DEFAULT ''")
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS telefono TEXT DEFAULT ''")
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS cargo TEXT DEFAULT ''")
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS empresa TEXT DEFAULT ''")
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS area TEXT DEFAULT ''")
         cur.execute("ALTER TABLE art_records ADD COLUMN IF NOT EXISTS estado TEXT DEFAULT 'pendiente'")
+        cur.execute("ALTER TABLE art_records ADD COLUMN IF NOT EXISTS creado_por TEXT DEFAULT ''")
+        cur.execute("ALTER TABLE art_records ADD COLUMN IF NOT EXISTS asignado_a TEXT DEFAULT ''")
+        cur.execute("ALTER TABLE art_records ADD COLUMN IF NOT EXISTS supervisor_asignado TEXT DEFAULT ''")
+        cur.execute("ALTER TABLE art_records ADD COLUMN IF NOT EXISTS comentario_supervisor TEXT DEFAULT ''")
+        cur.execute("ALTER TABLE art_records ADD COLUMN IF NOT EXISTS revisado_por TEXT DEFAULT ''")
+        cur.execute("ALTER TABLE art_records ADD COLUMN IF NOT EXISTS revisado_en TEXT DEFAULT ''")
         conn.commit()
     finally:
         cur.close()

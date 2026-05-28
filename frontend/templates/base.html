@@ -2,49 +2,113 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title if title else "D.A.R.T" }}</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 </head>
 
-<body class="bg-slate-100 text-slate-900 min-h-screen">
+<body class="min-h-screen bg-slate-100 text-slate-950">
+    {% if user %}
+    <div class="min-h-screen lg:flex">
+        <input id="menu-toggle" type="checkbox" class="peer hidden">
 
-    <nav class="bg-slate-950 text-white px-8 py-4 shadow-lg">
-        <div class="max-w-7xl mx-auto flex items-center justify-between">
-            <a href="/" class="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-2xl font-bold tracking-tight backdrop-blur hover:bg-white/10">
-                D.A.R.T
+        <header class="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 lg:hidden">
+            <a href="/dashboard" class="inline-flex items-center gap-2 font-black tracking-tight">
+                <span class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-cyan-500 text-white">D</span>
+                <span>D.A.R.T</span>
             </a>
+            <label for="menu-toggle" class="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700">
+                Menú
+            </label>
+        </header>
 
-            <div class="flex items-center gap-3 text-sm">
-                <a href="/" class="rounded-2xl border border-white/10 px-4 py-2 hover:border-cyan-400/40 hover:text-cyan-300">Inicio</a>
-                {% if user %}
-                <a href="/art/nueva" class="rounded-2xl bg-cyan-500 px-4 py-2 font-semibold text-slate-950 hover:bg-cyan-400">
-                    Nueva ART
+        <label for="menu-toggle" class="fixed inset-0 z-40 hidden bg-slate-950/50 peer-checked:block lg:hidden"></label>
+
+        <aside class="fixed inset-y-0 left-0 z-50 flex w-72 -translate-x-full flex-col overflow-hidden bg-slate-950 text-white shadow-2xl transition peer-checked:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0">
+            <div class="flex h-20 items-center justify-between border-b border-white/10 px-5">
+                <a href="/dashboard" class="inline-flex items-center gap-3 font-black tracking-tight">
+                    <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-500 text-lg text-white shadow-lg shadow-cyan-500/30">D</span>
+                    <span class="text-2xl">D.A.R.T</span>
                 </a>
-                <a href="/perfil" class="rounded-2xl border border-white/10 px-4 py-2 hover:border-cyan-400/40 hover:text-cyan-300">Perfil</a>
-                {% if user.rol == 'admin' %}
-                <a href="/admin/art" class="relative rounded-2xl border border-white/10 px-4 py-2 bg-white/5 hover:border-cyan-400/40 hover:text-cyan-300">
-                    Admin
+                <label for="menu-toggle" class="rounded-xl px-3 py-2 text-sm font-bold text-slate-300 lg:hidden">Cerrar</label>
+            </div>
+
+            <nav class="flex-1 space-y-2 px-4 py-6 text-sm font-semibold">
+                <a href="/dashboard" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-slate-200 hover:bg-white/10 hover:text-white">
+                    <span class="text-cyan-300">▦</span> Dashboard
+                </a>
+                <a href="/art/nueva" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-slate-200 hover:bg-white/10 hover:text-white">
+                    <span class="text-cyan-300">＋</span> Nueva ART
+                </a>
+                <a href="/perfil" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-slate-200 hover:bg-white/10 hover:text-white">
+                    <span class="text-cyan-300">◉</span> Mi perfil
+                </a>
+                {% if user.rol == 'admin' or user.rol == 'supervisor' %}
+                <a href="/supervisor/art" class="relative flex items-center gap-3 rounded-2xl px-4 py-3 text-slate-200 hover:bg-white/10 hover:text-white">
+                    <span class="text-cyan-300">✓</span> Revisar ART
                     {% if user.pendientes and user.pendientes > 0 %}
-                    <span class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full">{{ user.pendientes }}</span>
+                    <span class="ml-auto inline-flex min-w-6 items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-black text-white">{{ user.pendientes }}</span>
                     {% endif %}
                 </a>
                 {% endif %}
-                <a href="/logout" class="rounded-2xl border border-white/10 px-4 py-2 hover:border-cyan-400/40 hover:text-cyan-300">Salir</a>
-                {% else %}
-                <a href="/login" class="rounded-2xl border border-white/10 px-4 py-2 hover:border-cyan-400/40 hover:text-cyan-300">Iniciar sesión</a>
-                <a href="/registro" class="rounded-2xl bg-cyan-500 px-4 py-2 font-semibold text-slate-950 hover:bg-cyan-400">
-                    Crear cuenta
+                {% if user.rol == 'admin' %}
+                <a href="/admin/usuarios" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-slate-200 hover:bg-white/10 hover:text-white">
+                    <span class="text-cyan-300">◎</span> Usuarios
                 </a>
                 {% endif %}
+                <div class="flex items-center gap-2">
+                    <div class="relative">
+                        <button hx-get="/notificaciones/fragment" hx-trigger="click" hx-swap="outerHTML" class="relative rounded-full px-3 py-2 text-slate-600 hover:bg-slate-100">🔔
+                            {% if user.notificaciones_no_leidas and user.notificaciones_no_leidas > 0 %}
+                            <span class="absolute -top-1 -right-1 inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white">{{ user.notificaciones_no_leidas }}</span>
+                            {% endif %}
+                        </button>
+                    </div>
+                    <a href="/logout" class="rounded-full px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">Salir</a>
+                </div>
+            </nav>
+
+            <div class="border-t border-white/10 bg-cyan-600/15 p-4">
+                <div class="rounded-3xl bg-cyan-500 p-4 text-slate-950 shadow-xl shadow-cyan-950/20">
+                    <p class="text-xs font-bold uppercase tracking-wide opacity-80">Sesión activa</p>
+                    <p class="mt-1 truncate text-lg font-black">{{ user.nombre or user.email or user.username }}</p>
+                    <div class="mt-4 grid grid-cols-2 gap-2">
+                        <a href="/perfil" class="rounded-2xl bg-white/85 px-3 py-2 text-center text-sm font-bold hover:bg-white">Perfil</a>
+                        <a href="/logout" class="rounded-2xl bg-slate-950 px-3 py-2 text-center text-sm font-bold text-white hover:bg-slate-800">Salir</a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
+    {% else %}
+    <nav class="bg-white text-slate-900 px-5 py-4 shadow-sm border-b border-slate-200">
+        <div class="mx-auto flex max-w-7xl items-center justify-between gap-4">
+            <a href="/" class="inline-flex items-center gap-3 text-2xl font-black tracking-tight">
+                <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-500 text-white">D</span>
+                <span>D.A.R.T</span>
+            </a>
+            <div class="flex items-center gap-2 text-sm font-bold text-slate-600">
+                <a href="/login" class="rounded-full px-4 py-2 hover:bg-slate-100 hover:text-cyan-700">Iniciar sesión</a>
+                <a href="/registro" class="rounded-full bg-lime-300 px-5 py-2 text-slate-950 hover:bg-lime-200">Crear cuenta</a>
             </div>
         </div>
     </nav>
+    <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    {% endif %}
 
-    <main class="max-w-7xl mx-auto px-6 py-8">
         {% block content %}
         {% endblock %}
+
     </main>
 
+    {% if user %}
+        </div>
+    </div>
+    {% endif %}
 </body>
 </html>

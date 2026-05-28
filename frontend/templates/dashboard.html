@@ -1,60 +1,46 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto">
-  <div class="flex items-center justify-between mb-6">
+<div class="mx-auto max-w-6xl">
+  <div class="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
     <div>
-      <h1 class="text-3xl font-bold">Panel</h1>
-      <p class="text-sm text-slate-500">Bienvenido, <strong>{{ user.nombre or user.username }}</strong> — <span class="uppercase text-xs tracking-wider">{{ user.rol }}</span></p>
+      <h1 class="text-3xl font-black tracking-tight sm:text-4xl">Bienvenido, {{ user.nombre or user.email or user.username }}</h1>
+      <p class="mt-2 text-slate-500">Revisa tus registros recientes y continúa con la gestión de trabajo seguro.</p>
     </div>
-    <div class="flex items-center gap-3">
-      <a href="/art/nueva" class="rounded-2xl bg-cyan-500 px-4 py-2 font-semibold text-slate-950 hover:bg-cyan-400">Nueva ART</a>
-      <a href="/perfil" class="rounded-2xl border border-white/10 px-4 py-2 hover:border-cyan-400/40 hover:text-cyan-300">Perfil</a>
-    </div>
-  </div>
-
-  <div class="grid grid-cols-3 gap-4 mb-6">
-    <div class="bg-white p-6 rounded-lg shadow">
-      <div class="text-sm text-slate-400">Total ARTs</div>
-      <div class="text-2xl font-bold">{{ registros|length }}</div>
-    </div>
-    <div class="bg-white p-6 rounded-lg shadow">
-      <div class="text-sm text-slate-400">Pendientes</div>
-      <div class="text-2xl font-bold">{{ user.pendientes if user.pendientes is not none else 0 }}</div>
-    </div>
-    <div class="bg-white p-6 rounded-lg shadow">
-      <div class="text-sm text-slate-400">Tu rol</div>
-      <div class="text-2xl font-bold">{{ user.rol }}</div>
+    <div class="grid grid-cols-1 gap-3 sm:flex sm:items-center">
+      <a href="/art/nueva" class="rounded-full bg-cyan-500 px-5 py-3 text-center font-bold text-white hover:bg-cyan-600">Nueva ART</a>
+      {% if user.rol == 'admin' or user.rol == 'supervisor' %}
+      <a href="/supervisor/art" class="rounded-full bg-slate-950 px-5 py-3 text-center font-bold text-white hover:bg-cyan-700">Revisar ART</a>
+      {% endif %}
     </div>
   </div>
 
-  {% if user.rol == 'admin' %}
-  <div class="mb-6">
-    <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded">
-      <div class="font-semibold">Sección administrador</div>
-      <div class="text-sm text-slate-600">Desde aquí puedes revisar ARTs presentados por usuarios, marcarlos como revisados y dejar notas.</div>
-      <div class="mt-3">
-        <a href="/admin/art" class="inline-block bg-cyan-600 text-white px-3 py-2 rounded">Revisar ARTs</a>
-      </div>
+  <div class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 px-5 py-4">
+      <h2 class="text-xl font-bold">ART recientes</h2>
     </div>
-  </div>
-  {% endif %}
-
-  <div class="space-y-4">
-    {% for r in registros[:5] %}
-    <div class="bg-white p-4 rounded shadow flex justify-between items-center">
-      <div>
-        <div class="font-semibold">{{ r.empresa }} — {{ r.trabajador }}</div>
-        <div class="text-sm text-slate-500">{{ r.tipo_tarea }} • {{ r.fecha }}</div>
+    <div class="divide-y divide-slate-100">
+      {% for r in registros[:8] %}
+      <div class="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div class="font-bold">{{ r.empresa }} — {{ r.trabajador }}</div>
+          <div class="text-sm text-slate-500">{{ r.tipo_tarea }} • {{ r.fecha }}</div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="rounded-full px-3 py-1 text-sm font-bold
+            {% if r.estado == 'aprobada' %}bg-green-100 text-green-700
+            {% elif r.estado == 'rechazada' %}bg-red-100 text-red-700
+            {% elif r.estado == 'corregir' %}bg-amber-100 text-amber-700
+            {% else %}bg-slate-100 text-slate-700{% endif %}">
+            {{ r.estado }}
+          </span>
+          <a href="/art/{{ r.id }}" class="rounded-full bg-cyan-500 px-4 py-2 font-bold text-white hover:bg-cyan-600">Ver</a>
+        </div>
       </div>
-      <div class="flex gap-2">
-        <a href="/art/{{ r.id }}" class="bg-cyan-500 text-white px-3 py-2 rounded">Ver</a>
-        <div class="px-3 py-1 text-sm rounded-full bg-slate-100">{{ r.estado }}</div>
-      </div>
+      {% else %}
+      <div class="px-5 py-8 text-slate-500">Aún no hay ART recientes.</div>
+      {% endfor %}
     </div>
-    {% else %}
-    <div class="bg-white p-4 rounded shadow">No hay ART recientes.</div>
-    {% endfor %}
   </div>
 </div>
 {% endblock %}
