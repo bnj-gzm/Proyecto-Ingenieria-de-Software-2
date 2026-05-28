@@ -1,4 +1,5 @@
 import logging
+import time
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -15,18 +16,28 @@ logger = logging.getLogger("dart")
 
 _FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 _UPLOAD_DIR = _FRONTEND_DIR / "static" / "uploads"
+_ART_UPLOAD_DIR = _UPLOAD_DIR / "art"
+_PROFILE_UPLOAD_DIR = _UPLOAD_DIR / "perfiles"
 _UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+_ART_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+_PROFILE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="ART/AST Digital")
 app.state.upload_dir = _UPLOAD_DIR
+app.state.art_upload_dir = _ART_UPLOAD_DIR
+app.state.profile_upload_dir = _PROFILE_UPLOAD_DIR
 
 
 @app.middleware("http")
 async def log_errors(request: Request, call_next):
+    start = time.time()
     try:
         response = await call_next(request)
+        duration = time.time() - start
         if response.status_code >= 400:
-            logger.warning("%s %s -> %s", request.method, request.url.path, response.status_code)
+            logger.warning("%s %s -> %s (%.3fs)", request.method, request.url.path, response.status_code, duration)
+        else:
+            logger.info("%s %s -> %s (%.3fs)", request.method, request.url.path, response.status_code, duration)
         return response
     except Exception:
         logger.exception("Error no controlado en %s %s", request.method, request.url.path)
@@ -40,11 +51,19 @@ app.include_router(perfil.router)
 app.include_router(art.router)
 app.include_router(admin.router)
 
-init_db()
+start_time = time.time()
+logger.info("Iniciando inicialización de la base de datos...")
+try:
+    init_db()
+    logger.info("init_db completado en %.2f s", time.time() - start_time)
+except Exception:
+    logger.exception("Error durante init_db")
+
 try:
     # Warm up DB connection once at startup to avoid first-request latency
+    warm_start = time.time()
     conn = _connect()
     conn.close()
+    logger.info("Warmup de conexión completado en %.2f s", time.time() - warm_start)
 except Exception:
-    # don't fail startup if warmup fails; DB errors will appear on first use
-    pass
+    logger.exception("Error en warmup de conexión; continuará sin fail de arranque")

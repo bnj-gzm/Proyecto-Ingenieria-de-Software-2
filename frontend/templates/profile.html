@@ -1,79 +1,71 @@
 {% extends "base.html" %}
 
+{% block page_title %}Mi perfil{% endblock %}
+
 {% block content %}
-<div class="max-w-3xl mx-auto bg-white p-6 rounded shadow">
-  <h2 class="text-2xl font-bold mb-4">Mi perfil</h2>
-  <p class="mb-4">Usuario: <strong>{{ user.username }}</strong></p>
-  <div class="mb-5 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-    <div class="bg-slate-50 rounded p-3"><strong>RUT:</strong> {{ user.rut or "-" }}</div>
-    <div class="bg-slate-50 rounded p-3"><strong>Teléfono:</strong> {{ user.telefono or "-" }}</div>
-    <div class="bg-slate-50 rounded p-3"><strong>Cargo:</strong> {{ user.cargo or "-" }}</div>
-  </div>
-  <form method="post" action="/perfil" class="space-y-4">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <div>
-      <label class="block text-sm font-medium text-gray-700">Nombre</label>
-      <input type="text" name="nombre" value="{{ user.nombre }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
-    </div>
-    <div>
-      <label class="block text-sm font-medium text-gray-700">Email</label>
-      <input type="email" name="email" value="{{ user.email }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
-    </div>
-    <div>
-      <label class="block text-sm font-medium text-gray-700">Nueva contraseña</label>
-      <input type="password" name="password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
-    </div>
-    <div>
-      <button type="submit" class="bg-cyan-500 text-white px-4 py-2 rounded">Actualizar perfil</button>
-      <a href="/dashboard" class="ml-2 text-sm text-gray-600">Volver al panel</a>
-    </div>
-  </form>
-</div>
-{% if registros %}
-<div class="max-w-3xl mx-auto bg-white p-6 rounded shadow mt-6">
-  <h3 class="text-xl font-semibold mb-3">Mis ARTs</h3>
-  <div class="space-y-3 text-sm">
-    {% for r in registros %}
-    <div class="border rounded p-3 flex justify-between items-center">
-      <div>
-        <div class="font-medium">{{ r.titulo or ('ART ' ~ r.id) }}</div>
-        <div class="text-gray-600">Estado: <strong>{{ r.estado or '-' }}</strong></div>
-        {% if r.comentario_supervisor %}
-        <div class="text-gray-700">Comentario: {{ r.comentario_supervisor }}</div>
-        {% endif %}
-      </div>
-      <div class="text-right">
-        <a class="text-cyan-600 mr-3" href="/art/{{ r.id }}">Ver</a>
-        {% if r.estado in ['aprobada','rechazada'] %}
-        <a class="text-gray-700" href="/art/{{ r.id }}/pdf">PDF</a>
-        {% endif %}
+<div class="space-y-6">
+  <section class="app-card overflow-hidden">
+    <div class="p-6 text-white sm:p-8" style="background: linear-gradient(135deg, #0B1726 0%, #0F3D4C 100%);">
+      <div class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+        <div class="flex items-center gap-5">
+          {% if user.foto_perfil %}
+          <img src="{{ url_for('static', path=user.foto_perfil) }}" alt="" class="h-24 w-24 rounded-full object-cover ring-4 ring-cyan-300/30" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+          <div class="avatar h-24 w-24 text-3xl ring-4 ring-cyan-300/30" hidden>{{ initials }}</div>
+          {% else %}
+          <div class="avatar h-24 w-24 text-3xl">{{ initials }}</div>
+          {% endif %}
+          <div>
+            <p class="text-sm font-black uppercase" style="color:#67E8F9;">Mi perfil</p>
+            <h1 class="mt-2 text-3xl font-black leading-tight" style="color:#FFFFFF;">{{ user.nombre or user.username or "Sin nombre registrado" }}</h1>
+            <p class="mt-1 font-semibold" style="color:#D7E1EA;">{{ user.email or "Sin email registrado" }}</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <a href="/perfil/editar" class="btn-primary">Editar perfil</a>
+          <a href="/olvide-password" class="btn-secondary bg-white">Cambiar contraseña</a>
+        </div>
       </div>
     </div>
-    {% endfor %}
-  </div>
-</div>
-{% endif %}
-{% if notificaciones %}
-<div class="max-w-3xl mx-auto bg-white p-6 rounded shadow mt-6">
-  <h3 class="text-xl font-semibold mb-3">Notificaciones recientes</h3>
-  <div class="space-y-3 text-sm">
-    {% for n in notificaciones %}
-    <div class="border rounded p-3 flex justify-between items-center">
-      <div>
-        <div class="font-medium">{{ n.title }}</div>
-        <div class="text-gray-600">{{ n.message }}</div>
-        <div class="text-xs text-slate-400 mt-1">{{ n.created_at }}</div>
+    <div class="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Rol</p><p class="mt-2 font-black capitalize">{{ user.rol }}</p></div>
+      <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Estado</p><p class="mt-2"><span class="status-badge {% if user.estado_cuenta == 'activo' %}status-activo{% else %}status-desactivado{% endif %}">{{ user.estado_cuenta or "activo" }}</span></p></div>
+      <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">RUT</p><p class="mt-2 font-black">{{ user.rut or "-" }}</p></div>
+      <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Creación</p><p class="mt-2 font-black">{{ user.created_at.strftime("%Y-%m-%d") if user.created_at else "-" }}</p></div>
+    </div>
+  </section>
+
+  <div class="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
+    <section class="app-card">
+      <div class="app-card-header"><h2 class="text-xl font-black">Datos personales</h2></div>
+      <div class="app-card-body grid gap-4 sm:grid-cols-2">
+        <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Usuario</p><p class="font-black">{{ user.username }}</p></div>
+        <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Teléfono</p><p class="font-black">{{ user.telefono or "-" }}</p></div>
+        <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Cargo</p><p class="font-black">{{ user.cargo or "-" }}</p></div>
+        <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Área</p><p class="font-black">{{ user.area or "-" }}</p></div>
       </div>
-      <div class="text-right">
-        {% if not n.read %}
-        <span class="inline-block rounded px-2 py-1 bg-amber-100 text-amber-800 font-semibold text-xs">Nuevo</span>
+    </section>
+
+    <section class="app-card">
+      <div class="app-card-header flex items-center justify-between">
+        <h2 class="text-xl font-black">Actividad reciente</h2>
+        <span class="status-badge bg-cyan-100 text-cyan-800">{{ registros|length }} ART</span>
+      </div>
+      <div class="app-card-body space-y-3">
+        {% for r in registros[:5] %}
+        <a href="/art/{{ r.id }}" class="block rounded-lg border border-line p-4 hover:border-cyan-300 hover:bg-slate-50">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <div class="font-black">{{ r.empresa }} - {{ r.tipo_tarea }}</div>
+              <div class="mt-1 text-sm text-dartMuted">{{ r.fecha }}</div>
+            </div>
+            <span class="status-badge status-{{ r.estado }}">{{ r.estado }}</span>
+          </div>
+        </a>
         {% else %}
-        <span class="text-sm text-slate-500">Leído</span>
-        {% endif %}
+        <div class="rounded-lg border border-dashed border-line p-6 text-center text-dartMuted">Aún no hay ART asociadas.</div>
+        {% endfor %}
       </div>
-    </div>
-    {% endfor %}
+    </section>
   </div>
 </div>
-{% endif %}
 {% endblock %}

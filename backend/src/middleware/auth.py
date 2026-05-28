@@ -53,6 +53,8 @@ def get_current_user(request: Request):
     user = obtener_usuario(username)
     if not user:
         return None
+    if user.get("estado_cuenta") != "activo":
+        return None
     if can_review_art(user.get("rol", "")):
         try:
             user["pendientes"] = contar_art_pendientes()

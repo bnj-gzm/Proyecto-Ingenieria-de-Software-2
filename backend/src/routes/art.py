@@ -19,12 +19,11 @@ from backend.src.services.art_service import (
     actualizar_registro,
 )
 from backend.src.services.pdf_service import generar_art_pdf
+from backend.src.services.upload_service import save_art_image
 from backend.src.services.usuario_service import cargar_usuarios_por_rol
 
 
 router = APIRouter()
-MAX_IMAGE_BYTES = 5 * 1024 * 1024
-ALLOWED_IMAGE_TYPES = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
 
 _CHECKLIST = [
     "Me encuentro en condiciones físicas y psicológicas aptas para realizar la actividad.",
@@ -93,7 +92,6 @@ def nueva_art(request: Request, user=Depends(get_current_user)):
     if not user:
         return RedirectResponse("/login", status_code=303)
     csrf_token = create_csrf_token()
-    trabajadores = cargar_usuarios_por_rol(USER)
     supervisores = cargar_usuarios_por_rol(SUPERVISOR)
     response = templates.TemplateResponse(
         request,
@@ -103,8 +101,8 @@ def nueva_art(request: Request, user=Depends(get_current_user)):
             "checklist": _CHECKLIST,
             "epp": _EPP,
             "user": user,
-            "trabajadores": trabajadores,
             "supervisores": supervisores,
+            "fecha_actual": datetime.now().strftime("%Y-%m-%d"),
             "csrf_token": csrf_token,
         },
     )
@@ -116,9 +114,7 @@ def nueva_art(request: Request, user=Depends(get_current_user)):
 async def guardar_art(
     request: Request,
     empresa: str = Form(...),
-    asignado_a: str = Form(...),
     area: str = Form(...),
-    fecha: str = Form(...),
     tipo_tarea: str = Form(...),
     descripcion: str = Form(...),
     supervisor_asignado: str = Form(...),
@@ -143,9 +139,8 @@ async def guardar_art(
         raise HTTPException(status_code=400, detail="Debes ingresar observaciones")
     if not evidencia:
         raise HTTPException(status_code=400, detail="Debes adjuntar al menos una imagen de evidencia")
-    trabajador_user = next((u for u in cargar_usuarios_por_rol(USER) if u["username"] == asignado_a), None)
     supervisor_user = next((u for u in cargar_usuarios_por_rol(SUPERVISOR) if u["username"] == supervisor_asignado), None)
-    trabajador = (trabajador_user or {}).get("nombre") or asignado_a
+    trabajador = user.get("nombre") or user.get("email") or user["username"]
     supervisor = (supervisor_user or {}).get("nombre") or supervisor_asignado
     riesgos = []
     for seq, risk, ctrl in zip(secuencia or [], riesgo or [], control or []):
@@ -154,19 +149,11 @@ async def guardar_art(
     if not riesgos or any(not item["secuencia"] or not item["riesgo"] or not item["control"] for item in riesgos):
         raise HTTPException(status_code=400, detail="Debes completar secuencia, riesgo y control")
     archivos = []
-    upload_dir = request.app.state.upload_dir
+    upload_dir = request.app.state.art_upload_dir
     for archivo in evidencia or []:
         if not archivo.filename:
             continue
-        if archivo.content_type not in ALLOWED_IMAGE_TYPES:
-            raise HTTPException(status_code=400, detail="Solo se permiten imágenes JPG, PNG o WEBP")
-        contenido = await archivo.read()
-        if len(contenido) > MAX_IMAGE_BYTES:
-            raise HTTPException(status_code=400, detail="Cada imagen debe pesar máximo 5 MB")
-        extension = ALLOWED_IMAGE_TYPES[archivo.content_type]
-        nombre_archivo = f"{uuid.uuid4().hex}.{extension}"
-        (upload_dir / nombre_archivo).write_bytes(contenido)
-        archivos.append(nombre_archivo)
+        archivos.append(await save_art_image(upload_dir, archivo))
     id_art = str(uuid.uuid4())[:8]
     guardar_registro(
         {
@@ -174,7 +161,7 @@ async def guardar_art(
             "empresa": empresa,
             "trabajador": trabajador,
             "area": area,
-            "fecha": fecha,
+            "fecha": datetime.now().strftime("%Y-%m-%d"),
             "tipo_tarea": tipo_tarea,
             "descripcion": descripcion,
             "supervisor": supervisor,
@@ -185,7 +172,7 @@ async def guardar_art(
             "evidencia": archivos,
             "creado_en": datetime.now().strftime("%Y-%m-%d %H:%M"),
             "creado_por": user["username"],
-            "asignado_a": asignado_a,
+            "asignado_a": user["username"],
             "supervisor_asignado": supervisor_asignado,
         }
     )
@@ -237,7 +224,6 @@ def editar_art_view(request: Request, id_art: str, user=Depends(get_current_user
         return RedirectResponse(f"/art/{id_art}", status_code=303)
         
     csrf_token = create_csrf_token()
-    trabajadores = cargar_usuarios_por_rol(USER)
     supervisores = cargar_usuarios_por_rol(SUPERVISOR)
     
     response = templates.TemplateResponse(
@@ -248,7 +234,6 @@ def editar_art_view(request: Request, id_art: str, user=Depends(get_current_user
             "checklist": _CHECKLIST,
             "epp": _EPP,
             "user": user,
-            "trabajadores": trabajadores,
             "supervisores": supervisores,
             "csrf_token": csrf_token,
             "registro": registro,
@@ -263,9 +248,7 @@ async def editar_art_post(
     request: Request,
     id_art: str,
     empresa: str = Form(...),
-    asignado_a: str = Form(...),
     area: str = Form(...),
-    fecha: str = Form(...),
     tipo_tarea: str = Form(...),
     descripcion: str = Form(...),
     supervisor_asignado: str = Form(...),
@@ -298,9 +281,8 @@ async def editar_art_post(
     if not observaciones.strip():
         raise HTTPException(status_code=400, detail="Debes ingresar observaciones")
         
-    trabajador_user = next((u for u in cargar_usuarios_por_rol(USER) if u["username"] == asignado_a), None)
     supervisor_user = next((u for u in cargar_usuarios_por_rol(SUPERVISOR) if u["username"] == supervisor_asignado), None)
-    trabajador = (trabajador_user or {}).get("nombre") or asignado_a
+    trabajador = registro_existente.get("trabajador") or user.get("nombre") or user["username"]
     supervisor = (supervisor_user or {}).get("nombre") or supervisor_asignado
     
     riesgos = []
@@ -311,25 +293,17 @@ async def editar_art_post(
         raise HTTPException(status_code=400, detail="Debes completar secuencia, riesgo y control")
         
     archivos = registro_existente.get("evidencia", []).copy()
-    upload_dir = request.app.state.upload_dir
+    upload_dir = request.app.state.art_upload_dir
     for archivo in evidencia or []:
         if not archivo.filename:
             continue
-        if archivo.content_type not in ALLOWED_IMAGE_TYPES:
-            raise HTTPException(status_code=400, detail="Solo se permiten imágenes JPG, PNG o WEBP")
-        contenido = await archivo.read()
-        if len(contenido) > MAX_IMAGE_BYTES:
-            raise HTTPException(status_code=400, detail="Cada imagen debe pesar máximo 5 MB")
-        extension = ALLOWED_IMAGE_TYPES[archivo.content_type]
-        nombre_archivo = f"{uuid.uuid4().hex}.{extension}"
-        (upload_dir / nombre_archivo).write_bytes(contenido)
-        archivos.append(nombre_archivo)
+        archivos.append(await save_art_image(upload_dir, archivo))
         
     registro_actualizado = {
         "empresa": empresa,
         "trabajador": trabajador,
         "area": area,
-        "fecha": fecha,
+        "fecha": registro_existente.get("fecha"),
         "tipo_tarea": tipo_tarea,
         "descripcion": descripcion,
         "supervisor": supervisor,
@@ -338,7 +312,7 @@ async def editar_art_post(
         "riesgos": riesgos,
         "observaciones": observaciones,
         "evidencia": archivos,
-        "asignado_a": asignado_a,
+        "asignado_a": registro_existente.get("asignado_a") or user["username"],
         "supervisor_asignado": supervisor_asignado,
     }
     
@@ -369,15 +343,25 @@ def descargar_art_pdf(id_art: str, user=Depends(get_current_user)):
 
 
 @router.post("/art/{id_art}/eliminar")
-def borrar_art(id_art: str, user=Depends(get_current_user)):
-    # 1. Seguridad: Verificar que el usuario tenga sesión
+def borrar_art(
+    request: Request,
+    id_art: str,
+    csrf_token: str = Form(...),
+    user=Depends(get_current_user),
+):
     if not user:
         return RedirectResponse("/login", status_code=303)
-
-    # 2. Ejecutar el borrado
+    validate_csrf_token(request, csrf_token)
+    registro = obtener_registro(id_art)
+    if not registro:
+        return RedirectResponse("/dashboard", status_code=303)
+    es_admin = user.get("rol") == "admin"
+    es_creador = registro.get("creado_por") == user["username"]
+    if not es_admin and not es_creador:
+        raise HTTPException(status_code=403, detail="No tienes permiso para eliminar esta ART")
+    if not es_admin and registro.get("estado") not in {"pendiente", "corregir", "rechazada"}:
+        raise HTTPException(status_code=400, detail="Esta ART no puede eliminarse en su estado actual")
     eliminar_registro(id_art)
-
-    # 3. Redirigir de vuelta al panel principal
     return RedirectResponse("/dashboard", status_code=303)
 
 @router.get("/partials/riesgo-row", response_class=HTMLResponse)

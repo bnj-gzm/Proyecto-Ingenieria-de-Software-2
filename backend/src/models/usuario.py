@@ -6,7 +6,7 @@ from datetime import datetime
 class UsuarioCreate(BaseModel):
     username: str
     password: str
-    rol: str = "user"
+    rol: str = "trabajador"
     nombre: str = ""
     email: str = ""
     rut: str = ""
@@ -27,6 +27,8 @@ class UsuarioResponse(BaseModel):
     cargo: Optional[str] = ""
     empresa: Optional[str] = ""
     area: Optional[str] = ""
+    estado_cuenta: Optional[str] = "activo"
+    foto_perfil: Optional[str] = ""
     created_at: Optional[datetime] = None
 
     class Config:

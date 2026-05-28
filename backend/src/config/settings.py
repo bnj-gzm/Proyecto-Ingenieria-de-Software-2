@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
 load_dotenv(ROOT_DIR / ".env")
-
+    
 
 class Settings:
     def __init__(self) -> None:
@@ -19,6 +19,14 @@ class Settings:
         self.cookie_secure = self._as_bool(os.getenv("COOKIE_SECURE", "false"))
         self.cookie_samesite = os.getenv("COOKIE_SAMESITE", "lax")
         self.access_token_minutes = int(os.getenv("ACCESS_TOKEN_MINUTES", "120"))
+        domains = os.getenv("ALLOWED_EMAIL_DOMAINS", "dart-mineria.lat")
+        self.allowed_email_domains = {
+            domain.strip().lower().lstrip("@")
+            for domain in domains.split(",")
+            if domain.strip()
+        }
+        self.email_enabled = self._as_bool(os.getenv("EMAIL_ENABLED", "false"))
+        self.public_base_url = os.getenv("PUBLIC_BASE_URL", "").rstrip("/")
 
     @staticmethod
     def _required(name: str) -> str:

@@ -15,11 +15,33 @@ _SELECT = """
 """
 
 
+def _normalize_evidence_path(value: Any) -> str:
+    if not value:
+        return ""
+    path = str(value).replace("\\", "/").strip()
+    if path.startswith("/static/"):
+        path = path[len("/static/"):]
+    if path.startswith("static/"):
+        path = path[len("static/"):]
+    marker = "/uploads/"
+    if marker in path:
+        path = "uploads/" + path.split(marker, 1)[1]
+    if path.startswith("uploads/"):
+        return path
+    if "/" in path or ":" in path:
+        return "uploads/art/" + path.rsplit("/", 1)[-1]
+    return "uploads/" + path
+
+
+def _normalize_evidence_list(values: list[Any]) -> list[str]:
+    return [path for path in (_normalize_evidence_path(value) for value in values) if path]
+
+
 def _deserialize(row: dict) -> dict:
     row["checklist"] = _load_json_list(row.pop("checklist_json"))
     row["epp"] = _load_json_list(row.pop("epp_json"))
     row["riesgos"] = _load_json_list(row.pop("riesgos_json"))
-    row["evidencia"] = _load_json_list(row.pop("evidencia_json"))
+    row["evidencia"] = _normalize_evidence_list(_load_json_list(row.pop("evidencia_json")))
     return row
 
 

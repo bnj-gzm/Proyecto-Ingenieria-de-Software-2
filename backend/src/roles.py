@@ -1,12 +1,12 @@
 ADMIN = "admin"
 SUPERVISOR = "supervisor"
-USER = "user"
+USER = "trabajador"
 
 ROLES = {ADMIN, SUPERVISOR, USER}
 ROLE_LABELS = {
     ADMIN: "Admin",
     SUPERVISOR: "Supervisor",
-    USER: "Usuario",
+    USER: "Trabajador",
 }
 
 
