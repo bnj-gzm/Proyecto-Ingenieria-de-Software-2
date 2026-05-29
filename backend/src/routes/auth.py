@@ -10,6 +10,7 @@ from backend.src.config.frontend import templates
 from backend.src.config.settings import settings
 from backend.src.middleware.auth import create_access_token, delete_auth_cookie, pwd_context, set_auth_cookie
 from backend.src.middleware.csrf import create_csrf_token, set_csrf_cookie, validate_csrf_token
+from backend.src.services.email_service import build_password_reset_email, send_email
 from backend.src.services.usuario_service import (
     activar_usuario,
     guardar_reset_token,
@@ -42,7 +43,8 @@ def email_corporativo_valido(email: str) -> bool:
 
 
 def _absolute_url(request: Request, path: str) -> str:
-    base = settings.public_base_url or str(request.base_url).rstrip("/")
+    fallback_base_url = "https://www.dart-mineria.lat" if settings.email_enabled else str(request.base_url).rstrip("/")
+    base = settings.public_base_url or fallback_base_url
     return f"{base}{path}"
 
 
@@ -188,8 +190,13 @@ def olvide_password_post(request: Request, email: str = Form(...), csrf_token: s
             token = secrets.token_urlsafe(32)
             guardar_reset_token(user["username"], token, datetime.now() + timedelta(hours=2))
             reset_link = _absolute_url(request, f"/reset-password/{token}")
-            logger.info("Link de reset para %s: %s", email, reset_link)
-    message = "Si el correo existe y está activo, enviaremos instrucciones para recuperar la contraseña."
+            if settings.email_enabled:
+                logger.info("Link de reset generado para %s.", email)
+                subject, html_body, text_body = build_password_reset_email(reset_link)
+                send_email(email, subject, html_body, text_body)
+            else:
+                logger.info("Link de reset para %s: %s", email, reset_link)
+    message = "Si el correo existe, enviaremos instrucciones para recuperar la cuenta."
     if reset_link and not settings.email_enabled:
         message = f"{message} Link de prueba: {reset_link}"
     return _render_simple_form(request, "olvide_password.html", "Olvidé mi contraseña", message=message)
