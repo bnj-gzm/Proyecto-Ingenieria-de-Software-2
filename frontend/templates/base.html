@@ -78,6 +78,7 @@
         .logo-md { width: 48px; height: 48px; }
         .logo-lg { width: 64px; height: 64px; }
         .app-logo img { width: 100%; height: 100%; object-fit: contain; }
+        .brand-logo-img { max-width: 100%; transform: none; }
         .public-navbar { position: sticky; top: 0; z-index: 40; }
         .public-feature-card { border: 1px solid var(--line); border-radius: 8px; background: #FFFFFF; padding: 1.1rem; box-shadow: 0 1px 2px rgba(15, 23, 42, .04); }
         .public-icon { display: inline-flex; width: 2.5rem; height: 2.5rem; align-items: center; justify-content: center; border-radius: 10px; background: #E0F7FA; color: #0F3D4C; }
@@ -160,6 +161,17 @@
             .responsive-table td[data-label="Acción"] .btn-secondary { width: auto; white-space: nowrap; }
             .responsive-table td[colspan] { display: block; text-align: center; }
             .responsive-table td[colspan]::before { content: ""; display: none; }
+        }
+        @media print {
+            .app-logo { overflow: visible !important; background: #FFFFFF !important; box-shadow: none !important; }
+            .app-logo img,
+            .brand-logo-img {
+                width: 100% !important;
+                height: 100% !important;
+                max-width: 100% !important;
+                object-fit: contain !important;
+                transform: none !important;
+            }
         }
     </style>
 </head>

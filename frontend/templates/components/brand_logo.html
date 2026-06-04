@@ -14,7 +14,7 @@
     'md': 'h-12 w-12',
     'lg': 'h-16 w-16'
   }.get(brand_logo_size, 'h-12 w-12') %}
-  {% set brand_logo_img_classes = 'block h-[165%] w-[165%] max-w-none object-cover object-left-top -translate-x-[6%] -translate-y-[11%]' %}
+  {% set brand_logo_img_classes = 'brand-logo-img block h-full w-full object-contain' %}
 {% else %}
   {% set brand_logo_wrap_classes = {
     'xs': 'h-8 w-16',
@@ -22,7 +22,7 @@
     'md': 'h-12 w-28',
     'lg': 'h-16 w-36'
   }.get(brand_logo_size, 'h-12 w-28') %}
-  {% set brand_logo_img_classes = 'block h-full w-full object-contain' %}
+  {% set brand_logo_img_classes = 'brand-logo-img block h-full w-full object-contain' %}
 {% endif %}
 {% if brand_logo_theme == 'dark' %}
   {% set brand_logo_wrap_classes = brand_logo_wrap_classes ~ ' app-logo ' ~ brand_logo_size_token ~ ' inline-flex items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/95 p-1.5 shadow-sm' %}
@@ -30,12 +30,5 @@
   {% set brand_logo_wrap_classes = brand_logo_wrap_classes ~ ' app-logo ' ~ brand_logo_size_token ~ ' inline-flex items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm' %}
 {% endif %}
 <span class="{{ brand_logo_wrap_classes }}">
-  <img src="{{ url_for('static', path='img/logo-dart.png') }}" alt="Logo oficial" class="{{ brand_logo_img_classes }}" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
-  <span hidden class="flex h-full w-full items-center justify-center rounded-xl bg-[#0F3D4C] text-white">
-    <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M3 18h18"></path>
-      <path d="m7 18 4-8 4 8"></path>
-      <path d="m11 10 2-4 2 4"></path>
-    </svg>
-  </span>
+  <img src="{{ url_for('static', path='img/logo-dart.png') }}" alt="Logo oficial" class="{{ brand_logo_img_classes }}">
 </span>
