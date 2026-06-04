@@ -20,7 +20,7 @@
       <p class="mt-2 max-w-3xl text-dartMuted">{{ registro.descripcion }}</p>
     </div>
     <div class="flex flex-wrap gap-3">
-      {% if registro.creado_por == user.username and registro.estado in ['pendiente', 'corregir'] %}
+      {% if puede_editar %}
       <a href="/art/{{ registro.id }}/editar" class="btn-secondary">Editar</a>
       {% endif %}
       {% if user.rol == 'admin' or (registro.creado_por == user.username and registro.estado in ['pendiente', 'corregir', 'rechazada']) %}

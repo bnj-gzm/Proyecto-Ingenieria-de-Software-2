@@ -202,6 +202,7 @@
                     </span>
                     <span class="sidebar-label whitespace-nowrap">Dashboard</span>
                 </a>
+                {% if user.rol == 'admin' or user.rol == 'supervisor' %}
                 <a href="/art/nueva" title="Nueva ART" data-tooltip="Nueva ART" class="sidebar-link {% if request.url.path == '/art/nueva' %}sidebar-link-active{% endif %}">
                     <span class="sidebar-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -210,6 +211,7 @@
                     </span>
                     <span class="sidebar-label whitespace-nowrap">Nueva ART</span>
                 </a>
+                {% endif %}
                 {% if user.rol == 'admin' or user.rol == 'supervisor' %}
                 <a href="/supervisor/art" title="Revisar ART" data-tooltip="Revisar ART" class="sidebar-link {% if request.url.path in ['/supervisor/art', '/admin/art'] %}sidebar-link-active{% endif %}">
                     <span class="sidebar-icon">
@@ -218,9 +220,6 @@
                         </svg>
                     </span>
                     <span class="sidebar-label whitespace-nowrap">Revisar ART</span>
-                    {% if user.pendientes and user.pendientes > 0 %}
-                    <span class="ml-auto status-badge status-rechazada px-2 py-0.5">{{ user.pendientes }}</span>
-                    {% endif %}
                 </a>
                 {% endif %}
                 {% if user.rol == 'admin' %}

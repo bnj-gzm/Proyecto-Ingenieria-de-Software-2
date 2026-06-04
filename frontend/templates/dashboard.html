@@ -106,10 +106,10 @@
           <a href="/supervisor/art" class="btn-primary">ART pendientes</a>
           <a href="#" class="btn-secondary opacity-70">Reportes</a>
           {% elif user.rol == 'supervisor' %}
+          <a href="/art/nueva" class="btn-primary">Crear nueva ART</a>
           <a href="/supervisor/art" class="btn-primary">Revisar ART</a>
           <a href="/supervisor/art" class="btn-secondary">Ver observadas</a>
           {% else %}
-          <a href="/art/nueva" class="btn-primary">Crear nueva ART</a>
           <a href="#mis-art" class="btn-secondary">Ver mis ART</a>
           {% endif %}
         </div>

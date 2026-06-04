@@ -244,6 +244,21 @@ def contar_art_pendientes() -> int:
         cur.close()
         conn.close()
 
+
+def contar_art_pendientes_por_supervisor(username: str) -> int:
+    conn = _connect()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "SELECT COUNT(*) FROM art_records WHERE estado = %s AND supervisor_asignado = %s",
+            ("pendiente", username),
+        )
+        return cur.fetchone()[0]
+    finally:
+        cur.close()
+        conn.close()
+
+
 def eliminar_registro(id_art: str) -> None:
     conn = _connect()
     cur = conn.cursor()

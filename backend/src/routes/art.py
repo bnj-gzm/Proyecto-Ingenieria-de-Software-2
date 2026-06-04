@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from backend.src.config.frontend import templates
 from backend.src.middleware.auth import get_current_user
 from backend.src.middleware.csrf import create_csrf_token, set_csrf_cookie, validate_csrf_token
-from backend.src.roles import SUPERVISOR, USER, can_review_art
+from backend.src.roles import SUPERVISOR, can_create_art
 from backend.src.services.art_service import (
     cargar_registros,
     cargar_registros_por_supervisor,
@@ -20,7 +20,8 @@ from backend.src.services.art_service import (
 )
 from backend.src.services.pdf_service import generar_art_pdf
 from backend.src.services.upload_service import save_art_image
-from backend.src.services.usuario_service import cargar_usuarios_por_rol
+from backend.src.services.usuario_service import cargar_usuarios_asignables, cargar_usuarios_por_rol
+from backend.src.services.notification_service import add_notification
 
 
 router = APIRouter()
@@ -63,6 +64,30 @@ def _es_supervisor_asignado(registro: dict, user: dict) -> bool:
     return supervisor_texto in opciones
 
 
+def _es_asignado(registro: dict, user: dict) -> bool:
+    return (registro.get("asignado_a") or "").strip().lower() == user.get("username", "").strip().lower()
+
+
+def _puede_ver_art(registro: dict, user: dict) -> bool:
+    return (
+        user.get("rol") == "admin"
+        or registro.get("creado_por") == user.get("username")
+        or _es_asignado(registro, user)
+        or _es_supervisor_asignado(registro, user)
+    )
+
+
+def _puede_editar_art(registro: dict, user: dict) -> bool:
+    return (
+        registro.get("estado") in {"pendiente", "corregir"}
+        and (registro.get("creado_por") == user.get("username") or _es_asignado(registro, user))
+    )
+
+
+def _usuarios_asignables() -> list[dict]:
+    return cargar_usuarios_asignables()
+
+
 @router.get("/", response_class=HTMLResponse)
 def inicio(request: Request):
     user = get_current_user(request)
@@ -91,8 +116,11 @@ def dashboard(request: Request, user=Depends(get_current_user)):
 def nueva_art(request: Request, user=Depends(get_current_user)):
     if not user:
         return RedirectResponse("/login", status_code=303)
+    if not can_create_art(user.get("rol", "")):
+        return RedirectResponse("/dashboard", status_code=303)
     csrf_token = create_csrf_token()
     supervisores = cargar_usuarios_por_rol(SUPERVISOR)
+    trabajadores = _usuarios_asignables()
     response = templates.TemplateResponse(
         request,
         "nueva_art.html",
@@ -102,6 +130,7 @@ def nueva_art(request: Request, user=Depends(get_current_user)):
             "epp": _EPP,
             "user": user,
             "supervisores": supervisores,
+            "trabajadores": trabajadores,
             "fecha_actual": datetime.now().strftime("%Y-%m-%d"),
             "csrf_token": csrf_token,
         },
@@ -117,6 +146,7 @@ async def guardar_art(
     area: str = Form(...),
     tipo_tarea: str = Form(...),
     descripcion: str = Form(...),
+    trabajador_asignado: str = Form(...),
     supervisor_asignado: str = Form(...),
     checklist: Optional[List[str]] = Form(None),
     epp: Optional[List[str]] = Form(None),
@@ -130,7 +160,19 @@ async def guardar_art(
 ):
     if not user:
         return RedirectResponse("/login", status_code=303)
+    if not can_create_art(user.get("rol", "")):
+        raise HTTPException(status_code=403, detail="No tienes permiso para crear ART")
     validate_csrf_token(request, csrf_token)
+    trabajador_user = next(
+        (
+            trabajador
+            for trabajador in _usuarios_asignables()
+            if trabajador["username"] == trabajador_asignado
+        ),
+        None,
+    )
+    if not trabajador_user:
+        raise HTTPException(status_code=400, detail="Debes seleccionar un usuario registrado")
     if len(checklist or []) != len(_CHECKLIST):
         raise HTTPException(status_code=400, detail="Debes completar todo el checklist de seguridad")
     if not epp:
@@ -140,7 +182,7 @@ async def guardar_art(
     if not evidencia:
         raise HTTPException(status_code=400, detail="Debes adjuntar al menos una imagen de evidencia")
     supervisor_user = next((u for u in cargar_usuarios_por_rol(SUPERVISOR) if u["username"] == supervisor_asignado), None)
-    trabajador = user.get("nombre") or user.get("email") or user["username"]
+    trabajador = trabajador_user.get("nombre") or trabajador_user.get("email") or trabajador_user["username"]
     supervisor = (supervisor_user or {}).get("nombre") or supervisor_asignado
     riesgos = []
     for seq, risk, ctrl in zip(secuencia or [], riesgo or [], control or []):
@@ -154,26 +196,31 @@ async def guardar_art(
             continue
         archivos.append(await save_art_image(request.app.state.art_upload_dir, archivo))
     id_art = str(uuid.uuid4())[:8]
-    guardar_registro(
-        {
-            "id": id_art,
-            "empresa": empresa,
-            "trabajador": trabajador,
-            "area": area,
-            "fecha": datetime.now().strftime("%Y-%m-%d"),
-            "tipo_tarea": tipo_tarea,
-            "descripcion": descripcion,
-            "supervisor": supervisor,
-            "checklist": checklist or [],
-            "epp": epp or [],
-            "riesgos": riesgos,
-            "observaciones": observaciones,
-            "evidencia": archivos,
-            "creado_en": datetime.now().strftime("%Y-%m-%d %H:%M"),
-            "creado_por": user["username"],
-            "asignado_a": user["username"],
-            "supervisor_asignado": supervisor_asignado,
-        }
+    registro = {
+        "id": id_art,
+        "empresa": empresa,
+        "trabajador": trabajador,
+        "area": area,
+        "fecha": datetime.now().strftime("%Y-%m-%d"),
+        "tipo_tarea": tipo_tarea,
+        "descripcion": descripcion,
+        "supervisor": supervisor,
+        "checklist": checklist or [],
+        "epp": epp or [],
+        "riesgos": riesgos,
+        "observaciones": observaciones,
+        "evidencia": archivos,
+        "creado_en": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "creado_por": user["username"],
+        "asignado_a": trabajador_user["username"],
+        "supervisor_asignado": supervisor_asignado,
+    }
+    guardar_registro(registro)
+    add_notification(
+        trabajador_user["username"],
+        f"ART {id_art} asignada",
+        f"{user.get('nombre') or user.get('username')} te asignó una ART para completar.",
+        f"/art/{id_art}",
     )
     return RedirectResponse(f"/art/{id_art}", status_code=303)
 
@@ -186,7 +233,7 @@ def detalle_art(request: Request, id_art: str, user=Depends(get_current_user)):
     if not registro:
         return RedirectResponse("/dashboard", status_code=303)
     supervisor_asignado = _es_supervisor_asignado(registro, user)
-    if not supervisor_asignado and user.get("rol") != "admin" and registro.get("creado_por") != user["username"]:
+    if not _puede_ver_art(registro, user):
         return RedirectResponse("/dashboard", status_code=303)
     if user.get("rol") == SUPERVISOR and not supervisor_asignado:
         return RedirectResponse("/dashboard", status_code=303)
@@ -202,6 +249,7 @@ def detalle_art(request: Request, id_art: str, user=Depends(get_current_user)):
             "user": user,
             "csrf_token": csrf_token,
             "puede_revisar": puede_revisar,
+            "puede_editar": _puede_editar_art(registro, user),
             "puede_descargar_pdf": registro.get("estado") in {"aprobada", "rechazada"},
         },
     )
@@ -217,10 +265,8 @@ def editar_art_view(request: Request, id_art: str, user=Depends(get_current_user
     if not registro:
         return RedirectResponse("/dashboard", status_code=303)
     
-    if registro.get("creado_por") != user["username"]:
+    if not _puede_editar_art(registro, user):
         return RedirectResponse("/dashboard", status_code=303)
-    if registro.get("estado") not in {"pendiente", "corregir"}:
-        return RedirectResponse(f"/art/{id_art}", status_code=303)
         
     csrf_token = create_csrf_token()
     supervisores = cargar_usuarios_por_rol(SUPERVISOR)
@@ -268,10 +314,8 @@ async def editar_art_post(
     registro_existente = obtener_registro(id_art)
     if not registro_existente:
         raise HTTPException(status_code=404, detail="Registro no encontrado")
-    if registro_existente.get("creado_por") != user["username"]:
+    if not _puede_editar_art(registro_existente, user):
         raise HTTPException(status_code=403, detail="No tienes permiso para editar esta ART")
-    if registro_existente.get("estado") not in {"pendiente", "corregir"}:
-        raise HTTPException(status_code=400, detail="Esta ART no se puede editar en su estado actual")
         
     if len(checklist or []) != len(_CHECKLIST):
         raise HTTPException(status_code=400, detail="Debes completar todo el checklist de seguridad")
@@ -326,7 +370,7 @@ def descargar_art_pdf(id_art: str, user=Depends(get_current_user)):
     if not registro:
         return RedirectResponse("/dashboard", status_code=303)
     supervisor_asignado = _es_supervisor_asignado(registro, user)
-    if not supervisor_asignado and user.get("rol") != "admin" and registro.get("creado_por") != user["username"]:
+    if not _puede_ver_art(registro, user):
         return RedirectResponse("/dashboard", status_code=303)
     if user.get("rol") == SUPERVISOR and not supervisor_asignado:
         return RedirectResponse("/dashboard", status_code=303)
