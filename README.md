@@ -34,8 +34,19 @@ Aplicación web desarrollada con un enfoque centrado en la simplicidad, velocida
 
    Edita `.env` con tu conexión de Neon y una `SECRET_KEY` larga y aleatoria.
 
-3. **Instalar dependencias y ejecutar:**
+3. **Crear el entorno virtual, instalar dependencias y ejecutar:**
    ```bash
-   pip install -r requirements.txt
-   uvicorn backend.app:app --reload --host 0.0.0.0 --port 8000
+   python3 -m venv .venv
+   .venv/bin/pip install -r requirements.txt
+   .venv/bin/python -m uvicorn backend.app:app --host 127.0.0.1 --port 8000
    ```
+
+   Primero se crea el entorno virtual, luego se instalan las dependencias y, por último, se inicia el servidor.
+
+   Después abre:
+
+   ```text
+   http://127.0.0.1:8000
+   ```
+
+   Si el entorno virtual ya existe, se puede omitir la primera línea y ejecutar solo las dos últimas.
