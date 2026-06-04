@@ -44,10 +44,10 @@
               {{ trabajador.nombre or trabajador.email or trabajador.username }} - {{ trabajador.rol|capitalize }}{% if trabajador.cargo %} / {{ trabajador.cargo }}{% endif %} (@{{ trabajador.username }})
             </option>
             {% else %}
-            <option disabled>No hay usuarios registrados disponibles</option>
+            <option disabled>No hay trabajadores registrados disponibles</option>
             {% endfor %}
           </select>
-          <p class="mt-2 text-sm text-dartMuted">La ART quedará asignada al usuario seleccionado y recibirá una notificación.</p>
+          <p class="mt-2 text-sm text-dartMuted">La ART quedará asignada al trabajador seleccionado y recibirá una notificación.</p>
         </div>
         <div>
           <label class="form-label">Área de trabajo</label>
@@ -74,7 +74,7 @@
         </div>
         {% if not trabajadores %}
         <div class="md:col-span-2 rounded-lg border border-amber-200 bg-amber-50 p-4 font-bold text-amber-800">
-          Para crear ART debe existir al menos un usuario registrado.
+          Para crear ART debe existir al menos un trabajador registrado.
         </div>
         {% endif %}
         {% if not supervisores %}

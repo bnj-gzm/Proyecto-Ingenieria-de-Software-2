@@ -121,6 +121,7 @@ def cargar_usuarios_asignables() -> list[dict[str, Any]]:
                 COALESCE(email, '') AS email,
                 COALESCE(cargo, '') AS cargo
             FROM users
+            WHERE rol = 'trabajador'
             ORDER BY nombre ASC, username ASC
             """
         )
