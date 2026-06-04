@@ -126,8 +126,8 @@
           {% if registro.evidencia %}
           <div class="mt-4 grid grid-cols-2 gap-3">
             {% for imagen in registro.evidencia %}
-            <a href="{{ url_for('static', path=imagen) }}" target="_blank" rel="noopener">
-              <img src="{{ url_for('static', path=imagen) }}" alt="Evidencia actual ART {{ registro.id }}" class="h-28 w-full rounded-lg border object-cover">
+            <a href="{{ imagen.src }}" target="_blank" rel="noopener">
+              <img src="{{ imagen.src }}" alt="Evidencia actual ART {{ registro.id }}" class="h-28 w-full rounded-lg border object-cover">
             </a>
             {% endfor %}
           </div>

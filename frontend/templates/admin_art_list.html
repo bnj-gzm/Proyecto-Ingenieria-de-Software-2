@@ -46,7 +46,7 @@
             <td data-label="ID" class="font-mono font-bold">{{ r.id }}</td>
             <td data-label="Foto">
               {% if r.evidencia %}
-              <img src="{{ url_for('static', path=r.evidencia[0]) }}" alt="Evidencia ART {{ r.id }}" class="art-thumb" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+              <img src="{{ r.evidencia[0].src }}" alt="Evidencia ART {{ r.id }}" class="art-thumb" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
               <div class="art-thumb flex items-center justify-center text-xs font-bold text-dartMuted" hidden>ART</div>
               {% else %}
               <span class="text-xs text-dartMuted">Sin foto</span>

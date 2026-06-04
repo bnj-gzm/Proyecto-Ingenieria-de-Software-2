@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from psycopg2.extras import RealDictCursor
@@ -18,7 +19,11 @@ _SELECT = """
 def _normalize_evidence_path(value: Any) -> str:
     if not value:
         return ""
+    if isinstance(value, dict):
+        value = value.get("src") or value.get("data_uri") or value.get("path") or value.get("filename") or ""
     path = str(value).replace("\\", "/").strip()
+    if path.startswith("data:") or path.startswith("http://") or path.startswith("https://"):
+        return path
     if path.startswith("/static/"):
         path = path[len("/static/"):]
     if path.startswith("static/"):
@@ -27,14 +32,42 @@ def _normalize_evidence_path(value: Any) -> str:
     if marker in path:
         path = "uploads/" + path.split(marker, 1)[1]
     if path.startswith("uploads/"):
-        return path
+        return f"/static/{path}"
     if "/" in path or ":" in path:
-        return "uploads/art/" + path.rsplit("/", 1)[-1]
-    return "uploads/" + path
+        return f"/static/uploads/art/{Path(path).name}"
+    return f"/static/uploads/{path}"
 
 
-def _normalize_evidence_list(values: list[Any]) -> list[str]:
-    return [path for path in (_normalize_evidence_path(value) for value in values) if path]
+def _normalize_evidence_item(value: Any) -> dict[str, Any]:
+    if not value:
+        return {}
+    if isinstance(value, dict):
+        filename = str(value.get("filename") or value.get("name") or "evidencia").strip() or "evidencia"
+        mime_type = str(value.get("mime_type") or value.get("content_type") or "image/jpeg").strip() or "image/jpeg"
+        data = str(value.get("data") or value.get("base64") or "").strip()
+        src = str(value.get("src") or value.get("data_uri") or "").strip()
+        if not src and data:
+            src = f"data:{mime_type};base64,{data}"
+        if not src:
+            src = _normalize_evidence_path(value)
+        return {
+            "filename": filename,
+            "mime_type": mime_type,
+            "data": data,
+            "src": src,
+        }
+    src = _normalize_evidence_path(value)
+    filename = Path(str(value)).name or "evidencia"
+    return {
+        "filename": filename,
+        "mime_type": "image/jpeg",
+        "data": "",
+        "src": src,
+    }
+
+
+def _normalize_evidence_list(values: list[Any]) -> list[dict[str, Any]]:
+    return [item for item in (_normalize_evidence_item(value) for value in values) if item.get("src")]
 
 
 def _deserialize(row: dict) -> dict:

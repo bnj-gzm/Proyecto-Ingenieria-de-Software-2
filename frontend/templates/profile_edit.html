@@ -25,7 +25,7 @@
     <div class="grid gap-6 p-6 md:grid-cols-[240px_1fr]">
       <aside class="rounded-lg bg-dartSidebar p-5 text-white">
         {% if user.foto_perfil %}
-        <img src="/static/{{ user.foto_perfil }}" alt="" class="h-32 w-32 rounded-full object-cover ring-4 ring-cyan-300/40" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+        <img src="{{ user.foto_perfil if user.foto_perfil[:5] == 'data:' else '/static/' + user.foto_perfil }}" alt="" class="h-32 w-32 rounded-full object-cover ring-4 ring-cyan-300/40" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
         <div class="avatar h-32 w-32 text-4xl ring-4 ring-cyan-300/40" hidden>{{ initials }}</div>
         {% else %}
         <div class="avatar h-32 w-32 text-4xl ring-4 ring-cyan-300/40">{{ initials }}</div>

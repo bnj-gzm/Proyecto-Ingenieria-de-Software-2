@@ -114,8 +114,8 @@
           {% if registro.evidencia %}
           <div class="grid gap-3">
             {% for imagen in registro.evidencia %}
-            <a href="{{ url_for('static', path=imagen) }}" target="_blank" rel="noopener">
-              <img src="{{ url_for('static', path=imagen) }}" alt="Evidencia ART {{ registro.id }}" class="h-48 w-full rounded-lg border object-cover" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+            <a href="{{ imagen.src }}" target="_blank" rel="noopener">
+              <img src="{{ imagen.src }}" alt="Evidencia ART {{ registro.id }}" class="h-48 w-full rounded-lg border object-cover" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
               <div class="flex h-48 w-full items-center justify-center rounded-lg border border-dashed border-line bg-slate-50 text-sm font-bold text-dartMuted" hidden>Imagen no disponible</div>
             </a>
             {% endfor %}

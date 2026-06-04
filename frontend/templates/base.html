@@ -260,7 +260,7 @@
                     <div id="top-user-menu-wrap" class="relative">
                         <button id="top-user-button" type="button" class="flex items-center gap-2 rounded-lg border border-line bg-white px-2 py-1.5 hover:bg-slate-50">
                             {% if user.foto_perfil %}
-                            <img src="{{ url_for('static', path=user.foto_perfil) }}" alt="" class="h-8 w-8 rounded-full object-cover" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+                            <img src="{{ user.foto_perfil if user.foto_perfil[:5] == 'data:' else url_for('static', path=user.foto_perfil) }}" alt="" class="h-8 w-8 rounded-full object-cover" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
                             <span class="avatar h-8 w-8 text-xs" hidden>{{ (user.nombre or user.username)[:2].upper() }}</span>
                             {% else %}
                             <span class="avatar h-8 w-8 text-xs">{{ (user.nombre or user.username)[:2].upper() }}</span>

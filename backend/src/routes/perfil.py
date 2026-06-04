@@ -1,6 +1,3 @@
-import uuid
-from pathlib import Path
-
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 
@@ -12,10 +9,10 @@ from backend.src.services.validation_service import normalizar_telefono_chile, v
 from backend.src.services.art_service import cargar_registros_por_usuario
 from backend.src.services.notification_service import get_notifications
 from backend.src.services.notification_service import mark_read
+from backend.src.services.upload_service import save_art_image
 
 router = APIRouter()
 MAX_PROFILE_IMAGE_BYTES = 2 * 1024 * 1024
-ALLOWED_PROFILE_EXTENSIONS = {".jpg": "JPEG", ".jpeg": "JPEG", ".png": "PNG", ".webp": "WEBP"}
 
 
 def _initials(user: dict) -> str:
@@ -45,46 +42,11 @@ def _render_profile_edit(request: Request, user: dict, error: str | None = None,
     return response
 
 
-def _safe_profile_path(base_dir: Path, stored_path: str) -> Path | None:
-    if not stored_path:
-        return None
-    filename = Path(stored_path).name
-    candidate = (base_dir / filename).resolve()
-    base = base_dir.resolve()
-    if base not in candidate.parents and candidate != base:
-        return None
-    return candidate
-
-
 async def _guardar_foto_perfil(request: Request, archivo: UploadFile, user: dict) -> str:
-    original_name = archivo.filename or ""
-    extension = Path(original_name).suffix.lower()
-    if extension not in ALLOWED_PROFILE_EXTENSIONS:
-        raise HTTPException(status_code=400, detail="La foto debe ser JPG, PNG o WEBP")
-    contenido = await archivo.read()
-    if not contenido:
+    if not archivo.filename:
         return user.get("foto_perfil") or ""
-    if len(contenido) > MAX_PROFILE_IMAGE_BYTES:
-        raise HTTPException(status_code=400, detail="La foto debe pesar máximo 2 MB")
-    try:
-        from PIL import Image
-        import io
-
-        image = Image.open(io.BytesIO(contenido))
-        image.verify()
-        if image.format != ALLOWED_PROFILE_EXTENSIONS[extension]:
-            raise HTTPException(status_code=400, detail="El contenido de la imagen no coincide con su extensión")
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail="La foto no parece ser una imagen válida") from exc
-    upload_dir = request.app.state.profile_upload_dir
-    filename = f"{uuid.uuid4().hex}{extension}"
-    (upload_dir / filename).write_bytes(contenido)
-    anterior = _safe_profile_path(upload_dir, user.get("foto_perfil") or "")
-    if anterior and anterior.exists():
-        anterior.unlink()
-    return f"uploads/perfiles/{filename}"
+    imagen = await save_art_image(request.app.state.profile_upload_dir, archivo, max_bytes=MAX_PROFILE_IMAGE_BYTES)
+    return imagen["src"]
 
 
 @router.get("/perfil", response_class=HTMLResponse)
@@ -196,9 +158,5 @@ def eliminar_foto_perfil(request: Request, csrf_token: str = Form(...), user=Dep
     if not user:
         return RedirectResponse("/login", status_code=303)
     validate_csrf_token(request, csrf_token)
-    upload_dir = request.app.state.profile_upload_dir
-    foto = _safe_profile_path(upload_dir, user.get("foto_perfil") or "")
-    if foto and foto.exists():
-        foto.unlink()
     actualizar_foto_perfil(user["username"], "")
     return RedirectResponse("/perfil/editar", status_code=303)

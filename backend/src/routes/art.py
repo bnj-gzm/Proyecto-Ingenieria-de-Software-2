@@ -149,11 +149,10 @@ async def guardar_art(
     if not riesgos or any(not item["secuencia"] or not item["riesgo"] or not item["control"] for item in riesgos):
         raise HTTPException(status_code=400, detail="Debes completar secuencia, riesgo y control")
     archivos = []
-    upload_dir = request.app.state.art_upload_dir
     for archivo in evidencia or []:
         if not archivo.filename:
             continue
-        archivos.append(await save_art_image(upload_dir, archivo))
+        archivos.append(await save_art_image(request.app.state.art_upload_dir, archivo))
     id_art = str(uuid.uuid4())[:8]
     guardar_registro(
         {
@@ -293,11 +292,10 @@ async def editar_art_post(
         raise HTTPException(status_code=400, detail="Debes completar secuencia, riesgo y control")
         
     archivos = registro_existente.get("evidencia", []).copy()
-    upload_dir = request.app.state.art_upload_dir
     for archivo in evidencia or []:
         if not archivo.filename:
             continue
-        archivos.append(await save_art_image(upload_dir, archivo))
+        archivos.append(await save_art_image(request.app.state.art_upload_dir, archivo))
         
     registro_actualizado = {
         "empresa": empresa,

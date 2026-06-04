@@ -1,12 +1,48 @@
 from __future__ import annotations
 
+from base64 import b64encode
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
 from backend.src.config.database import _connect
+
+_STATIC_DIR = Path(__file__).resolve().parents[3] / "frontend" / "static"
+_PROFILE_PREFIX = "uploads/perfiles/"
+_MIME_BY_EXTENSION = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+}
+
+
+def _foto_perfil_src(value: Any) -> str:
+    if not value:
+        return ""
+    texto = str(value).strip()
+    if texto.startswith("data:"):
+        return texto
+    if texto.startswith("/static/"):
+        texto = texto[len("/static/"):]
+    if texto.startswith("static/"):
+        texto = texto[len("static/"):]
+    candidate = _STATIC_DIR / texto
+    if not candidate.exists() and texto.startswith(_PROFILE_PREFIX):
+        candidate = _STATIC_DIR / texto
+    if candidate.exists():
+        mime_type = _MIME_BY_EXTENSION.get(candidate.suffix.lower(), "image/jpeg")
+        data = b64encode(candidate.read_bytes()).decode("ascii")
+        return f"data:{mime_type};base64,{data}"
+    return ""
+
+
+def _normalize_user_row(row: dict[str, Any]) -> dict[str, Any]:
+    row["foto_perfil"] = _foto_perfil_src(row.get("foto_perfil") or "")
+    return row
 
 _USER_COLUMNS = """
     id, username, password_hash, rol, nombre, email, rut, telefono, cargo,
@@ -29,7 +65,7 @@ def obtener_usuario(username: str) -> dict[str, Any] | None:
             (username,),
         )
         row = cur.fetchone()
-        return dict(row) if row else None
+        return _normalize_user_row(dict(row)) if row else None
     finally:
         cur.close()
         conn.close()
@@ -48,7 +84,7 @@ def obtener_usuario_por_email(email: str) -> dict[str, Any] | None:
             (email,),
         )
         row = cur.fetchone()
-        return dict(row) if row else None
+        return _normalize_user_row(dict(row)) if row else None
     finally:
         cur.close()
         conn.close()
@@ -65,7 +101,7 @@ def cargar_usuarios() -> list[dict[str, Any]]:
             FROM users ORDER BY id ASC
             """
         )
-        return [dict(row) for row in cur.fetchall()]
+        return [_normalize_user_row(dict(row)) for row in cur.fetchall()]
     finally:
         cur.close()
         conn.close()
@@ -119,7 +155,7 @@ def cargar_usuarios_por_rol(rol: str) -> list[dict[str, Any]]:
             """,
             (rol,),
         )
-        return [dict(row) for row in cur.fetchall()]
+        return [_normalize_user_row(dict(row)) for row in cur.fetchall()]
     finally:
         cur.close()
         conn.close()

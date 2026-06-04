@@ -20,7 +20,7 @@ class ARTCreate(BaseModel):
 
 class ARTResponse(ARTCreate):
     id: str
-    evidencia: List[str] = []
+    evidencia: List[dict] = []
     estado: str = "pendiente"
     comentario_supervisor: str = ""
     revisado_por: str = ""

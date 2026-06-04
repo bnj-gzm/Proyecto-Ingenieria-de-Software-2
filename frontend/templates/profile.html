@@ -9,7 +9,7 @@
       <div class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div class="flex items-center gap-5">
           {% if user.foto_perfil %}
-          <img src="{{ url_for('static', path=user.foto_perfil) }}" alt="" class="h-24 w-24 rounded-full object-cover ring-4 ring-cyan-300/30" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+          <img src="{{ user.foto_perfil if user.foto_perfil[:5] == 'data:' else url_for('static', path=user.foto_perfil) }}" alt="" class="h-24 w-24 rounded-full object-cover ring-4 ring-cyan-300/30" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
           <div class="avatar h-24 w-24 text-3xl ring-4 ring-cyan-300/30" hidden>{{ initials }}</div>
           {% else %}
           <div class="avatar h-24 w-24 text-3xl">{{ initials }}</div>
