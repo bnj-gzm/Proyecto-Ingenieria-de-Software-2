@@ -41,7 +41,7 @@
               value="{{ trabajador.username }}"
               data-search="{{ trabajador.nombre or '' }} {{ trabajador.username }} {{ trabajador.email or '' }} {{ trabajador.rol or '' }} {{ trabajador.cargo or '' }}"
             >
-              {{ trabajador.nombre or trabajador.email or trabajador.username }} - {{ trabajador.rol|capitalize }}{% if trabajador.cargo %} / {{ trabajador.cargo }}{% endif %} (@{{ trabajador.username }})
+              {{ trabajador.nombre or trabajador.email or trabajador.username }} - {{ trabajador.rol|capitalize }}
             </option>
             {% else %}
             <option disabled>No hay trabajadores registrados disponibles</option>
