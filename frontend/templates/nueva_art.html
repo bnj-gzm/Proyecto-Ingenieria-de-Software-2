@@ -66,20 +66,12 @@
         </div>
         <div>
           <label class="form-label">Supervisor asignado</label>
-          <select name="supervisor_asignado" required class="form-select">
-            {% for supervisor in supervisores %}
-            <option value="{{ supervisor.username }}">{{ supervisor.nombre or supervisor.username }}{% if supervisor.area %} - {{ supervisor.area }}{% endif %}</option>
-            {% endfor %}
-          </select>
+          <input type="hidden" name="supervisor_asignado" value="{{ user.username }}">
+          <div class="rounded-lg border border-line bg-slate-50 px-4 py-3 font-black">{{ user.nombre or user.email or user.username }}</div>
         </div>
         {% if not trabajadores %}
         <div class="md:col-span-2 rounded-lg border border-amber-200 bg-amber-50 p-4 font-bold text-amber-800">
           Para crear ART debe existir al menos un trabajador registrado.
-        </div>
-        {% endif %}
-        {% if not supervisores %}
-        <div class="md:col-span-2 rounded-lg border border-amber-200 bg-amber-50 p-4 font-bold text-amber-800">
-          Para crear ART completas debe existir al menos un supervisor registrado.
         </div>
         {% endif %}
         <div class="md:col-span-2">
@@ -164,7 +156,7 @@
 
     <div class="app-card app-card-body flex flex-col gap-3 border-l-4 border-l-alert sm:flex-row sm:items-center sm:justify-between">
       <p class="text-sm font-bold text-dartMuted">Si identificas una condición crítica, informa al supervisor antes de continuar.</p>
-      <button type="submit" {% if not supervisores or not trabajadores %}disabled{% endif %} class="btn-primary disabled:cursor-not-allowed disabled:opacity-50">Guardar ART/AST</button>
+      <button type="submit" {% if not trabajadores %}disabled{% endif %} class="btn-primary disabled:cursor-not-allowed disabled:opacity-50">Guardar ART/AST</button>
     </div>
   </form>
 </div>

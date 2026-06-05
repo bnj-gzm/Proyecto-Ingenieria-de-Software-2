@@ -119,7 +119,6 @@ def nueva_art(request: Request, user=Depends(get_current_user)):
     if not can_create_art(user.get("rol", "")):
         return RedirectResponse("/dashboard", status_code=303)
     csrf_token = create_csrf_token()
-    supervisores = cargar_usuarios_por_rol(SUPERVISOR)
     trabajadores = _usuarios_asignables()
     response = templates.TemplateResponse(
         request,
@@ -129,7 +128,6 @@ def nueva_art(request: Request, user=Depends(get_current_user)):
             "checklist": _CHECKLIST,
             "epp": _EPP,
             "user": user,
-            "supervisores": supervisores,
             "trabajadores": trabajadores,
             "fecha_actual": datetime.now().strftime("%Y-%m-%d"),
             "csrf_token": csrf_token,
