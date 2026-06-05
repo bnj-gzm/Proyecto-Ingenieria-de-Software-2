@@ -1,0 +1,38 @@
+[
+  {
+    "id": "8e2046c5-3d29-4f95-9c04-e8b21da8246c",
+    "user": "benjamin.guzman",
+    "title": "ART 9dae2c2c asignada",
+    "message": "Ignacio te asignó una ART para completar y validar.",
+    "action_url": "/art/9dae2c2c",
+    "read": false,
+    "created_at": "2026-06-04T21:34:18.156700"
+  },
+  {
+    "id": "a6817c43-01ef-466d-a6b1-47f1ce5cae11",
+    "user": "benjamin.guzman",
+    "title": "ART 9499ab46 asignada",
+    "message": "Ignacio te asignó una ART para completar y validar.",
+    "action_url": "/art/9499ab46",
+    "read": false,
+    "created_at": "2026-06-04T21:34:25.551858"
+  },
+  {
+    "id": "41396150-b8f9-4eec-82b4-dc4d7545ed40",
+    "user": "ignacio",
+    "title": "ART 9499ab46 requiere atención",
+    "message": "benjamin indicó que no está en condiciones de realizar el trabajo.",
+    "action_url": "/art/9499ab46",
+    "read": false,
+    "created_at": "2026-06-04T21:36:01.759319"
+  },
+  {
+    "id": "a7a25b5b-2427-41cb-96f2-a6d31d42645c",
+    "user": "ignacio",
+    "title": "ART 9dae2c2c aprobada",
+    "message": "todo listo",
+    "action_url": "",
+    "read": false,
+    "created_at": "2026-06-04T21:51:33.644383"
+  }
+]

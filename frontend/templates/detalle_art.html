@@ -20,8 +20,8 @@
       <p class="mt-2 max-w-3xl text-dartMuted">{{ registro.descripcion }}</p>
     </div>
     <div class="flex flex-wrap gap-3">
-      {% if puede_editar %}
-      <a href="/art/{{ registro.id }}/editar" class="btn-secondary">Editar</a>
+      {% if puede_editar or puede_validar %}
+      <a href="/art/{{ registro.id }}/editar" class="btn-secondary">{{ "Completar ART" if puede_validar else "Editar" }}</a>
       {% endif %}
       {% if user.rol == 'admin' or (registro.creado_por == user.username and registro.estado in ['pendiente', 'corregir', 'rechazada']) %}
       <form action="/art/{{ registro.id }}/eliminar" method="post" onsubmit="return confirm('¿Estás seguro de que deseas eliminar esta ART de forma permanente?');">
@@ -46,8 +46,74 @@
         <div class="app-card-body grid gap-4 md:grid-cols-2">
           <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Área</p><p class="font-black">{{ registro.area }}</p></div>
           <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Tipo de tarea</p><p class="font-black">{{ registro.tipo_tarea }}</p></div>
-          <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Asignado a</p><p class="font-black">{{ registro.asignado_a or registro.trabajador }}</p></div>
+          <div class="rounded-lg bg-slate-50 p-4">
+            <p class="text-sm text-dartMuted">Asignado a</p>
+            <p class="font-black">
+              {% if trabajadores_art %}
+              {{ trabajadores_art | map(attribute='nombre') | join(', ') }}
+              {% else %}
+              {{ registro.trabajador }}
+              {% endif %}
+            </p>
+          </div>
           <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Creado</p><p class="font-black">{{ registro.creado_en }}</p></div>
+        </div>
+      </section>
+
+      <section class="app-card overflow-hidden">
+        <div class="app-card-header">
+          <h2 class="text-xl font-black">Validación del equipo ejecutor</h2>
+          <p class="mt-1 text-sm text-dartMuted">Condiciones físicas y psicológicas declaradas por cada integrante asignado.</p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="app-table min-w-[860px]">
+            <thead>
+              <tr>
+                <th>Rol</th>
+                <th>Nombre</th>
+                <th>Cargo</th>
+                <th>Condición</th>
+                <th>Firma digital</th>
+                <th>Observación</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="font-black uppercase text-dartMuted">Líder</td>
+                <td>{{ registro.supervisor }}</td>
+                <td>Supervisor</td>
+                <td><span class="status-badge status-aprobada">Asignado</span></td>
+                <td>{{ registro.creado_en }}</td>
+                <td>-</td>
+              </tr>
+              {% for trabajador in trabajadores_art %}
+              <tr>
+                <td class="font-black uppercase text-dartMuted">Trabajador {{ loop.index }}</td>
+                <td>{{ trabajador.nombre }}</td>
+                <td>{{ trabajador.cargo or "-" }}</td>
+                <td>
+                  {% if trabajador.condicion_ok is sameas true %}
+                  <span class="status-badge status-aprobada">Sí</span>
+                  {% elif trabajador.condicion_ok is sameas false %}
+                  <span class="status-badge status-rechazada">No</span>
+                  {% else %}
+                  <span class="status-badge status-pendiente">Pendiente</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if trabajador.validado_en %}
+                  {{ trabajador.nombre }} validó con su cuenta el {{ trabajador.validado_en }}
+                  {% else %}
+                  Pendiente
+                  {% endif %}
+                </td>
+                <td>{{ trabajador.observacion or "-" }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="6" class="text-center text-dartMuted">No hay trabajadores asignados.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
       </section>
 

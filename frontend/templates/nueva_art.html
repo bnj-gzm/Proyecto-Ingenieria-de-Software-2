@@ -35,7 +35,7 @@
             class="form-input"
             placeholder="Filtra por nombre, rol, cargo o usuario"
           >
-          <select id="trabajador-asignado" name="trabajador_asignado" required class="form-select mt-2" size="5">
+          <select id="trabajador-asignado" name="trabajador_asignado" required multiple class="form-select mt-2" size="6">
             {% for trabajador in trabajadores %}
             <option
               value="{{ trabajador.username }}"
@@ -47,7 +47,7 @@
             <option disabled>No hay trabajadores registrados disponibles</option>
             {% endfor %}
           </select>
-          <p class="mt-2 text-sm text-dartMuted">La ART quedará asignada al trabajador seleccionado y recibirá una notificación.</p>
+          <p class="mt-2 text-sm text-dartMuted">La ART quedará asignada a los trabajadores seleccionados y cada uno recibirá una notificación.</p>
         </div>
         <div>
           <label class="form-label">Área de trabajo</label>

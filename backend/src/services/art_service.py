@@ -94,8 +94,13 @@ def cargar_registros_por_usuario(username: str) -> list[dict[str, Any]]:
     cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         cur.execute(
-            _SELECT + "WHERE creado_por = %s OR asignado_a = %s ORDER BY creado_en DESC, id DESC",
-            (username, username),
+            _SELECT + """
+            WHERE creado_por = %s
+               OR asignado_a = %s
+               OR id IN (SELECT art_id FROM art_trabajadores WHERE username = %s)
+            ORDER BY creado_en DESC, id DESC
+            """,
+            (username, username, username),
         )
         return [_deserialize(dict(row)) for row in cur.fetchall()]
     finally:
@@ -227,6 +232,87 @@ def actualizar_revision_art(id_art: str, estado: str, comentario: str, revisado_
             WHERE id = %s
             """,
             (estado, comentario, revisado_por, revisado_en, id_art),
+        )
+        conn.commit()
+    finally:
+        cur.close()
+        conn.close()
+
+
+def guardar_trabajadores_art(id_art: str, trabajadores: list[dict[str, Any]]) -> None:
+    conn = _connect()
+    cur = conn.cursor()
+    try:
+        for trabajador in trabajadores:
+            cur.execute(
+                """
+                INSERT INTO art_trabajadores (art_id, username, nombre, cargo)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (art_id, username)
+                DO UPDATE SET nombre = EXCLUDED.nombre, cargo = EXCLUDED.cargo
+                """,
+                (
+                    id_art,
+                    trabajador["username"],
+                    trabajador.get("nombre") or trabajador.get("email") or trabajador["username"],
+                    trabajador.get("cargo") or "",
+                ),
+            )
+        conn.commit()
+    finally:
+        cur.close()
+        conn.close()
+
+
+def cargar_trabajadores_art(id_art: str) -> list[dict[str, Any]]:
+    conn = _connect()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        cur.execute(
+            """
+            SELECT id, art_id, username, nombre, cargo, condicion_ok, validado_en, observacion
+            FROM art_trabajadores
+            WHERE art_id = %s
+            ORDER BY id ASC
+            """,
+            (id_art,),
+        )
+        return [dict(row) for row in cur.fetchall()]
+    finally:
+        cur.close()
+        conn.close()
+
+
+def obtener_trabajador_art(id_art: str, username: str) -> dict[str, Any] | None:
+    conn = _connect()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        cur.execute(
+            """
+            SELECT id, art_id, username, nombre, cargo, condicion_ok, validado_en, observacion
+            FROM art_trabajadores
+            WHERE art_id = %s AND username = %s
+            """,
+            (id_art, username),
+        )
+        row = cur.fetchone()
+        return dict(row) if row else None
+    finally:
+        cur.close()
+        conn.close()
+
+
+def validar_trabajador_art(id_art: str, username: str, condicion_ok: bool, observacion: str, validado_en: str) -> None:
+    conn = _connect()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            UPDATE art_trabajadores
+            SET condicion_ok = %s, observacion = %s, validado_en = %s
+            WHERE art_id = %s AND username = %s
+            """,
+            (condicion_ok, observacion, validado_en, id_art, username),
         )
         conn.commit()
     finally:

@@ -13,10 +13,14 @@ from backend.src.services.art_service import (
     cargar_registros,
     cargar_registros_por_supervisor,
     cargar_registros_por_usuario,
+    cargar_trabajadores_art,
     eliminar_registro,
     guardar_registro,
+    guardar_trabajadores_art,
+    obtener_trabajador_art,
     obtener_registro,
     actualizar_registro,
+    validar_trabajador_art,
 )
 from backend.src.services.pdf_service import generar_art_pdf
 from backend.src.services.upload_service import save_art_image
@@ -65,7 +69,11 @@ def _es_supervisor_asignado(registro: dict, user: dict) -> bool:
 
 
 def _es_asignado(registro: dict, user: dict) -> bool:
-    return (registro.get("asignado_a") or "").strip().lower() == user.get("username", "").strip().lower()
+    username = user.get("username", "")
+    return (
+        obtener_trabajador_art(registro.get("id", ""), username) is not None
+        or (registro.get("asignado_a") or "").strip().lower() == username.strip().lower()
+    )
 
 
 def _puede_ver_art(registro: dict, user: dict) -> bool:
@@ -80,8 +88,12 @@ def _puede_ver_art(registro: dict, user: dict) -> bool:
 def _puede_editar_art(registro: dict, user: dict) -> bool:
     return (
         registro.get("estado") in {"pendiente", "corregir"}
-        and (registro.get("creado_por") == user.get("username") or _es_asignado(registro, user))
+        and registro.get("creado_por") == user.get("username")
     )
+
+
+def _puede_validar_art(registro: dict, user: dict) -> bool:
+    return registro.get("estado") in {"pendiente", "corregir"} and _es_asignado(registro, user)
 
 
 def _usuarios_asignables() -> list[dict]:
@@ -107,8 +119,17 @@ def dashboard(request: Request, user=Depends(get_current_user)):
         registros = cargar_registros_por_supervisor(user["username"])
     else:
         registros = cargar_registros_por_usuario(user["username"])
+    art_asignadas = []
+    if user.get("rol") not in {"admin", SUPERVISOR}:
+        for registro in registros:
+            validacion = obtener_trabajador_art(registro["id"], user["username"])
+            if validacion:
+                registro["validacion_trabajador"] = validacion
+                art_asignadas.append(registro)
     return templates.TemplateResponse(
-        request, "dashboard.html", {"request": request, "user": user, "registros": registros}
+        request,
+        "dashboard.html",
+        {"request": request, "user": user, "registros": registros, "art_asignadas": art_asignadas},
     )
 
 
@@ -144,7 +165,7 @@ async def guardar_art(
     area: str = Form(...),
     tipo_tarea: str = Form(...),
     descripcion: str = Form(...),
-    trabajador_asignado: str = Form(...),
+    trabajador_asignado: List[str] = Form(...),
     supervisor_asignado: str = Form(...),
     checklist: Optional[List[str]] = Form(None),
     epp: Optional[List[str]] = Form(None),
@@ -161,16 +182,13 @@ async def guardar_art(
     if not can_create_art(user.get("rol", "")):
         raise HTTPException(status_code=403, detail="No tienes permiso para crear ART")
     validate_csrf_token(request, csrf_token)
-    trabajador_user = next(
-        (
-            trabajador
-            for trabajador in _usuarios_asignables()
-            if trabajador["username"] == trabajador_asignado
-        ),
-        None,
-    )
-    if not trabajador_user:
-        raise HTTPException(status_code=400, detail="Debes seleccionar un usuario registrado")
+    usernames_asignados = list(dict.fromkeys(trabajador_asignado))
+    trabajadores_disponibles = _usuarios_asignables()
+    trabajadores_asignados = [
+        trabajador for trabajador in trabajadores_disponibles if trabajador["username"] in usernames_asignados
+    ]
+    if not trabajadores_asignados:
+        raise HTTPException(status_code=400, detail="Debes seleccionar al menos un trabajador registrado")
     if len(checklist or []) != len(_CHECKLIST):
         raise HTTPException(status_code=400, detail="Debes completar todo el checklist de seguridad")
     if not epp:
@@ -180,7 +198,10 @@ async def guardar_art(
     if not evidencia:
         raise HTTPException(status_code=400, detail="Debes adjuntar al menos una imagen de evidencia")
     supervisor_user = next((u for u in cargar_usuarios_por_rol(SUPERVISOR) if u["username"] == supervisor_asignado), None)
-    trabajador = trabajador_user.get("nombre") or trabajador_user.get("email") or trabajador_user["username"]
+    trabajador = ", ".join(
+        trabajador_user.get("nombre") or trabajador_user.get("email") or trabajador_user["username"]
+        for trabajador_user in trabajadores_asignados
+    )
     supervisor = (supervisor_user or {}).get("nombre") or supervisor_asignado
     riesgos = []
     for seq, risk, ctrl in zip(secuencia or [], riesgo or [], control or []):
@@ -210,16 +231,18 @@ async def guardar_art(
         "evidencia": archivos,
         "creado_en": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "creado_por": user["username"],
-        "asignado_a": trabajador_user["username"],
+        "asignado_a": trabajadores_asignados[0]["username"],
         "supervisor_asignado": supervisor_asignado,
     }
     guardar_registro(registro)
-    add_notification(
-        trabajador_user["username"],
-        f"ART {id_art} asignada",
-        f"{user.get('nombre') or user.get('username')} te asignó una ART para completar.",
-        f"/art/{id_art}",
-    )
+    guardar_trabajadores_art(id_art, trabajadores_asignados)
+    for trabajador_user in trabajadores_asignados:
+        add_notification(
+            trabajador_user["username"],
+            f"ART {id_art} asignada",
+            f"{user.get('nombre') or user.get('username')} te asignó una ART para completar y validar.",
+            f"/art/{id_art}",
+        )
     return RedirectResponse(f"/art/{id_art}", status_code=303)
 
 
@@ -236,6 +259,11 @@ def detalle_art(request: Request, id_art: str, user=Depends(get_current_user)):
     if user.get("rol") == SUPERVISOR and not supervisor_asignado:
         return RedirectResponse("/dashboard", status_code=303)
     csrf_token = create_csrf_token()
+    trabajadores_art = cargar_trabajadores_art(id_art)
+    validacion_actual = next(
+        (item for item in trabajadores_art if item.get("username") == user.get("username")),
+        None,
+    )
     # Only allow supervisor to review if assigned AND the ART is not already approved/rejected
     puede_revisar = supervisor_asignado and registro.get("estado") not in {"aprobada", "rechazada"}
     response = templates.TemplateResponse(
@@ -248,7 +276,10 @@ def detalle_art(request: Request, id_art: str, user=Depends(get_current_user)):
             "csrf_token": csrf_token,
             "puede_revisar": puede_revisar,
             "puede_editar": _puede_editar_art(registro, user),
+            "puede_validar": _puede_validar_art(registro, user),
             "puede_descargar_pdf": registro.get("estado") in {"aprobada", "rechazada"},
+            "trabajadores_art": trabajadores_art,
+            "validacion_actual": validacion_actual,
         },
     )
     set_csrf_cookie(response, csrf_token)
@@ -263,11 +294,24 @@ def editar_art_view(request: Request, id_art: str, user=Depends(get_current_user
     if not registro:
         return RedirectResponse("/dashboard", status_code=303)
     
+    csrf_token = create_csrf_token()
+    validacion_actual = obtener_trabajador_art(id_art, user["username"])
+    if validacion_actual and _puede_validar_art(registro, user):
+        response = templates.TemplateResponse(
+            request,
+            "validar_art.html",
+            {
+                "request": request,
+                "user": user,
+                "csrf_token": csrf_token,
+                "registro": registro,
+                "validacion_actual": validacion_actual,
+            },
+        )
+        set_csrf_cookie(response, csrf_token)
+        return response
     if not _puede_editar_art(registro, user):
         return RedirectResponse("/dashboard", status_code=303)
-        
-    csrf_token = create_csrf_token()
-    supervisores = cargar_usuarios_por_rol(SUPERVISOR)
     
     response = templates.TemplateResponse(
         request,
@@ -277,9 +321,9 @@ def editar_art_view(request: Request, id_art: str, user=Depends(get_current_user
             "checklist": _CHECKLIST,
             "epp": _EPP,
             "user": user,
-            "supervisores": supervisores,
             "csrf_token": csrf_token,
             "registro": registro,
+            "validacion_actual": None,
         },
     )
     set_csrf_cookie(response, csrf_token)
@@ -357,6 +401,44 @@ async def editar_art_post(
     }
     
     actualizar_registro(id_art, registro_actualizado)
+    return RedirectResponse(f"/art/{id_art}", status_code=303)
+
+
+@router.post("/art/{id_art}/validar")
+def validar_art_trabajador(
+    request: Request,
+    id_art: str,
+    condicion_ok: str = Form(...),
+    observacion_validacion: str = Form(""),
+    csrf_token: str = Form(...),
+    user=Depends(get_current_user),
+):
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    validate_csrf_token(request, csrf_token)
+    registro = obtener_registro(id_art)
+    if not registro:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+    if not _puede_validar_art(registro, user):
+        raise HTTPException(status_code=403, detail="No tienes permiso para validar esta ART")
+    if condicion_ok not in {"si", "no"}:
+        raise HTTPException(status_code=400, detail="Debes validar tus condiciones físicas y psicológicas")
+    condicion_es_ok = condicion_ok == "si"
+    validado_en = datetime.now().strftime("%Y-%m-%d %H:%M")
+    validar_trabajador_art(
+        id_art,
+        user["username"],
+        condicion_es_ok,
+        observacion_validacion.strip(),
+        validado_en,
+    )
+    if not condicion_es_ok and registro.get("supervisor_asignado"):
+        add_notification(
+            registro["supervisor_asignado"],
+            f"ART {id_art} requiere atención",
+            f"{user.get('nombre') or user.get('username')} indicó que no está en condiciones de realizar el trabajo.",
+            f"/art/{id_art}",
+        )
     return RedirectResponse(f"/art/{id_art}", status_code=303)
 
 
