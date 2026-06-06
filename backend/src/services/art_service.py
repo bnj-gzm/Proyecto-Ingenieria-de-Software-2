@@ -327,7 +327,7 @@ def resetear_validaciones_trabajadores(id_art: str) -> None:
         cur.execute(
             """
             UPDATE art_trabajadores
-            SET condicion_ok = NULL, observacion = NULL, validado_en = NULL
+            SET condicion_ok = NULL, observacion = '', validado_en = ''
             WHERE art_id = %s
             """,
             (id_art,)

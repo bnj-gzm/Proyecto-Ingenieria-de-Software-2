@@ -97,5 +97,50 @@
     "action_url": "/art/64120178",
     "read": false,
     "created_at": "2026-06-06T17:07:15.018743"
+  },
+  {
+    "id": "993037b2-d06f-419d-8fc7-e9fc616ffc58",
+    "user": "ignacio",
+    "title": "ART 64120178 aprobada",
+    "message": "si",
+    "action_url": "",
+    "read": false,
+    "created_at": "2026-06-06T17:32:05.358813"
+  },
+  {
+    "id": "361286e1-e5e1-48e5-b6a7-07c03f12c35b",
+    "user": "benjamin.guzman",
+    "title": "ART e04fca28 asignada",
+    "message": "Ignacio te asignó una ART para completar y validar.",
+    "action_url": "/art/e04fca28",
+    "read": false,
+    "created_at": "2026-06-06T17:35:21.507341"
+  },
+  {
+    "id": "eb192f94-46a8-43e3-8fc5-3f5dfac8a5b3",
+    "user": "ignacio",
+    "title": "ART e04fca28 aprobada",
+    "message": "si",
+    "action_url": "",
+    "read": false,
+    "created_at": "2026-06-06T17:38:03.535602"
+  },
+  {
+    "id": "948280aa-0df5-496f-be9b-be0384c51b84",
+    "user": "benjamin.guzman",
+    "title": "ART 35842c51 asignada",
+    "message": "Ignacio te asignó una ART para completar y validar.",
+    "action_url": "/art/35842c51",
+    "read": false,
+    "created_at": "2026-06-06T17:40:04.005804"
+  },
+  {
+    "id": "1fae7507-0a15-4732-964e-7d5c6cf03e10",
+    "user": "ignacio",
+    "title": "ART 35842c51 requiere atención",
+    "message": "benjamin indicó que no está en condiciones de realizar el trabajo.",
+    "action_url": "/art/35842c51",
+    "read": false,
+    "created_at": "2026-06-06T17:42:15.097544"
   }
 ]
