@@ -16,7 +16,6 @@
         <option value="">Todos los estados</option>
         <option value="pendiente">Pendiente</option>
         <option value="aprobada">Aprobada</option>
-        <option value="corregir">Observada</option>
         <option value="rechazada">Rechazada</option>
       </select>
       {% if can_manage_users %}
@@ -56,7 +55,7 @@
             <td data-label="Empresa">{{ r.empresa }}</td>
             <td data-label="Tipo tarea">{{ r.tipo_tarea }}</td>
             <td data-label="Fecha">{{ r.fecha }}</td>
-            <td data-label="Estado"><span class="status-badge status-{{ r.estado }}">{{ "Observada" if r.estado == "corregir" else r.estado }}</span></td>
+            <td data-label="Estado"><span class="status-badge status-{{ r.estado }}">{{ r.estado }}</span></td>
             <td data-label="Acciones"><a href="/art/{{ r.id }}" class="btn-secondary px-3 py-2 text-sm">Ver y revisar</a></td>
           </tr>
           {% else %}

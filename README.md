@@ -16,7 +16,7 @@ Aplicación web desarrollada con un enfoque centrado en la simplicidad, velocida
 ## Flujo ART
 1. Un usuario crea una ART y la asigna a un trabajador registrado.
 2. La ART se deriva a un supervisor real del sistema.
-3. El supervisor marca la ART como `aprobada`, `rechazada`, `corregir` o `pendiente`.
+3. El supervisor marca la ART como `aprobada`, `rechazada` o `pendiente`.
 4. La revisión queda guardada con comentario, responsable y fecha.
 
 ## 🚀 Configuración del Entorno Local

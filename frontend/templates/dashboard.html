@@ -3,12 +3,11 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
-{% set stats = namespace(total=0, pendientes=0, aprobadas=0, observadas=0, rechazadas=0) %}
+{% set stats = namespace(total=0, pendientes=0, aprobadas=0, rechazadas=0) %}
 {% for r in registros %}
   {% set stats.total = stats.total + 1 %}
   {% if r.estado == 'pendiente' %}{% set stats.pendientes = stats.pendientes + 1 %}{% endif %}
   {% if r.estado == 'aprobada' %}{% set stats.aprobadas = stats.aprobadas + 1 %}{% endif %}
-  {% if r.estado == 'corregir' %}{% set stats.observadas = stats.observadas + 1 %}{% endif %}
   {% if r.estado == 'rechazada' %}{% set stats.rechazadas = stats.rechazadas + 1 %}{% endif %}
 {% endfor %}
 
@@ -38,9 +37,9 @@
       <p class="mt-2 text-sm text-dartMuted">Listas para respaldo</p>
     </div>
     <div class="metric-card">
-      <p class="text-sm font-black uppercase text-dartMuted">Observadas</p>
-      <p class="mt-3 text-4xl font-black text-orange-600">{{ stats.observadas + stats.rechazadas }}</p>
-      <p class="mt-2 text-sm text-dartMuted">Corrección o rechazo</p>
+      <p class="text-sm font-black uppercase text-dartMuted">Rechazadas</p>
+      <p class="mt-3 text-4xl font-black text-orange-600">{{ stats.rechazadas }}</p>
+      <p class="mt-2 text-sm text-dartMuted">No aprobadas</p>
     </div>
   </section>
 
@@ -162,7 +161,6 @@
           {% elif user.rol == 'supervisor' %}
           <a href="/art/nueva" class="btn-primary">Crear nueva ART</a>
           <a href="/supervisor/art" class="btn-primary">Revisar ART</a>
-          <a href="/supervisor/art" class="btn-secondary">Ver observadas</a>
           {% else %}
           <a href="#mis-art" class="btn-secondary">Ver mis ART</a>
           {% endif %}

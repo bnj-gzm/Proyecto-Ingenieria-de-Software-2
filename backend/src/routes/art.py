@@ -87,13 +87,13 @@ def _puede_ver_art(registro: dict, user: dict) -> bool:
 
 def _puede_editar_art(registro: dict, user: dict) -> bool:
     return (
-        registro.get("estado") in {"pendiente", "corregir"}
+        registro.get("estado") == "pendiente"
         and registro.get("creado_por") == user.get("username")
     )
 
 
 def _puede_validar_art(registro: dict, user: dict) -> bool:
-    return registro.get("estado") in {"pendiente", "corregir"} and _es_asignado(registro, user)
+    return registro.get("estado") == "pendiente" and _es_asignado(registro, user)
 
 
 def _usuarios_asignables() -> list[dict]:
@@ -481,7 +481,7 @@ def borrar_art(
     es_creador = registro.get("creado_por") == user["username"]
     if not es_admin and not es_creador:
         raise HTTPException(status_code=403, detail="No tienes permiso para eliminar esta ART")
-    if not es_admin and registro.get("estado") not in {"pendiente", "corregir", "rechazada"}:
+    if not es_admin and registro.get("estado") not in {"pendiente", "rechazada"}:
         raise HTTPException(status_code=400, detail="Esta ART no puede eliminarse en su estado actual")
     eliminar_registro(id_art)
     return RedirectResponse("/dashboard", status_code=303)

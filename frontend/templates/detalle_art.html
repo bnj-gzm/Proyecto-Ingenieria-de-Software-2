@@ -15,7 +15,7 @@
       <a href="/dashboard" class="text-sm font-black text-techCyan hover:underline">Volver al dashboard</a>
       <div class="mt-3 flex flex-wrap items-center gap-3">
         <h1 class="text-3xl font-black">ART {{ registro.id }}</h1>
-        <span class="status-badge status-{{ registro.estado }}">{{ "Observada" if registro.estado == "corregir" else registro.estado }}</span>
+        <span class="status-badge status-{{ registro.estado }}">{{ registro.estado }}</span>
       </div>
       <p class="mt-2 max-w-3xl text-dartMuted">{{ registro.descripcion }}</p>
     </div>
@@ -23,7 +23,7 @@
       {% if puede_editar or puede_validar %}
       <a href="/art/{{ registro.id }}/editar" class="btn-secondary">{{ "Completar ART" if puede_validar else "Editar" }}</a>
       {% endif %}
-      {% if user.rol == 'admin' or (registro.creado_por == user.username and registro.estado in ['pendiente', 'corregir', 'rechazada']) %}
+      {% if user.rol == 'admin' or (registro.creado_por == user.username and registro.estado in ['pendiente', 'rechazada']) %}
       <form action="/art/{{ registro.id }}/eliminar" method="post" onsubmit="return confirm('¿Estás seguro de que deseas eliminar esta ART de forma permanente?');">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <button type="submit" class="btn-danger">Eliminar</button>
@@ -159,7 +159,6 @@
             <select name="estado" required class="form-select">
               <option value="aprobada" {% if registro.estado == 'aprobada' %}selected{% endif %}>Aceptar ART</option>
               <option value="rechazada" {% if registro.estado == 'rechazada' %}selected{% endif %}>Rechazar ART</option>
-              <option value="corregir" {% if registro.estado == 'corregir' %}selected{% endif %}>Solicitar corrección</option>
               <option value="pendiente" {% if registro.estado == 'pendiente' %}selected{% endif %}>Mantener pendiente</option>
             </select>
           </div>

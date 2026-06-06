@@ -268,9 +268,9 @@ def admin_change_estado(
     # Prevent changing estado once it's finalized
     if registro.get("estado") in {"aprobada", "rechazada"}:
         return RedirectResponse(f"/art/{id_art}", status_code=303)
-    if estado not in {"pendiente", "aprobada", "rechazada", "corregir"}:
+    if estado not in {"pendiente", "aprobada", "rechazada"}:
         raise HTTPException(status_code=400, detail="Estado de ART inválido")
-    if estado in {"aprobada", "rechazada", "corregir"} and not comentario_supervisor.strip():
+    if estado in {"aprobada", "rechazada"} and not comentario_supervisor.strip():
         raise HTTPException(status_code=400, detail="Debes ingresar un comentario de revisión")
     actualizar_revision_art(
         id_art,
