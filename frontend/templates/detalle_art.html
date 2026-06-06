@@ -152,6 +152,7 @@
       {% if puede_revisar %}
       <section class="app-card">
         <div class="app-card-header"><h2 class="text-xl font-black">Resolver revisión</h2></div>
+        {% if todos_validados %}
         <form method="post" action="/supervisor/art/{{ registro.id }}/estado" class="app-card-body space-y-4">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <div>
@@ -168,6 +169,14 @@
           </div>
           <button type="submit" class="btn-primary">Guardar revisión</button>
         </form>
+        {% else %}
+        <div class="app-card-body">
+            <div class="rounded-lg border border-orange-200 bg-orange-50 p-4 text-orange-800">
+                <p class="font-bold">Acción bloqueada</p>
+                <p class="text-sm">Debes esperar a que todos los trabajadores asignados completen y validen la ART antes de poder entregar una resolución.</p>
+            </div>
+        </div>
+        {% endif %}
       </section>
       {% endif %}
     </div>

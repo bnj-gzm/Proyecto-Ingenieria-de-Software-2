@@ -21,6 +21,7 @@ from backend.src.services.art_service import (
     obtener_registro,
     actualizar_registro,
     validar_trabajador_art,
+    resetear_validaciones_trabajadores,
 )
 from backend.src.services.pdf_service import generar_art_pdf
 from backend.src.services.upload_service import save_art_image
@@ -266,6 +267,7 @@ def detalle_art(request: Request, id_art: str, user=Depends(get_current_user)):
     )
     # Only allow supervisor to review if assigned AND the ART is not already approved/rejected
     puede_revisar = supervisor_asignado and registro.get("estado") not in {"aprobada", "rechazada"}
+    todos_validados = all(t.get("condicion_ok") is not None for t in trabajadores_art) if trabajadores_art else False
     response = templates.TemplateResponse(
         request,
         "detalle_art.html",
@@ -280,6 +282,7 @@ def detalle_art(request: Request, id_art: str, user=Depends(get_current_user)):
             "puede_descargar_pdf": registro.get("estado") in {"aprobada", "rechazada"},
             "trabajadores_art": trabajadores_art,
             "validacion_actual": validacion_actual,
+            "todos_validados": todos_validados,
         },
     )
     set_csrf_cookie(response, csrf_token)
@@ -401,6 +404,7 @@ async def editar_art_post(
     }
     
     actualizar_registro(id_art, registro_actualizado)
+    resetear_validaciones_trabajadores(id_art)
     return RedirectResponse(f"/art/{id_art}", status_code=303)
 
 

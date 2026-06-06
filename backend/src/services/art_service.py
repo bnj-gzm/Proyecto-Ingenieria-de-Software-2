@@ -320,6 +320,24 @@ def validar_trabajador_art(id_art: str, username: str, condicion_ok: bool, obser
         conn.close()
 
 
+def resetear_validaciones_trabajadores(id_art: str) -> None:
+    conn = _connect()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            UPDATE art_trabajadores
+            SET condicion_ok = NULL, observacion = NULL, validado_en = NULL
+            WHERE art_id = %s
+            """,
+            (id_art,)
+        )
+        conn.commit()
+    finally:
+        cur.close()
+        conn.close()
+
+
 def contar_art_pendientes() -> int:
     conn = _connect()
     cur = conn.cursor()
