@@ -5,10 +5,10 @@ from fastapi import Request
 from passlib.context import CryptContext
 
 from backend.src.config.settings import settings
-from backend.src.roles import can_review_art
+from backend.src.roles import ADMIN, SUPERVISOR, can_review_art
 from backend.src.services.usuario_service import obtener_usuario
 from backend.src.services.notification_service import get_notifications
-from backend.src.services.art_service import contar_art_pendientes
+from backend.src.services.art_service import contar_art_pendientes, contar_art_pendientes_por_supervisor
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"
@@ -57,7 +57,12 @@ def get_current_user(request: Request):
         return None
     if can_review_art(user.get("rol", "")):
         try:
-            user["pendientes"] = contar_art_pendientes()
+            if user.get("rol") == ADMIN:
+                user["pendientes"] = contar_art_pendientes()
+            elif user.get("rol") == SUPERVISOR:
+                user["pendientes"] = contar_art_pendientes_por_supervisor(user["username"])
+            else:
+                user["pendientes"] = 0
         except Exception:
             user["pendientes"] = 0
     try:

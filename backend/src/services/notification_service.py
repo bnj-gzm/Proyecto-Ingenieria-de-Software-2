@@ -27,13 +27,14 @@ def _write_all(items: list):
     p.write_text(json.dumps(items, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def add_notification(username: str, title: str, message: str):
+def add_notification(username: str, title: str, message: str, action_url: str = ""):
     items = _read_all()
     item = {
         "id": str(uuid4()),
         "user": username,
         "title": title,
         "message": message,
+        "action_url": action_url,
         "read": False,
         "created_at": datetime.now().isoformat(),
     }

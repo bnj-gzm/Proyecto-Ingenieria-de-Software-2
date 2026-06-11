@@ -12,10 +12,12 @@
         </p>
 
         <div class="mt-6 flex gap-3">
+            {% if user.rol == 'admin' or user.rol == 'supervisor' %}
             <a href="/art/nueva"
                class="bg-cyan-600 hover:bg-cyan-700 text-white px-5 py-3 rounded-xl font-semibold">
                 Crear nueva ART
             </a>
+            {% endif %}
 
             <button hx-post="/saludo"
                     hx-target="#respuesta-backend"
@@ -48,7 +50,9 @@
 <section class="bg-white rounded-2xl shadow border border-slate-200 overflow-hidden">
     <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
         <h2 class="text-xl font-bold">Registros recientes</h2>
+        {% if user.rol == 'admin' or user.rol == 'supervisor' %}
         <a href="/art/nueva" class="text-cyan-600 font-semibold hover:underline">Nuevo registro</a>
+        {% endif %}
     </div>
 
     {% if registros %}

@@ -28,6 +28,29 @@
           <input name="empresa" required class="form-input" placeholder="Ej: Empresa contratista SpA">
         </div>
         <div>
+          <label class="form-label">Trabajador asignado</label>
+          <input
+            id="trabajador-busqueda"
+            type="text"
+            autocomplete="off"
+            class="form-input"
+            placeholder="Filtra por nombre, rol, cargo o usuario"
+          >
+          <select id="trabajador-asignado" name="trabajador_asignado" required multiple class="form-select mt-2" size="6">
+            {% for trabajador in trabajadores %}
+            <option
+              value="{{ trabajador.username }}"
+              data-search="{{ trabajador.nombre or '' }} {{ trabajador.username }} {{ trabajador.email or '' }} {{ trabajador.rol or '' }} {{ trabajador.cargo or '' }}"
+            >
+              {{ trabajador.nombre or trabajador.email or trabajador.username }} - {{ trabajador.rol|capitalize }}
+            </option>
+            {% else %}
+            <option disabled>No hay trabajadores registrados disponibles</option>
+            {% endfor %}
+          </select>
+          <p class="mt-2 text-sm text-dartMuted">La ART quedará asignada a los trabajadores seleccionados y cada uno recibirá una notificación.</p>
+        </div>
+        <div>
           <label class="form-label">Área de trabajo</label>
           <input name="area" required class="form-input" placeholder="Ej: Planta, taller, mina, bodega">
         </div>
@@ -42,6 +65,16 @@
             <option value="No rutinaria">No rutinaria</option>
           </select>
         </div>
+        <div>
+          <label class="form-label">Supervisor asignado</label>
+          <input type="hidden" name="supervisor_asignado" value="{{ user.username }}">
+          <div class="rounded-lg border border-line bg-slate-50 px-4 py-3 font-black">{{ user.nombre or user.email or user.username }}</div>
+        </div>
+        {% if not trabajadores %}
+        <div class="md:col-span-2 rounded-lg border border-amber-200 bg-amber-50 p-4 font-bold text-amber-800">
+          Para crear ART debe existir al menos un trabajador registrado.
+        </div>
+        {% endif %}
         <div class="md:col-span-2">
           <label class="form-label">Descripción de la tarea</label>
           <textarea name="descripcion" required rows="4" class="form-textarea" placeholder="Describe la actividad que se realizará..."></textarea>
@@ -130,48 +163,26 @@
     </section>
 
     <div class="app-card app-card-body flex flex-col gap-3 border-l-4 border-l-alert sm:flex-row sm:items-center sm:justify-between">
-      <p class="text-sm font-bold text-dartMuted">Al guardar, podrás enviar el enlace individual a cada trabajador desde el detalle de la ART.</p>
-      <button type="submit" {% if trabajadores|length < min_trabajadores %}disabled{% endif %} class="btn-primary disabled:cursor-not-allowed disabled:opacity-50">Guardar ART/AST</button>
+      <p class="text-sm font-bold text-dartMuted">Si identificas una condición crítica, informa al supervisor antes de continuar.</p>
+      <button type="submit" {% if not trabajadores %}disabled{% endif %} class="btn-primary disabled:cursor-not-allowed disabled:opacity-50">Guardar ART/AST</button>
     </div>
   </form>
 </div>
 <script>
-  const minWorkers = {{ min_trabajadores }};
-  const workerCounter = document.getElementById("worker-counter");
-  const workerError = document.getElementById("worker-error");
-  const workerSearch = document.getElementById("worker-search");
-  const form = document.querySelector("form[action='/art/guardar']");
-  function selectedWorkers() {
-    return Array.from(document.querySelectorAll("input[name='trabajadores_asignados']:checked"));
-  }
-  function updateWorkerCounter() {
-    const total = selectedWorkers().length;
-    workerCounter.textContent = `Seleccionados: ${total} / mínimo requerido: ${minWorkers}`;
-    workerCounter.classList.toggle("bg-cyan-100", total >= minWorkers);
-    workerCounter.classList.toggle("text-cyan-900", total >= minWorkers);
-    document.querySelectorAll(".worker-option").forEach((option) => {
-      const checked = option.querySelector("input").checked;
-      option.classList.toggle("border-cyan-400", checked);
-      option.classList.toggle("bg-cyan-50", checked);
-      option.classList.toggle("shadow-sm", checked);
-    });
-  }
-  document.querySelectorAll("input[name='trabajadores_asignados']").forEach((input) => {
-    input.addEventListener("change", updateWorkerCounter);
-  });
-  workerSearch?.addEventListener("input", () => {
-    const term = workerSearch.value.toLowerCase();
-    document.querySelectorAll(".worker-option").forEach((option) => {
-      option.style.display = option.dataset.search.toLowerCase().includes(term) ? "" : "none";
-    });
-  });
-  form?.addEventListener("submit", (event) => {
-    if (selectedWorkers().length < minWorkers) {
-      event.preventDefault();
-      workerError.classList.remove("hidden");
-      workerError.scrollIntoView({ behavior: "smooth", block: "center" });
+  (function () {
+    const input = document.getElementById("trabajador-busqueda");
+    const select = document.getElementById("trabajador-asignado");
+    if (!input || !select) return;
+
+    function filterWorkers() {
+      const query = input.value.trim().toLowerCase();
+      Array.from(select.options).forEach((option) => {
+        const searchable = option.dataset.search.toLowerCase();
+        option.hidden = query && !searchable.includes(query);
+      });
     }
-  });
-  updateWorkerCounter();
+
+    input.addEventListener("input", filterWorkers);
+  })();
 </script>
 {% endblock %}
