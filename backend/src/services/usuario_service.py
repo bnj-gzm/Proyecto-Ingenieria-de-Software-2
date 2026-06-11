@@ -107,6 +107,30 @@ def cargar_usuarios() -> list[dict[str, Any]]:
         conn.close()
 
 
+def cargar_usuarios_asignables() -> list[dict[str, Any]]:
+    conn = _connect()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        cur.execute(
+            """
+            SELECT
+                id,
+                username,
+                rol,
+                COALESCE(nombre, '') AS nombre,
+                COALESCE(email, '') AS email,
+                COALESCE(cargo, '') AS cargo
+            FROM users
+            WHERE rol = 'trabajador'
+            ORDER BY nombre ASC, username ASC
+            """
+        )
+        return [dict(row) for row in cur.fetchall()]
+    finally:
+        cur.close()
+        conn.close()
+
+
 def username_existe(username: str) -> bool:
     conn = _connect()
     cur = conn.cursor()

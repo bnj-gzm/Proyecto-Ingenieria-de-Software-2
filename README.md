@@ -16,7 +16,7 @@ Aplicación web desarrollada con un enfoque centrado en la simplicidad, velocida
 ## Flujo ART
 1. Un usuario crea una ART y la asigna a un trabajador registrado.
 2. La ART se deriva a un supervisor real del sistema.
-3. El supervisor marca la ART como `aprobada`, `rechazada`, `corregir` o `pendiente`.
+3. El supervisor marca la ART como `aprobada`, `rechazada` o `pendiente`.
 4. La revisión queda guardada con comentario, responsable y fecha.
 
 ## 🚀 Configuración del Entorno Local
@@ -38,7 +38,7 @@ Aplicación web desarrollada con un enfoque centrado en la simplicidad, velocida
    ```bash
    python3 -m venv .venv
    .venv/bin/pip install -r requirements.txt
-   .venv/bin/python -m uvicorn backend.app:app --host 127.0.0.1 --port 8000
+   .venv/bin/python -m uvicorn backend.app:app --host 127.0.0.1 --port 8000 --reload
    ```
 
    Primero se crea el entorno virtual, luego se instalan las dependencias y, por último, se inicia el servidor.
@@ -50,3 +50,14 @@ Aplicación web desarrollada con un enfoque centrado en la simplicidad, velocida
    ```
 
    Si el entorno virtual ya existe, se puede omitir la primera línea y ejecutar solo las dos últimas.
+
+4. **Si el puerto 8000 ya está ocupado:**
+   ```bash
+   lsof -i :8000
+   kill <PID>
+   ```
+
+   Luego vuelve a iniciar el servidor:
+   ```bash
+   .venv/bin/python -m uvicorn backend.app:app --host 127.0.0.1 --port 8000 --reload
+   ```

@@ -73,6 +73,19 @@ def init_db() -> None:
                 creado_por TEXT NOT NULL DEFAULT ''
             )
         """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS art_trabajadores (
+                id SERIAL PRIMARY KEY,
+                art_id TEXT NOT NULL REFERENCES art_records(id) ON DELETE CASCADE,
+                username TEXT NOT NULL,
+                nombre TEXT NOT NULL DEFAULT '',
+                cargo TEXT NOT NULL DEFAULT '',
+                condicion_ok BOOLEAN NULL,
+                validado_en TEXT NOT NULL DEFAULT '',
+                observacion TEXT NOT NULL DEFAULT '',
+                UNIQUE (art_id, username)
+            )
+        """)
         cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS nombre TEXT DEFAULT ''")
         cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT DEFAULT ''")
         cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS rut VARCHAR(12) DEFAULT ''")

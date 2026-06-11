@@ -14,5 +14,9 @@ def can_review_art(role: str) -> bool:
     return role in {ADMIN, SUPERVISOR}
 
 
+def can_create_art(role: str) -> bool:
+    return role in {ADMIN, SUPERVISOR}
+
+
 def can_manage_users(role: str) -> bool:
     return role == ADMIN

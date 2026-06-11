@@ -11,6 +11,9 @@
         <div class="font-medium">{{ n.title }}</div>
         <div class="text-gray-600">{{ n.message }}</div>
         <div class="text-xs text-slate-400 mt-1">{{ n.created_at }}</div>
+        {% if n.action_url %}
+        <a href="{{ n.action_url }}" class="mt-2 inline-flex rounded px-3 py-2 bg-slate-900 text-white text-sm font-bold">Abrir ART</a>
+        {% endif %}
       </div>
       <div class="text-right">
         {% if not n.read %}

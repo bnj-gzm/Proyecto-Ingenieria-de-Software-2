@@ -47,11 +47,8 @@
         </div>
         <div>
           <label class="form-label">Supervisor asignado</label>
-          <select name="supervisor_asignado" required class="form-select">
-            {% for supervisor in supervisores %}
-            <option value="{{ supervisor.username }}" {% if registro.supervisor_asignado == supervisor.username %}selected{% endif %}>{{ supervisor.nombre or supervisor.username }}{% if supervisor.area %} - {{ supervisor.area }}{% endif %}</option>
-            {% endfor %}
-          </select>
+          <input type="hidden" name="supervisor_asignado" value="{{ registro.supervisor_asignado }}">
+          <div class="rounded-lg border border-line bg-slate-50 px-4 py-3 font-black">{{ registro.supervisor }}</div>
         </div>
         <div class="md:col-span-2">
           <label class="form-label">Descripción de la tarea</label>
@@ -142,7 +139,7 @@
 
     <div class="flex justify-end gap-3">
       <a href="/art/{{ registro.id }}" class="btn-secondary">Cancelar</a>
-      <button type="submit" {% if not supervisores %}disabled{% endif %} class="btn-primary disabled:cursor-not-allowed disabled:opacity-50">Guardar cambios</button>
+      <button type="submit" class="btn-primary disabled:cursor-not-allowed disabled:opacity-50">Guardar cambios</button>
     </div>
   </form>
 </div>
