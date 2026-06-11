@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import secrets
 from pathlib import Path
 from typing import Any
+from datetime import datetime, timedelta, timezone
 
 from psycopg2.extras import RealDictCursor
 
-from backend.src.config.database import _connect, _dump_json, _load_json_list
+from backend.src.config.database import _connect, _dump_json, _load_json_dict, _load_json_list
 
 _SELECT = """
     SELECT id, empresa, trabajador, area, fecha, tipo_tarea, descripcion,
@@ -78,18 +80,225 @@ def _deserialize(row: dict) -> dict:
     return row
 
 
-def cargar_registros() -> list[dict[str, Any]]:
+def _deserialize_asignacion(row: dict) -> dict[str, Any]:
+    row["respuestas"] = _load_json_dict(row.pop("respuestas_json", "{}"))
+    row["evidencia_trabajador"] = _normalize_evidence_list(_load_json_list(row.pop("evidencia_trabajador_json", "[]")))
+    if row.get("estado_respuesta") == "fallido":
+        row["estado_envio"] = "envio_fallido"
+        row["estado_respuesta"] = "pendiente"
+    art_keys = {
+        "art_empresa": "empresa",
+        "art_area": "area",
+        "art_fecha": "fecha",
+        "art_tipo_tarea": "tipo_tarea",
+        "art_descripcion": "descripcion",
+        "art_supervisor": "supervisor",
+        "art_estado": "estado",
+    }
+    art = {}
+    for source, target in art_keys.items():
+        if source in row:
+            art[target] = row.pop(source)
+    if art:
+        art["id"] = row.get("art_id")
+        row["art"] = art
+    row["con_observacion"] = bool(
+        row["respuestas"].get("con_observacion")
+        or row["respuestas"].get("observaciones")
+        or row["respuestas"].get("observaciones_por_pregunta")
+    )
+    return row
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _new_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def _assignment_summary(asignaciones: list[dict[str, Any]]) -> dict[str, int]:
+    total = len(asignaciones)
+    response_done_states = {"respondido", "con_observacion", "aprobado", "observado", "rechazado"}
+    respondidos = sum(1 for item in asignaciones if item.get("estado_respuesta") in response_done_states)
+    enviados = sum(1 for item in asignaciones if item.get("estado_envio") == "enviado")
+    pendientes = sum(1 for item in asignaciones if item.get("estado_respuesta") == "pendiente")
+    fallidos = sum(1 for item in asignaciones if item.get("estado_envio") == "envio_fallido")
+    firmas = sum(1 for item in asignaciones if item.get("firma_valor") or item.get("firma_imagen_base64"))
+    con_observaciones = sum(1 for item in asignaciones if item.get("con_observacion"))
+    aprobados = sum(1 for item in asignaciones if item.get("estado_respuesta") == "aprobado")
+    evidencias = sum(1 for item in asignaciones if item.get("evidencia_trabajador"))
+    return {
+        "total": total,
+        "respondidos": respondidos,
+        "enviados": enviados,
+        "pendientes": pendientes,
+        "fallidos": fallidos,
+        "firmas": firmas,
+        "con_observaciones": con_observaciones,
+        "aprobados": aprobados,
+        "evidencias": evidencias,
+        "faltantes": max(total - respondidos, 0),
+    }
+
+
+def cargar_asignaciones_art(id_art: str) -> list[dict[str, Any]]:
     conn = _connect()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        cur.execute(_SELECT + "ORDER BY creado_en DESC, id DESC")
-        return [_deserialize(dict(row)) for row in cur.fetchall()]
+        cur.execute(
+            """
+            SELECT ata.id, ata.art_id, ata.trabajador_id,
+                   COALESCE(NULLIF(ata.email, ''), u.email, '') AS email,
+                   COALESCE(NULLIF(ata.nombre, ''), u.nombre, u.username, '') AS nombre,
+                   COALESCE(NULLIF(ata.rut, ''), u.rut, '') AS rut,
+                   COALESCE(NULLIF(ata.cargo, ''), u.cargo, '') AS cargo,
+                   COALESCE(NULLIF(ata.area, ''), u.area, '') AS area,
+                   COALESCE(NULLIF(ata.telefono, ''), u.telefono, '') AS telefono,
+                   u.username,
+                   ata.token_acceso, ata.token_expires_at, ata.estado_envio, ata.estado_respuesta,
+                   ata.fecha_envio, ata.fecha_respuesta, ata.respuestas_json, ata.evidencia_trabajador_json,
+                   ata.firma_tipo, ata.firma_valor, ata.firma_imagen_path,
+                   ata.firma_imagen_base64, ata.documento_firma, ata.comentario_revision,
+                   ata.fecha_revision, ata.supervisor_revisor_id, ata.created_at, ata.updated_at
+            FROM art_trabajadores_asignados ata
+            LEFT JOIN users u ON u.id = ata.trabajador_id
+            WHERE ata.art_id = %s
+            ORDER BY nombre ASC, email ASC
+            """,
+            (id_art,),
+        )
+        return [_deserialize_asignacion(dict(row)) for row in cur.fetchall()]
     finally:
         cur.close()
         conn.close()
 
 
-def cargar_registros_por_usuario(username: str) -> list[dict[str, Any]]:
+def guardar_asignaciones_art(id_art: str, trabajadores: list[dict[str, Any]]) -> None:
+    conn = _connect()
+    cur = conn.cursor()
+    try:
+        for trabajador in trabajadores:
+            cur.execute(
+                """
+                INSERT INTO art_trabajadores_asignados (
+                    art_id, trabajador_id, email, nombre, rut, cargo, area, telefono,
+                    token_acceso, token_expires_at, estado_envio, estado_respuesta
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'pendiente', 'pendiente')
+                ON CONFLICT (art_id, trabajador_id) DO UPDATE SET
+                    email = EXCLUDED.email,
+                    nombre = EXCLUDED.nombre,
+                    rut = EXCLUDED.rut,
+                    cargo = EXCLUDED.cargo,
+                    area = EXCLUDED.area,
+                    telefono = EXCLUDED.telefono,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (
+                    id_art,
+                    trabajador["id"],
+                    trabajador.get("email", ""),
+                    trabajador.get("nombre") or trabajador.get("username", ""),
+                    trabajador.get("rut", ""),
+                    trabajador.get("cargo", ""),
+                    trabajador.get("area", ""),
+                    trabajador.get("telefono", ""),
+                    _new_token(),
+                    _now() + timedelta(days=7),
+                ),
+            )
+        conn.commit()
+    finally:
+        cur.close()
+        conn.close()
+
+
+def preparar_envio_asignacion(id_asignacion: int) -> dict[str, Any] | None:
+    conn = _connect()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        expires_at = _now() + timedelta(days=7)
+        cur.execute(
+            """
+            UPDATE art_trabajadores_asignados
+            SET token_acceso = CASE
+                    WHEN token_acceso = '' OR token_expires_at IS NULL OR token_expires_at < CURRENT_TIMESTAMP
+                    THEN %s ELSE token_acceso END,
+                token_expires_at = %s,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s AND estado_respuesta NOT IN ('respondido', 'con_observacion', 'aprobado', 'observado', 'rechazado')
+            RETURNING id, art_id, trabajador_id, email, nombre, rut, cargo, area, telefono, token_acceso,
+                      token_expires_at, estado_envio, estado_respuesta, fecha_envio, fecha_respuesta,
+                      respuestas_json, evidencia_trabajador_json, firma_tipo, firma_valor, firma_imagen_path,
+                      firma_imagen_base64, documento_firma, comentario_revision,
+                      fecha_revision, supervisor_revisor_id, created_at, updated_at
+            """,
+            (_new_token(), expires_at, id_asignacion),
+        )
+        row = cur.fetchone()
+        conn.commit()
+        return _deserialize_asignacion(dict(row)) if row else None
+    finally:
+        cur.close()
+        conn.close()
+
+
+def marcar_envio_asignacion(id_asignacion: int, estado_envio: bool | str) -> None:
+    conn = _connect()
+    cur = conn.cursor()
+    try:
+        if isinstance(estado_envio, bool):
+            estado = "enviado" if estado_envio else "envio_fallido"
+        else:
+            estado = estado_envio
+        cur.execute(
+            """
+            UPDATE art_trabajadores_asignados
+            SET estado_envio = %s, fecha_envio = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s AND estado_respuesta NOT IN ('respondido', 'con_observacion', 'aprobado', 'observado', 'rechazado')
+            """,
+            (estado, id_asignacion),
+        )
+        conn.commit()
+    finally:
+        cur.close()
+        conn.close()
+
+
+def obtener_asignacion_por_token(token: str) -> dict[str, Any] | None:
+    conn = _connect()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        cur.execute(
+            """
+            SELECT ata.id, ata.art_id, ata.trabajador_id,
+                   COALESCE(NULLIF(ata.email, ''), u.email, '') AS email,
+                   COALESCE(NULLIF(ata.nombre, ''), u.nombre, u.username, '') AS nombre,
+                   COALESCE(NULLIF(ata.rut, ''), u.rut, '') AS rut,
+                   COALESCE(NULLIF(ata.cargo, ''), u.cargo, '') AS cargo,
+                   COALESCE(NULLIF(ata.area, ''), u.area, '') AS area,
+                   COALESCE(NULLIF(ata.telefono, ''), u.telefono, '') AS telefono,
+                   u.username,
+                   ata.token_acceso, ata.token_expires_at, ata.estado_envio, ata.estado_respuesta,
+                   ata.fecha_envio, ata.fecha_respuesta, ata.respuestas_json, ata.evidencia_trabajador_json,
+                   ata.firma_tipo, ata.firma_valor, ata.firma_imagen_path,
+                   ata.firma_imagen_base64, ata.documento_firma, ata.comentario_revision,
+                   ata.fecha_revision, ata.supervisor_revisor_id, ata.created_at, ata.updated_at
+            FROM art_trabajadores_asignados ata
+            LEFT JOIN users u ON u.id = ata.trabajador_id
+            WHERE ata.token_acceso = %s
+            """,
+            (token,),
+        )
+        row = cur.fetchone()
+        return _deserialize_asignacion(dict(row)) if row else None
+    finally:
+        cur.close()
+        conn.close()
+
+
+def obtener_asignacion_art(id_art: str, id_asignacion: int) -> dict[str, Any] | None:
     conn = _connect()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
@@ -102,18 +311,36 @@ def cargar_registros_por_usuario(username: str) -> list[dict[str, Any]]:
             """,
             (username, username, username),
         )
-        return [_deserialize(dict(row)) for row in cur.fetchall()]
+        registros = [_deserialize(dict(row)) for row in cur.fetchall()]
+        if con_asignaciones:
+            for registro in registros:
+                registro["asignaciones"] = cargar_asignaciones_art(registro["id"])
+                registro["progreso_asignaciones"] = _assignment_summary(registro["asignaciones"])
+        else:
+            for registro in registros:
+                registro["asignaciones"] = []
+                registro["progreso_asignaciones"] = {"total": 0, "respondidos": 0, "enviados": 0, "pendientes": 0, "fallidos": 0, "firmas": 0, "con_observaciones": 0, "aprobados": 0, "evidencias": 0, "faltantes": 0}
+        return registros
     finally:
         cur.close()
         conn.close()
 
 
-def cargar_registros_por_supervisor(username: str) -> list[dict[str, Any]]:
+def cargar_registros_por_supervisor(username: str, limite: int = 50, con_asignaciones: bool = True) -> list[dict[str, Any]]:
     conn = _connect()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        cur.execute(_SELECT + "WHERE supervisor_asignado = %s ORDER BY creado_en DESC, id DESC", (username,))
-        return [_deserialize(dict(row)) for row in cur.fetchall()]
+        cur.execute(_SELECT + f"WHERE supervisor_asignado = %s ORDER BY creado_en DESC, id DESC LIMIT {limite}", (username,))
+        registros = [_deserialize(dict(row)) for row in cur.fetchall()]
+        if con_asignaciones:
+            for registro in registros:
+                registro["asignaciones"] = cargar_asignaciones_art(registro["id"])
+                registro["progreso_asignaciones"] = _assignment_summary(registro["asignaciones"])
+        else:
+            for registro in registros:
+                registro["asignaciones"] = []
+                registro["progreso_asignaciones"] = {"total": 0, "respondidos": 0, "enviados": 0, "pendientes": 0, "fallidos": 0, "firmas": 0, "con_observaciones": 0, "aprobados": 0, "evidencias": 0, "faltantes": 0}
+        return registros
     finally:
         cur.close()
         conn.close()
@@ -125,7 +352,12 @@ def obtener_registro(id_art: str) -> dict[str, Any] | None:
     try:
         cur.execute(_SELECT + "WHERE id = %s", (id_art,))
         row = cur.fetchone()
-        return _deserialize(dict(row)) if row else None
+        if not row:
+            return None
+        registro = _deserialize(dict(row))
+        registro["asignaciones"] = cargar_asignaciones_art(registro["id"])
+        registro["progreso_asignaciones"] = _assignment_summary(registro["asignaciones"])
+        return registro
     finally:
         cur.close()
         conn.close()

@@ -8,7 +8,8 @@
     <div>
       <p class="text-sm font-black uppercase text-techCyan">Registro preventivo</p>
       <h1 class="mt-2 text-3xl font-black">Nueva ART/AST Digital</h1>
-      <p class="mt-2 text-dartMuted">Completa antecedentes, controles críticos y evidencia de terreno.</p>
+      <p class="mt-2 text-dartMuted">Completa antecedentes, controles críticos, evidencia y trabajadores asignados.</p>
+      <p class="mt-3 text-sm font-semibold text-dartMuted">Supervisor responsable: <span class="text-dartText">{{ user.nombre or user.email or user.username }}</span></p>
     </div>
     <a href="/dashboard" class="btn-secondary">Cancelar</a>
   </div>
@@ -19,7 +20,7 @@
     <section class="app-card">
       <div class="app-card-header">
         <h2 class="text-xl font-black">Datos generales</h2>
-        <p class="mt-1 text-sm text-dartMuted">Trabajador y fecha se asignan desde la sesión y el servidor.</p>
+        <p class="mt-1 text-sm text-dartMuted">Define la tarea y el contexto operacional que revisarán los trabajadores asignados.</p>
       </div>
       <div class="app-card-body grid gap-5 md:grid-cols-2">
         <div>
@@ -82,30 +83,37 @@
     </section>
 
     <section class="app-card">
-      <div class="app-card-header">
-        <h2 class="text-xl font-black">Checklist de seguridad</h2>
+      <div class="app-card-header flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h2 class="text-xl font-black">Trabajadores asignados</h2>
+          <p class="mt-1 text-sm text-dartMuted">Selecciona al menos {{ min_trabajadores }} trabajadores activos distintos.</p>
+        </div>
+        <span id="worker-counter" class="status-badge bg-slate-100 text-dartText normal-case">Seleccionados: 0 / mínimo requerido: {{ min_trabajadores }}</span>
       </div>
-      <div class="app-card-body grid gap-3 md:grid-cols-2">
-        {% for item in checklist %}
-        <label class="flex items-start gap-3 rounded-lg border border-line bg-slate-50 p-4">
-          <input type="checkbox" name="checklist" value="{{ item }}" required class="mt-1 h-5 w-5">
-          <span class="text-sm font-semibold">{{ item }}</span>
-        </label>
-        {% endfor %}
-      </div>
-    </section>
-
-    <section class="app-card">
-      <div class="app-card-header">
-        <h2 class="text-xl font-black">Elementos de Protección Personal</h2>
-      </div>
-      <div class="app-card-body grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {% for item in epp %}
-        <label class="flex items-center gap-3 rounded-lg border border-line bg-slate-50 p-4">
-          <input type="checkbox" name="epp" value="{{ item }}" class="h-5 w-5">
-          <span class="text-sm font-semibold">{{ item }}</span>
-        </label>
-        {% endfor %}
+      <div class="app-card-body space-y-4">
+        <input id="worker-search" type="search" class="form-input" placeholder="Buscar por nombre, RUT, correo, cargo, área o teléfono">
+        <div id="worker-error" class="alert-error hidden">Debes asignar al menos {{ min_trabajadores }} trabajadores distintos a la ART.</div>
+        <div class="grid gap-3 md:grid-cols-2">
+          {% for trabajador in trabajadores %}
+          <label class="worker-option flex cursor-pointer items-start gap-4 rounded-lg border border-line bg-white p-4 transition hover:border-cyan-300 hover:bg-cyan-50/40" data-search="{{ trabajador.nombre }} {{ trabajador.username }} {{ trabajador.rut }} {{ trabajador.email }} {{ trabajador.telefono }} {{ trabajador.cargo }} {{ trabajador.area }}">
+            <input type="checkbox" name="trabajadores_asignados" value="{{ trabajador.id }}" class="worker-checkbox mt-1 h-5 w-5">
+            <span class="min-w-0 flex-1">
+              <span class="block text-base font-black text-dartText">{{ trabajador.nombre or trabajador.username }}</span>
+              <span class="mt-2 grid gap-1 text-sm text-dartMuted sm:grid-cols-2">
+                <span><strong>RUT:</strong> {{ trabajador.rut or "Sin RUT registrado" }}</span>
+                <span><strong>Cargo:</strong> {{ trabajador.cargo or "Sin cargo registrado" }}</span>
+                <span><strong>Área:</strong> {{ trabajador.area or "Sin área registrada" }}</span>
+                <span><strong>Teléfono:</strong> {{ trabajador.telefono or "Sin teléfono registrado" }}</span>
+              </span>
+              <span class="mt-2 block break-all text-sm font-semibold text-techCyan">{{ trabajador.email or "Sin correo registrado" }}</span>
+            </span>
+          </label>
+          {% else %}
+          <div class="md:col-span-2 rounded-lg border border-amber-200 bg-amber-50 p-4 font-bold text-amber-800">
+            No hay trabajadores activos disponibles para asignar.
+          </div>
+          {% endfor %}
+        </div>
       </div>
     </section>
 
@@ -144,7 +152,7 @@
       <div class="app-card-body grid gap-5 md:grid-cols-2">
         <div>
           <label class="form-label">Adjuntar imágenes de evidencia</label>
-          <input type="file" name="evidencia" multiple required accept=".jpg,.jpeg,.png,.webp" class="form-input bg-white">
+          <input type="file" name="evidencia" multiple accept=".jpg,.jpeg,.png,.webp" class="form-input bg-white">
           <p class="mt-2 text-sm text-dartMuted">JPG, PNG o WEBP. Máximo 5 MB por imagen.</p>
         </div>
         <div>

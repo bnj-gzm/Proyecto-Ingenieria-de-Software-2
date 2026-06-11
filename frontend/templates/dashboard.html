@@ -11,6 +11,82 @@
   {% if r.estado == 'rechazada' %}{% set stats.rechazadas = stats.rechazadas + 1 %}{% endif %}
 {% endfor %}
 
+{% if user.rol == 'trabajador' %}
+{% set assigned = namespace(total=0, pendientes=0, respondidas=0, observadas=0) %}
+{% for item in art_asignadas %}
+  {% set assigned.total = assigned.total + 1 %}
+  {% if item.estado_respuesta in ['respondido', 'con_observacion', 'aprobado', 'observado', 'rechazado'] %}
+    {% set assigned.respondidas = assigned.respondidas + 1 %}
+  {% else %}
+    {% set assigned.pendientes = assigned.pendientes + 1 %}
+  {% endif %}
+  {% if item.con_observacion %}{% set assigned.observadas = assigned.observadas + 1 %}{% endif %}
+{% endfor %}
+
+<div class="space-y-6">
+  <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+    <div>
+      <p class="text-sm font-black uppercase text-techCyan">Mis ART asignadas</p>
+      <h1 class="mt-2 text-3xl font-black sm:text-4xl">Bienvenido, {{ user.nombre or user.email or user.username }}</h1>
+      <p class="mt-2 text-dartMuted">Estas son las ART que tienes asignadas para completar tu validación de seguridad.</p>
+    </div>
+    <a href="/mis-art-asignadas" class="btn-secondary">Ver todas</a>
+  </div>
+
+  <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Asignadas</p><p class="mt-3 text-4xl font-black">{{ assigned.total }}</p></div>
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Pendientes</p><p class="mt-3 text-4xl font-black text-amber-500">{{ assigned.pendientes }}</p></div>
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Respondidas</p><p class="mt-3 text-4xl font-black text-green-600">{{ assigned.respondidas }}</p></div>
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Con observaciones</p><p class="mt-3 text-4xl font-black text-orange-600">{{ assigned.observadas }}</p></div>
+  </section>
+
+  <section id="mis-art" class="app-card overflow-hidden">
+    <div class="app-card-header">
+      <h2 class="text-xl font-black">Pendientes y respuestas</h2>
+      <p class="mt-1 text-sm text-dartMuted">Completa tu validación antes de iniciar el trabajo.</p>
+    </div>
+    <div class="overflow-x-auto p-1">
+      <table class="app-table responsive-table">
+        <thead>
+          <tr>
+            <th>ART</th>
+            <th>Supervisor</th>
+            <th>Fecha</th>
+            <th>Estado</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in art_asignadas[:10] %}
+          <tr>
+            <td data-label="ART">
+              <p class="font-mono font-black">{{ item.art_id }}</p>
+              <p class="text-sm font-bold">{{ item.art.empresa }}</p>
+              <p class="text-xs text-dartMuted">{{ item.art.area }} · {{ item.art.tipo_tarea }}</p>
+            </td>
+            <td data-label="Supervisor">{{ item.art.supervisor }}</td>
+            <td data-label="Fecha">{{ item.art.fecha }}</td>
+            <td data-label="Estado">
+              <span class="status-badge status-{{ item.estado_respuesta }}">{{ item.estado_respuesta }}</span>
+            </td>
+            <td data-label="Acción">
+              {% if item.estado_respuesta in ['respondido', 'con_observacion', 'aprobado', 'observado', 'rechazado'] %}
+              <a href="/art/asignada/{{ item.id }}/respuesta" class="btn-secondary px-3 py-2 text-sm">Ver respuesta</a>
+              {% else %}
+              <a href="/art/asignada/{{ item.id }}/responder" class="btn-primary px-3 py-2 text-sm">Completar</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="py-10 text-center text-dartMuted">Aún no tienes ART asignadas.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% else %}
+
 <div class="space-y-6">
   <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
     <div>
@@ -173,4 +249,5 @@
     </aside>
   </div>
 </div>
+{% endif %}
 {% endblock %}

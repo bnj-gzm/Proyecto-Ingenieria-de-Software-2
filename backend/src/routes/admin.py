@@ -227,7 +227,7 @@ def admin_list_art(request: Request, user=Depends(get_current_user)):
         return RedirectResponse("/login", status_code=303)
     if not can_review_art(user.get("rol", "")):
         return RedirectResponse("/", status_code=303)
-    registros = cargar_registros() if user.get("rol") == "admin" else cargar_registros_por_supervisor(user["username"])
+    registros = cargar_registros(limite=100, con_asignaciones=False) if user.get("rol") == "admin" else cargar_registros_por_supervisor(user["username"], limite=100, con_asignaciones=False)
     csrf_token = create_csrf_token()
     response = templates.TemplateResponse(
         request,

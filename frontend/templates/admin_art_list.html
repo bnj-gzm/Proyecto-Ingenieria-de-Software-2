@@ -36,6 +36,7 @@
             <th>Tipo tarea</th>
             <th>Fecha</th>
             <th>Estado</th>
+            <th>Progreso</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -59,7 +60,7 @@
             <td data-label="Acciones"><a href="/art/{{ r.id }}" class="btn-secondary px-3 py-2 text-sm">Ver y revisar</a></td>
           </tr>
           {% else %}
-          <tr><td colspan="8" class="py-10 text-center text-dartMuted">No hay registros.</td></tr>
+          <tr><td colspan="9" class="py-10 text-center text-dartMuted">No hay registros.</td></tr>
           {% endfor %}
         </tbody>
       </table>

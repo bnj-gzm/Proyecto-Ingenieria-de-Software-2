@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block page_title %}Mis ART asignadas{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div>
+      <p class="text-sm font-black uppercase text-techCyan">Trabajador</p>
+      <h1 class="mt-2 text-3xl font-black">Mis ART asignadas</h1>
+      <p class="mt-2 text-dartMuted">Estas son las ART que tienes asignadas para completar tu validación de seguridad.</p>
+    </div>
+    <a href="/dashboard" class="btn-secondary">Volver al dashboard</a>
+  </div>
+
+  <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    {% for item in art_asignadas %}
+    <article class="app-card app-card-body">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="font-mono text-sm font-black text-techCyan">ART {{ item.art_id }}</p>
+          <h2 class="mt-2 text-lg font-black">{{ item.art.empresa }}</h2>
+          <p class="mt-1 text-sm text-dartMuted">{{ item.art.area }} · {{ item.art.tipo_tarea }}</p>
+        </div>
+        <span class="status-badge status-{{ item.estado_respuesta }}">{{ item.estado_respuesta }}</span>
+      </div>
+      <dl class="mt-5 grid gap-3 text-sm">
+        <div><dt class="font-black text-dartMuted">Supervisor</dt><dd class="font-bold">{{ item.art.supervisor }}</dd></div>
+        <div><dt class="font-black text-dartMuted">Fecha</dt><dd class="font-bold">{{ item.art.fecha }}</dd></div>
+        <div><dt class="font-black text-dartMuted">Descripción</dt><dd class="text-dartMuted">{{ item.art.descripcion }}</dd></div>
+      </dl>
+      <div class="mt-5">
+        {% if item.estado_respuesta in ['respondido', 'con_observacion', 'aprobado', 'observado', 'rechazado'] %}
+        <a href="/art/asignada/{{ item.id }}/respuesta" class="btn-secondary w-full">Ver mi respuesta</a>
+        {% else %}
+        <a href="/art/asignada/{{ item.id }}/responder" class="btn-primary w-full">Completar mi validación</a>
+        {% endif %}
+      </div>
+    </article>
+    {% else %}
+    <div class="app-card app-card-body text-center text-dartMuted md:col-span-2 xl:col-span-3">
+      Aún no tienes ART asignadas.
+    </div>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}
