@@ -1,46 +1,203 @@
 {% extends "base.html" %}
 
+{% block page_title %}Dashboard{% endblock %}
+
 {% block content %}
-<div class="mx-auto max-w-6xl">
-  <div class="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+{% set stats = namespace(total=0, pendientes=0, aprobadas=0, observadas=0, rechazadas=0) %}
+{% for r in registros %}
+  {% set stats.total = stats.total + 1 %}
+  {% if r.estado == 'pendiente' %}{% set stats.pendientes = stats.pendientes + 1 %}{% endif %}
+  {% if r.estado == 'aprobada' %}{% set stats.aprobadas = stats.aprobadas + 1 %}{% endif %}
+  {% if r.estado == 'corregir' %}{% set stats.observadas = stats.observadas + 1 %}{% endif %}
+  {% if r.estado == 'rechazada' %}{% set stats.rechazadas = stats.rechazadas + 1 %}{% endif %}
+{% endfor %}
+
+{% if user.rol == 'trabajador' %}
+{% set assigned = namespace(total=0, pendientes=0, respondidas=0, observadas=0) %}
+{% for item in art_asignadas %}
+  {% set assigned.total = assigned.total + 1 %}
+  {% if item.estado_respuesta in ['respondido', 'con_observacion', 'aprobado', 'observado', 'rechazado'] %}
+    {% set assigned.respondidas = assigned.respondidas + 1 %}
+  {% else %}
+    {% set assigned.pendientes = assigned.pendientes + 1 %}
+  {% endif %}
+  {% if item.con_observacion %}{% set assigned.observadas = assigned.observadas + 1 %}{% endif %}
+{% endfor %}
+
+<div class="space-y-6">
+  <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
     <div>
-      <h1 class="text-3xl font-black tracking-tight sm:text-4xl">Bienvenido, {{ user.nombre or user.email or user.username }}</h1>
-      <p class="mt-2 text-slate-500">Revisa tus registros recientes y continúa con la gestión de trabajo seguro.</p>
+      <p class="text-sm font-black uppercase text-techCyan">Mis ART asignadas</p>
+      <h1 class="mt-2 text-3xl font-black sm:text-4xl">Bienvenido, {{ user.nombre or user.email or user.username }}</h1>
+      <p class="mt-2 text-dartMuted">Estas son las ART que tienes asignadas para completar tu validación de seguridad.</p>
     </div>
-    <div class="grid grid-cols-1 gap-3 sm:flex sm:items-center">
-      <a href="/art/nueva" class="rounded-full bg-cyan-500 px-5 py-3 text-center font-bold text-white hover:bg-cyan-600">Nueva ART</a>
-      {% if user.rol == 'admin' or user.rol == 'supervisor' %}
-      <a href="/supervisor/art" class="rounded-full bg-slate-950 px-5 py-3 text-center font-bold text-white hover:bg-cyan-700">Revisar ART</a>
-      {% endif %}
+    <a href="/mis-art-asignadas" class="btn-secondary">Ver todas</a>
+  </div>
+
+  <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Asignadas</p><p class="mt-3 text-4xl font-black">{{ assigned.total }}</p></div>
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Pendientes</p><p class="mt-3 text-4xl font-black text-amber-500">{{ assigned.pendientes }}</p></div>
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Respondidas</p><p class="mt-3 text-4xl font-black text-green-600">{{ assigned.respondidas }}</p></div>
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Con observaciones</p><p class="mt-3 text-4xl font-black text-orange-600">{{ assigned.observadas }}</p></div>
+  </section>
+
+  <section id="mis-art" class="app-card overflow-hidden">
+    <div class="app-card-header">
+      <h2 class="text-xl font-black">Pendientes y respuestas</h2>
+      <p class="mt-1 text-sm text-dartMuted">Completa tu validación antes de iniciar el trabajo.</p>
+    </div>
+    <div class="overflow-x-auto p-1">
+      <table class="app-table responsive-table">
+        <thead>
+          <tr>
+            <th>ART</th>
+            <th>Supervisor</th>
+            <th>Fecha</th>
+            <th>Estado</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in art_asignadas[:10] %}
+          <tr>
+            <td data-label="ART">
+              <p class="font-mono font-black">{{ item.art_id }}</p>
+              <p class="text-sm font-bold">{{ item.art.empresa }}</p>
+              <p class="text-xs text-dartMuted">{{ item.art.area }} · {{ item.art.tipo_tarea }}</p>
+            </td>
+            <td data-label="Supervisor">{{ item.art.supervisor }}</td>
+            <td data-label="Fecha">{{ item.art.fecha }}</td>
+            <td data-label="Estado">
+              <span class="status-badge status-{{ item.estado_respuesta }}">{{ item.estado_respuesta }}</span>
+            </td>
+            <td data-label="Acción">
+              {% if item.estado_respuesta in ['respondido', 'con_observacion', 'aprobado', 'observado', 'rechazado'] %}
+              <a href="/art/asignada/{{ item.id }}/respuesta" class="btn-secondary px-3 py-2 text-sm">Ver respuesta</a>
+              {% else %}
+              <a href="/art/asignada/{{ item.id }}/responder" class="btn-primary px-3 py-2 text-sm">Completar</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="py-10 text-center text-dartMuted">Aún no tienes ART asignadas.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% else %}
+
+<div class="space-y-6">
+  <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+    <div>
+      <p class="text-sm font-black uppercase text-techCyan">Panel operacional</p>
+      <h1 class="mt-2 text-3xl font-black sm:text-4xl">Bienvenido, {{ user.nombre or user.email or user.username }}</h1>
+      <p class="mt-2 text-dartMuted">Resumen de ART, revisión preventiva y evidencias recientes.</p>
     </div>
   </div>
 
-  <div class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-    <div class="border-b border-slate-200 px-5 py-4">
-      <h2 class="text-xl font-bold">ART recientes</h2>
+  <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div class="metric-card">
+      <p class="text-sm font-black uppercase text-dartMuted">Total ART</p>
+      <p class="mt-3 text-4xl font-black">{{ stats.total }}</p>
+      <p class="mt-2 text-sm text-dartMuted">Registros asociados a tu rol</p>
     </div>
-    <div class="divide-y divide-slate-100">
-      {% for r in registros[:8] %}
-      <div class="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
+    <div class="metric-card">
+      <p class="text-sm font-black uppercase text-dartMuted">Pendientes</p>
+      <p class="mt-3 text-4xl font-black text-amber-500">{{ stats.pendientes }}</p>
+      <p class="mt-2 text-sm text-dartMuted">Requieren seguimiento</p>
+    </div>
+    <div class="metric-card">
+      <p class="text-sm font-black uppercase text-dartMuted">Aprobadas</p>
+      <p class="mt-3 text-4xl font-black text-green-600">{{ stats.aprobadas }}</p>
+      <p class="mt-2 text-sm text-dartMuted">Listas para respaldo</p>
+    </div>
+    <div class="metric-card">
+      <p class="text-sm font-black uppercase text-dartMuted">Observadas</p>
+      <p class="mt-3 text-4xl font-black text-orange-600">{{ stats.observadas + stats.rechazadas }}</p>
+      <p class="mt-2 text-sm text-dartMuted">Corrección o rechazo</p>
+    </div>
+  </section>
+
+  <div class="grid gap-6 xl:grid-cols-[1fr_320px]">
+    <section id="mis-art" class="app-card overflow-hidden">
+      <div class="app-card-header flex items-center justify-between gap-3">
         <div>
-          <div class="font-bold">{{ r.empresa }} — {{ r.trabajador }}</div>
-          <div class="text-sm text-slate-500">{{ r.tipo_tarea }} • {{ r.fecha }}</div>
+          <h2 class="text-xl font-black">Últimas ART</h2>
+          <p class="mt-1 text-sm text-dartMuted">Registros recientes con estado y evidencia.</p>
         </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="rounded-full px-3 py-1 text-sm font-bold
-            {% if r.estado == 'aprobada' %}bg-green-100 text-green-700
-            {% elif r.estado == 'rechazada' %}bg-red-100 text-red-700
-            {% elif r.estado == 'corregir' %}bg-amber-100 text-amber-700
-            {% else %}bg-slate-100 text-slate-700{% endif %}">
-            {{ r.estado }}
-          </span>
-          <a href="/art/{{ r.id }}" class="rounded-full bg-cyan-500 px-4 py-2 font-bold text-white hover:bg-cyan-600">Ver</a>
+        {% if user.rol == 'admin' or user.rol == 'supervisor' %}
+        <a href="/supervisor/art" class="btn-secondary px-3 py-2 text-sm">Ver listado</a>
+        {% endif %}
+      </div>
+      <div class="overflow-x-auto p-1">
+        <table class="app-table responsive-table">
+          <thead>
+            <tr>
+              <th>ART</th>
+              <th>Trabajador</th>
+              <th>Fecha</th>
+              <th>Estado</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in registros[:8] %}
+            <tr>
+              <td data-label="ART">
+                <div class="flex items-center gap-3">
+                  {% if r.evidencia %}
+                  <img src="{{ r.evidencia[0].src }}" alt="Evidencia ART {{ r.id }}" class="art-thumb" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+                  <div class="art-thumb flex items-center justify-center text-xs font-bold text-dartMuted" hidden>ART</div>
+                  {% else %}
+                  <div class="art-thumb flex items-center justify-center text-xs font-bold text-dartMuted">ART</div>
+                  {% endif %}
+                  <div>
+                    <p class="font-black">{{ r.empresa }}</p>
+                    <p class="text-xs text-dartMuted">{{ r.tipo_tarea }}</p>
+                  </div>
+                </div>
+              </td>
+              <td data-label="Trabajador">{{ r.trabajador }}</td>
+              <td data-label="Fecha">{{ r.fecha }}</td>
+              <td data-label="Estado"><span class="status-badge status-{{ r.estado }}">{{ r.estado }}</span></td>
+              <td data-label="Acción"><a href="/art/{{ r.id }}" class="btn-secondary px-3 py-2 text-sm">Ver</a></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="py-10 text-center text-dartMuted">Aún no hay ART recientes.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <aside class="space-y-4">
+      <div class="app-card app-card-body">
+        <h2 class="text-lg font-black">Accesos rápidos</h2>
+        <div class="mt-4 grid gap-3">
+          {% if user.rol == 'admin' %}
+          <a href="/admin/usuarios" class="btn-dark">Gestión de usuarios</a>
+          <a href="/admin/usuarios#importar-usuarios" class="btn-secondary">Importar usuarios</a>
+          <a href="/supervisor/art" class="btn-primary">ART pendientes</a>
+          <a href="#" class="btn-secondary opacity-70">Reportes</a>
+          {% elif user.rol == 'supervisor' %}
+          <a href="/supervisor/art" class="btn-primary">Revisar ART</a>
+          <a href="/supervisor/art" class="btn-secondary">Ver observadas</a>
+          {% else %}
+          {% if user.rol == 'admin' or user.rol == 'supervisor' %}
+          <a href="/art/nueva" class="btn-primary">Crear nueva ART</a>
+          {% endif %}
+          <a href="#mis-art" class="btn-secondary">Ver mis ART</a>
+          {% endif %}
         </div>
       </div>
-      {% else %}
-      <div class="px-5 py-8 text-slate-500">Aún no hay ART recientes.</div>
-      {% endfor %}
-    </div>
+      <div class="app-card app-card-body border-l-4 border-l-[#A7F432]">
+        <p class="text-sm font-black uppercase text-dartMuted">Control preventivo</p>
+        <p class="mt-3 text-sm leading-6 text-dartMuted">Mantén evidencia clara y comentarios de revisión antes de ejecutar trabajos críticos.</p>
+      </div>
+    </aside>
   </div>
 </div>
+{% endif %}
 {% endblock %}

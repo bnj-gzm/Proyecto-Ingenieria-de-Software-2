@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Activar cuenta</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>body{font-family:Inter,system-ui,sans-serif;background:#F4F7FA;color:#111827}.card{border:1px solid #E2E8F0;border-radius:8px;background:#fff;box-shadow:0 12px 30px rgba(15,23,42,.08)}.input{width:100%;border:1px solid #CBD5E1;border-radius:8px;padding:.85rem 1rem;outline:none}.input:focus{border-color:#00A7B5;box-shadow:0 0 0 3px rgba(0,167,181,.14)}</style>
+</head>
+<body>
+  <main class="flex min-h-screen items-center justify-center px-5 py-10">
+    <section class="card w-full max-w-md p-8">
+      {% set brand_logo_size = 'md' %}
+      {% set brand_logo_theme = 'light' %}
+      {% set brand_logo_compact = true %}
+      {% include "components/brand_logo.html" with context %}
+      <h1 class="mt-5 text-3xl font-black">Activar cuenta</h1>
+      <p class="mt-3 text-sm leading-6 text-[#64748B]">Crea tu contraseña para dejar la cuenta activa.</p>
+      {% if error %}<div class="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ error }}</div>{% endif %}
+      {% if cuenta %}
+      <div class="mt-5 rounded-lg bg-slate-50 p-4"><p class="font-black">{{ cuenta.nombre or cuenta.username }}</p><p class="text-sm text-[#64748B]">{{ cuenta.email }}</p></div>
+      {% endif %}
+      <form method="post" action="/activar-cuenta/{{ token }}" class="mt-6 space-y-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="password" name="password" required minlength="8" placeholder="Contraseña" class="input">
+        <input type="password" name="password_confirm" required minlength="8" placeholder="Confirmar contraseña" class="input">
+        <button class="w-full rounded-lg bg-[#00A7B5] px-4 py-3 font-black text-white hover:bg-[#078c99]">Activar cuenta</button>
+      </form>
+      <a href="/login" class="mt-5 block text-center text-sm font-black text-[#0F3D4C]">Volver al login</a>
+    </section>
+  </main>
+</body>
+</html>

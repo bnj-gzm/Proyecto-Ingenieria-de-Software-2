@@ -1,219 +1,254 @@
 {% extends "base.html" %}
 
+{% block page_title %}Detalle ART{% endblock %}
+
 {% block content %}
-
-<div class="mb-6">
-    <div class="flex items-center justify-between">
-        <a href="/dashboard" class="font-semibold text-cyan-600 hover:underline">← Volver al dashboard</a>
-        <div class="flex items-center gap-3">
-            {% if registro.creado_por == user.username and registro.estado in ['pendiente', 'corregir'] %}
-            <a href="/art/{{ registro.id }}/editar" class="rounded-xl bg-amber-500 px-4 py-2 font-semibold text-white shadow transition duration-300 hover:bg-amber-600">
-                ✏️ Editar Registro
-            </a>
-            {% endif %}
-            <form action="/art/{{ registro.id }}/eliminar" method="post" onsubmit="return confirm('¿Estás seguro de que deseas eliminar esta ART de forma permanente?');">
-                <button type="submit" class="rounded-xl bg-red-500 px-4 py-2 font-semibold text-white shadow transition duration-300 hover:bg-red-600">
-                    🗑️ Eliminar Registro
-                </button>
-            </form>
-        </div>
-    </div>
-</div>
-
 {% if not registro %}
-
-<div class="bg-white rounded-2xl shadow p-8 border border-slate-200">
-    <h1 class="text-2xl font-bold text-red-600">Registro no encontrado</h1>
-    <p class="text-slate-600 mt-2">La ART/AST solicitada no existe.</p>
+<div class="app-card app-card-body">
+  <h1 class="text-2xl font-black text-critical">Registro no encontrado</h1>
+  <p class="mt-2 text-dartMuted">La ART/AST solicitada no existe.</p>
 </div>
-
 {% else %}
+<div class="space-y-6">
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div>
+      <a href="/dashboard" class="text-sm font-black text-techCyan hover:underline">Volver al dashboard</a>
+      <div class="mt-3 flex flex-wrap items-center gap-3">
+        <h1 class="text-3xl font-black">ART {{ registro.id }}</h1>
+        <span class="status-badge status-{{ registro.estado }}">{{ "Observada" if registro.estado == "corregir" else registro.estado }}</span>
+      </div>
+      <p class="mt-2 max-w-3xl text-dartMuted">{{ registro.descripcion }}</p>
+    </div>
+    <div class="flex flex-wrap gap-3">
+      {% if registro.creado_por == user.username and registro.estado in ['pendiente', 'corregir'] %}
+      <a href="/art/{{ registro.id }}/editar" class="btn-secondary">Editar</a>
+      {% endif %}
+      {% if user.rol == 'admin' or (registro.creado_por == user.username and registro.estado in ['pendiente', 'corregir', 'rechazada']) %}
+      <form action="/art/{{ registro.id }}/eliminar" method="post" onsubmit="return confirm('¿Estás seguro de que deseas eliminar esta ART de forma permanente?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn-danger">Eliminar</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
 
-<section class="bg-white rounded-2xl shadow border border-slate-200 overflow-hidden">
+  <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Empresa</p><p class="mt-2 font-black">{{ registro.empresa }}</p></div>
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Asignados</p><p class="mt-2 font-black">{{ registro.progreso_asignaciones.total if registro.progreso_asignaciones else registro.trabajador }}</p></div>
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Fecha</p><p class="mt-2 font-black">{{ registro.fecha }}</p></div>
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Supervisor</p><p class="mt-2 font-black">{{ registro.supervisor }}</p></div>
+  </section>
 
-    <div class="bg-slate-950 text-white px-8 py-6">
-        <p class="text-cyan-300 font-semibold">ART/AST Digital N° {{ registro.id }}</p>
-        <h1 class="text-3xl font-bold mt-2">{{ registro.descripcion }}</h1>
-        <p class="text-slate-300 mt-2">Creado el {{ registro.creado_en }}</p>
+  {% if mensaje %}
+  <div class="alert-success">{{ mensaje }}</div>
+  {% endif %}
+
+  <div class="grid gap-6 xl:grid-cols-[1fr_360px]">
+    <div class="space-y-6">
+      <section class="app-card">
+        <div class="app-card-header"><h2 class="text-xl font-black">Antecedentes</h2></div>
+        <div class="app-card-body grid gap-4 md:grid-cols-2">
+          <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Área</p><p class="font-black">{{ registro.area }}</p></div>
+          <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Tipo de tarea</p><p class="font-black">{{ registro.tipo_tarea }}</p></div>
+          <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Progreso trabajadores</p><p class="font-black">{{ registro.progreso_asignaciones.respondidos if registro.progreso_asignaciones else 0 }} / {{ registro.progreso_asignaciones.total if registro.progreso_asignaciones else 0 }} respondidos</p></div>
+          <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Creado</p><p class="font-black">{{ registro.creado_en }}</p></div>
+        </div>
+      </section>
+
+      {% if user.rol == 'admin' or user.rol == 'supervisor' %}
+      <section class="app-card overflow-hidden">
+        <div class="app-card-header flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 class="text-xl font-black">Trabajadores asignados y respuestas</h2>
+            <p class="mt-1 text-sm text-dartMuted">Seguimiento individual de respuestas, observaciones y firmas.</p>
+          </div>
+          <form method="post" action="/art/{{ registro.id }}/enviar-trabajadores">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn-primary disabled:cursor-not-allowed disabled:opacity-50" type="submit" {% if registro.progreso_asignaciones.total < min_trabajadores %}disabled{% endif %}>Enviar encuesta a trabajadores</button>
+          </form>
+        </div>
+        <div class="grid gap-3 border-b border-line p-4 sm:grid-cols-2 xl:grid-cols-5">
+          <div class="rounded-lg bg-slate-50 p-4"><p class="text-xs font-black uppercase text-dartMuted">Asignados</p><p class="mt-1 text-2xl font-black">{{ registro.progreso_asignaciones.total }}</p></div>
+          <div class="rounded-lg bg-slate-50 p-4"><p class="text-xs font-black uppercase text-dartMuted">Recibidas</p><p class="mt-1 text-2xl font-black">{{ registro.progreso_asignaciones.respondidos }} / {{ registro.progreso_asignaciones.total }}</p></div>
+          <div class="rounded-lg bg-slate-50 p-4"><p class="text-xs font-black uppercase text-dartMuted">Pendientes</p><p class="mt-1 text-2xl font-black">{{ registro.progreso_asignaciones.faltantes }}</p></div>
+          <div class="rounded-lg bg-slate-50 p-4"><p class="text-xs font-black uppercase text-dartMuted">Con observaciones</p><p class="mt-1 text-2xl font-black">{{ registro.progreso_asignaciones.con_observaciones }}</p></div>
+          <div class="rounded-lg bg-slate-50 p-4"><p class="text-xs font-black uppercase text-dartMuted">Firmas</p><p class="mt-1 text-2xl font-black">{{ registro.progreso_asignaciones.firmas }} / {{ registro.progreso_asignaciones.total }}</p></div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="app-table responsive-table">
+            <thead>
+              <tr>
+                <th>Trabajador</th>
+                <th>RUT</th>
+                <th>Cargo</th>
+                <th>Estado respuesta</th>
+                <th>Estado correo</th>
+                <th>Respuesta</th>
+                <th>Firma</th>
+                <th>Evidencia</th>
+                <th>Observaciones</th>
+                <th>Revisión</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for asignacion in registro.asignaciones %}
+              <tr>
+                <td data-label="Trabajador">
+                  <p class="font-bold">{{ asignacion.nombre }}</p>
+                  <p class="text-xs text-dartMuted">{{ asignacion.email }}</p>
+                </td>
+                <td data-label="RUT">{{ asignacion.rut or "Sin RUT" }}</td>
+                <td data-label="Cargo">{{ asignacion.cargo or "Sin cargo" }}{% if asignacion.area %}<br><span class="text-xs text-dartMuted">{{ asignacion.area }}</span>{% endif %}</td>
+                <td data-label="Estado respuesta">
+                  <span class="status-badge status-{{ asignacion.estado_respuesta }}">{{ asignacion.estado_respuesta }}</span>
+                </td>
+                <td data-label="Estado correo">
+                  {% if asignacion.estado_envio == 'envio_fallido' %}
+                  <span class="font-bold text-amber-700">Correo no enviado</span><br><span class="text-xs text-dartMuted">Puede responder desde su cuenta.</span>
+                  {% elif asignacion.estado_envio == 'enlace_generado' %}
+                  <span class="font-bold text-dartText">Link generado</span>
+                  {% elif asignacion.estado_envio == 'enviado' %}
+                  <span class="font-bold text-blue-700">Enviado</span>
+                  {% else %}
+                  <span class="text-dartMuted">Pendiente</span>
+                  {% endif %}
+                </td>
+                <td data-label="Respuesta">{{ asignacion.fecha_respuesta or "-" }}</td>
+                <td data-label="Firma">{{ "Recibida" if asignacion.firma_valor or asignacion.firma_imagen_base64 else "Pendiente" }}</td>
+                <td data-label="Evidencia">{{ "Sí" if asignacion.evidencia_trabajador else "No" }}</td>
+                <td data-label="Observaciones">{{ "Con observaciones" if asignacion.con_observacion else "Sin observaciones" }}</td>
+                <td data-label="Revisión">
+                  {% if asignacion.estado_respuesta in ['aprobado', 'observado', 'rechazado'] %}
+                  <span class="status-badge status-{{ asignacion.estado_respuesta }}">{{ asignacion.estado_respuesta }}</span>
+                  {% elif asignacion.estado_respuesta in ['respondido', 'con_observacion'] %}
+                  <span class="status-badge status-pendiente">Pendiente</span>
+                  {% else %}
+                  <span class="text-dartMuted">-</span>
+                  {% endif %}
+                </td>
+                <td data-label="Acción">
+                  {% if asignacion.estado_respuesta in ['respondido', 'con_observacion', 'aprobado', 'observado', 'rechazado'] %}
+                  <a href="/art/{{ registro.id }}/respuesta/{{ asignacion.id }}" class="btn-secondary px-3 py-2 text-sm">Ver / Revisar</a>
+                  {% else %}
+                  <div class="flex flex-col gap-2">
+                    <form method="post" action="/art/{{ registro.id }}/enviar-trabajador/{{ asignacion.id }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                      <button class="btn-secondary px-3 py-2 text-sm" type="submit">Enviar/Reenviar correo</button>
+                    </form>
+                    {% if not email_enabled and asignacion.token_acceso %}
+                    <a href="/art/trabajador/{{ asignacion.token_acceso }}" class="text-xs font-bold text-techCyan hover:underline">Ver link de prueba</a>
+                    {% endif %}
+                  </div>
+                  {% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="10" class="py-8 text-center text-dartMuted">Aún no hay trabajadores asignados.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      {% endif %}
+
+      {% if registro.checklist %}
+      <section class="app-card">
+        <div class="app-card-header"><h2 class="text-xl font-black">Checklist general registrado</h2></div>
+        <div class="app-card-body grid gap-3 md:grid-cols-2">
+          {% for item in registro.checklist %}
+          <div class="rounded-lg border border-green-200 bg-green-50 p-3 text-sm font-bold text-green-800">{{ item }}</div>
+          {% else %}
+          <p class="text-dartMuted">No se marcaron ítems.</p>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      <section class="app-card">
+        <div class="app-card-header"><h2 class="text-xl font-black">Riesgos y controles</h2></div>
+        <div class="overflow-x-auto">
+          <table class="app-table min-w-[760px]">
+            <thead><tr><th>Secuencia</th><th>Riesgo</th><th>Control</th></tr></thead>
+            <tbody>
+              {% for item in registro.riesgos %}
+              <tr><td>{{ item.secuencia }}</td><td>{{ item.riesgo }}</td><td>{{ item.control }}</td></tr>
+              {% else %}
+              <tr><td colspan="3" class="text-center text-dartMuted">No se agregaron riesgos.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="app-card">
+        <div class="app-card-header"><h2 class="text-xl font-black">Observaciones generales</h2></div>
+        <div class="app-card-body text-dartMuted">{{ registro.observaciones or "Sin observaciones." }}</div>
+      </section>
+
+      {% if puede_revisar %}
+      <section class="app-card">
+        <div class="app-card-header"><h2 class="text-xl font-black">Resolver revisión</h2></div>
+        <form method="post" action="/supervisor/art/{{ registro.id }}/estado" class="app-card-body space-y-4">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <div>
+            <label class="form-label">Resultado</label>
+            <select name="estado" required class="form-select">
+              <option value="aprobada" {% if registro.estado == 'aprobada' %}selected{% endif %}>Aceptar ART</option>
+              <option value="rechazada" {% if registro.estado == 'rechazada' %}selected{% endif %}>Rechazar ART</option>
+              <option value="corregir" {% if registro.estado == 'corregir' %}selected{% endif %}>Solicitar corrección</option>
+              <option value="pendiente" {% if registro.estado == 'pendiente' %}selected{% endif %}>Mantener pendiente</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Comentario</label>
+            <textarea name="comentario_supervisor" required rows="4" class="form-textarea" placeholder="Escribe la observación de revisión">{{ registro.comentario_supervisor }}</textarea>
+          </div>
+          <button type="submit" class="btn-primary">Guardar revisión</button>
+        </form>
+      </section>
+      {% endif %}
     </div>
 
-    <div class="p-8 space-y-8">
-
-        <section>
-            <h2 class="text-xl font-bold mb-4">A) Antecedentes</h2>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="bg-slate-50 rounded-xl p-4 border">
-                    <p class="text-sm text-slate-500">Empresa</p>
-                    <p class="font-semibold">{{ registro.empresa }}</p>
-                </div>
-
-                <div class="bg-slate-50 rounded-xl p-4 border">
-                    <p class="text-sm text-slate-500">Trabajador</p>
-                    <p class="font-semibold">{{ registro.trabajador }}</p>
-                </div>
-
-                <div class="bg-slate-50 rounded-xl p-4 border">
-                    <p class="text-sm text-slate-500">Área</p>
-                    <p class="font-semibold">{{ registro.area }}</p>
-                </div>
-
-                <div class="bg-slate-50 rounded-xl p-4 border">
-                    <p class="text-sm text-slate-500">Fecha</p>
-                    <p class="font-semibold">{{ registro.fecha }}</p>
-                </div>
-
-                <div class="bg-slate-50 rounded-xl p-4 border">
-                    <p class="text-sm text-slate-500">Tipo de tarea</p>
-                    <p class="font-semibold">{{ registro.tipo_tarea }}</p>
-                </div>
-
-                <div class="bg-slate-50 rounded-xl p-4 border">
-                    <p class="text-sm text-slate-500">Supervisor</p>
-                    <p class="font-semibold">{{ registro.supervisor }}</p>
-                </div>
-
-                <div class="bg-slate-50 rounded-xl p-4 border">
-                    <p class="text-sm text-slate-500">Estado</p>
-                    <p class="font-semibold uppercase">{{ registro.estado }}</p>
-                </div>
-
-                <div class="bg-slate-50 rounded-xl p-4 border">
-                    <p class="text-sm text-slate-500">Asignado a</p>
-                    <p class="font-semibold">{{ registro.asignado_a or registro.trabajador }}</p>
-                </div>
-            </div>
-        </section>
-
-        <section>
-            <h2 class="text-xl font-bold mb-4">B) Checklist respondido</h2>
-
-            {% if registro.checklist %}
-                <ul class="space-y-2">
-                    {% for item in registro.checklist %}
-                    <li class="bg-green-50 border border-green-200 text-green-800 rounded-xl p-3">
-                        ✅ {{ item }}
-                    </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="text-slate-500">No se marcaron ítems del checklist.</p>
-            {% endif %}
-        </section>
-
-        <section>
-            <h2 class="text-xl font-bold mb-4">C) EPP seleccionados</h2>
-
-            {% if registro.epp %}
-                <div class="flex flex-wrap gap-3">
-                    {% for item in registro.epp %}
-                    <span class="bg-cyan-100 text-cyan-800 px-4 py-2 rounded-full font-semibold">
-                        {{ item }}
-                    </span>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <p class="text-slate-500">No se seleccionaron EPP.</p>
-            {% endif %}
-        </section>
-
-        <section>
-            <h2 class="text-xl font-bold mb-4">D) Riesgos y controles</h2>
-
-            {% if registro.riesgos %}
-                <div class="overflow-x-auto border rounded-xl">
-                    <table class="w-full text-sm">
-                        <thead class="bg-slate-100">
-                            <tr>
-                                <th class="text-left px-4 py-3">Secuencia</th>
-                                <th class="text-left px-4 py-3">Riesgo</th>
-                                <th class="text-left px-4 py-3">Control</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            {% for item in registro.riesgos %}
-                            <tr class="border-t">
-                                <td class="px-4 py-3">{{ item.secuencia }}</td>
-                                <td class="px-4 py-3">{{ item.riesgo }}</td>
-                                <td class="px-4 py-3">{{ item.control }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% else %}
-                <p class="text-slate-500">No se agregaron riesgos.</p>
-            {% endif %}
-        </section>
-
-        <section>
-            <h2 class="text-xl font-bold mb-4">E) Observaciones</h2>
-
-            {% if registro.observaciones %}
-                <div class="bg-slate-50 border rounded-xl p-4">
-                    {{ registro.observaciones }}
-                </div>
-            {% else %}
-                <p class="text-slate-500">Sin observaciones.</p>
-            {% endif %}
-        </section>
-
-        <!-- Revisión: el formulario duplicado superior se eliminó; el bloque inferior maneja la resolución y visualización -->
-
-        <section>
-            <h2 class="text-xl font-bold mb-4">F) Evidencia fotográfica</h2>
-
-            {% if registro.evidencia %}
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {% for imagen in registro.evidencia %}
-                    <a href="/static/uploads/{{ imagen }}" target="_blank">
-                        <img src="/static/uploads/{{ imagen }}"
-                             class="rounded-xl border shadow object-cover w-full h-56">
-                    </a>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <p class="text-slate-500">No se adjuntaron imágenes.</p>
-            {% endif %}
-        </section>
-
-        {% if puede_revisar %}
-        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 class="text-xl font-bold mb-4">Resolver revisión</h2>
-            <form method="post" action="/supervisor/art/{{ registro.id }}/estado" class="space-y-4">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <div>
-                    <label class="block font-semibold mb-2">Resultado</label>
-                    <select name="estado" required class="w-full rounded-xl border border-slate-300 px-4 py-3">
-                        <option value="aprobada" {% if registro.estado == 'aprobada' %}selected{% endif %}>Aceptar ART</option>
-                        <option value="rechazada" {% if registro.estado == 'rechazada' %}selected{% endif %}>Rechazar ART</option>
-                        <option value="corregir" {% if registro.estado == 'corregir' %}selected{% endif %}>Solicitar corrección</option>
-                        <option value="pendiente" {% if registro.estado == 'pendiente' %}selected{% endif %}>Mantener pendiente</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block font-semibold mb-2">Comentario</label>
-                    <textarea name="comentario_supervisor" required rows="4" class="w-full rounded-xl border border-slate-300 px-4 py-3" placeholder="Escribe la observación de revisión">{{ registro.comentario_supervisor }}</textarea>
-                </div>
-                <button type="submit" class="rounded-xl bg-green-600 px-5 py-3 font-bold text-white hover:bg-green-700">Guardar revisión</button>
-            </form>
-        </section>
-        {% endif %}
-
-        {% if puede_descargar_pdf %}
-        <section class="rounded-2xl border border-green-200 bg-green-50 p-6">
-            <h2 class="text-xl font-bold text-green-900">Documento listo</h2>
-            <p class="mt-2 text-green-800">La ART ya tiene resolución y puede descargarse como respaldo.</p>
-            <a href="/art/{{ registro.id }}/pdf" class="mt-4 inline-flex rounded-xl bg-slate-950 px-5 py-3 font-bold text-white hover:bg-cyan-700">
-                Descargar PDF
+    <aside class="space-y-6">
+      <section class="app-card">
+        <div class="app-card-header"><h2 class="text-xl font-black">Evidencia general de la ART</h2></div>
+        <div class="app-card-body">
+          {% if registro.evidencia %}
+          <div class="grid gap-3">
+            {% for imagen in registro.evidencia %}
+            <a href="{{ imagen.src }}" target="_blank" rel="noopener">
+              <img src="{{ imagen.src }}" alt="Evidencia ART {{ registro.id }}" class="h-48 w-full rounded-lg border object-cover" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+              <div class="flex h-48 w-full items-center justify-center rounded-lg border border-dashed border-line bg-slate-50 text-sm font-bold text-dartMuted" hidden>Imagen no disponible</div>
             </a>
-        </section>
-        {% endif %}
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="rounded-lg border border-dashed border-line p-4 text-center text-sm text-dartMuted">Sin evidencia adjunta.</div>
+          {% endif %}
+        </div>
+      </section>
 
-    </div>
-</section>
+      {% if registro.epp %}
+      <section class="app-card">
+        <div class="app-card-header"><h2 class="text-xl font-black">EPP general definido</h2></div>
+        <div class="app-card-body flex flex-wrap gap-2">
+          {% for item in registro.epp %}
+          <span class="status-badge bg-cyan-100 text-cyan-800">{{ item }}</span>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
 
+      {% if puede_descargar_pdf %}
+      <section class="app-card app-card-body border-l-4 border-l-green-500">
+        <h2 class="text-xl font-black">Documento listo</h2>
+        <p class="mt-2 text-sm text-dartMuted">La ART ya tiene resolución y puede descargarse.</p>
+        <a href="/art/{{ registro.id }}/pdf" class="btn-dark mt-4">Descargar PDF</a>
+      </section>
+      {% endif %}
+    </aside>
+  </div>
+</div>
 {% endif %}
-
 {% endblock %}

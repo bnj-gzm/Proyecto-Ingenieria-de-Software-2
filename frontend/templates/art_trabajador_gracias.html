@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block page_title %}ART respondida{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl">
+  <section class="app-card app-card-body text-center">
+    <p class="text-sm font-black uppercase text-techCyan">Respuesta registrada</p>
+    <h1 class="mt-2 text-3xl font-black">Tu ART fue enviada correctamente</h1>
+    <p class="mt-3 text-dartMuted">La validación firmada de {{ asignacion.nombre }} quedó asociada a la ART {{ registro.id }}.</p>
+    <div class="mt-6 grid gap-4 text-left sm:grid-cols-2">
+      <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Tarea</p><p class="font-black">{{ registro.descripcion }}</p></div>
+      <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Fecha respuesta</p><p class="font-black">{{ asignacion.fecha_respuesta or "-" }}</p></div>
+    </div>
+  </section>
+</div>
+{% endblock %}

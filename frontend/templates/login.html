@@ -2,49 +2,60 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Iniciar sesión D.A.R.T</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iniciar sesión</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: Inter, system-ui, sans-serif; background:#F4F7FA; color:#111827; }
+  .card { border:1px solid #E2E8F0; border-radius:8px; background:#fff; box-shadow:0 12px 30px rgba(15,23,42,.08); }
+  .input { width:100%; border:1px solid #CBD5E1; border-radius:8px; padding:.85rem 1rem; outline:none; }
+  .input:focus { border-color:#00A7B5; box-shadow:0 0 0 3px rgba(0,167,181,.14); }
+</style>
 </head>
-<body class="min-h-screen bg-slate-100">
-  <div class="grid min-h-screen lg:grid-cols-[1fr_0.9fr]">
-    <section class="hidden bg-slate-950 px-12 py-10 text-white lg:flex lg:flex-col lg:justify-between">
+<body>
+  <main class="grid min-h-screen lg:grid-cols-[1fr_0.82fr]">
+    <section class="hidden bg-[#0B1726] p-10 text-white lg:flex lg:flex-col lg:justify-between">
       <a href="/" class="inline-flex items-center gap-3 text-2xl font-black">
-        <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-500">D</span>
-        D.A.R.T
+        {% set brand_logo_size = 'sm' %}
+        {% set brand_logo_theme = 'dark' %}
+        {% set brand_logo_compact = true %}
+        {% include "components/brand_logo.html" with context %}
       </a>
       <div>
-        <p class="text-sm font-bold uppercase tracking-[0.3em] text-cyan-300">Trabajo seguro</p>
-        <h1 class="mt-5 max-w-xl text-5xl font-black leading-tight">Gestiona ART, revisiones y evidencia sin perder trazabilidad.</h1>
-        <p class="mt-5 max-w-lg text-slate-300">Un acceso seguro para equipos que necesitan orden, respaldo y continuidad operacional.</p>
+        <span class="inline-flex rounded-full bg-[#A7F432] px-3 py-1 text-xs font-black uppercase text-[#111827]">Acceso corporativo</span>
+        <h1 class="mt-6 max-w-xl text-5xl font-black leading-tight">Gestión segura de ART para operación minera.</h1>
+        <p class="mt-5 max-w-lg leading-7 text-slate-300">Ingreso reservado para trabajadores, supervisores y administradores autorizados.</p>
       </div>
-      <p class="text-sm text-slate-400">Plataforma interna para gestión preventiva.</p>
+      <p class="text-sm text-slate-400">Seguridad industrial · Trazabilidad · Evidencia</p>
     </section>
 
     <section class="flex items-center justify-center px-5 py-10">
-      <div class="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
-        <div class="mb-6">
-          <p class="inline-flex rounded-full bg-cyan-100 px-4 py-1 text-sm font-bold text-cyan-700 uppercase tracking-wide">D.A.R.T</p>
-          <h1 class="mt-4 text-3xl font-black text-slate-900">Iniciar sesión</h1>
-          <p class="mt-3 text-sm leading-6 text-slate-600">Entra para crear ART, revisar solicitudes o administrar usuarios.</p>
+      <div class="card w-full max-w-md p-8">
+        <div class="mb-7">
+          {% set brand_logo_size = 'md' %}
+          {% set brand_logo_theme = 'light' %}
+          {% set brand_logo_compact = true %}
+          {% include "components/brand_logo.html" with context %}
+          <h1 class="mt-5 text-3xl font-black">Iniciar sesión</h1>
+          <p class="mt-2 text-sm leading-6 text-[#64748B]">Ingresa con tu correo corporativo para continuar.</p>
         </div>
-        {% if error %}
-        <div class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ error }}</div>
-        {% endif %}
+        {% if error %}<div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ error }}</div>{% endif %}
+        {% if message %}<div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-bold text-green-700">{{ message }}</div>{% endif %}
         <form action="/login" method="post" class="space-y-4">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <div>
-            <label class="mb-2 block text-sm font-semibold text-slate-700">Correo electrónico</label>
-            <input type="email" name="email" placeholder="nombre@empresa.cl" required autocomplete="email" class="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-cyan-500">
+            <label class="mb-2 block text-sm font-black text-slate-700">Correo electrónico</label>
+            <input class="input" type="email" name="email" placeholder="nombre@dart-mineria.lat" required autocomplete="email">
           </div>
           <div>
-            <label class="mb-2 block text-sm font-semibold text-slate-700">Contraseña</label>
-            <input type="password" name="password" placeholder="Contraseña" required autocomplete="current-password" class="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-cyan-500">
+            <label class="mb-2 block text-sm font-black text-slate-700">Contraseña</label>
+            <input class="input" type="password" name="password" placeholder="Contraseña" required autocomplete="current-password">
           </div>
-          <button type="submit" class="w-full rounded-2xl bg-cyan-500 px-4 py-3 font-bold text-white transition hover:bg-cyan-600">Ingresar</button>
+          <button type="submit" class="w-full rounded-lg bg-[#00A7B5] px-4 py-3 font-black text-white hover:bg-[#078c99]">Ingresar</button>
         </form>
-        <p class="mt-5 text-center text-sm text-slate-600">¿Aún no tienes cuenta? <a href="/registro" class="font-bold text-cyan-700 hover:text-cyan-600">Crear cuenta</a></p>
+        <p class="mt-5 text-center text-sm"><a href="/olvide-password" class="font-black text-[#0F3D4C] hover:text-[#00A7B5]">Olvidé mi contraseña</a></p>
       </div>
     </section>
-  </div>
+  </main>
 </body>
 </html>

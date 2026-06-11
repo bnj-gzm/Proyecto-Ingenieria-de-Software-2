@@ -1,61 +1,317 @@
 {% extends "base.html" %}
 
+{% block page_title %}Usuarios{% endblock %}
+
 {% block content %}
-<div class="max-w-6xl mx-auto">
-  <div class="flex items-center justify-between mb-6">
+<div class="space-y-6">
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
     <div>
-      <h1 class="text-3xl font-bold">Gestionar usuarios</h1>
-      <p class="text-sm text-slate-500 mt-1">Asigna roles: admin, supervisor o usuario.</p>
+      <p class="text-sm font-black uppercase text-techCyan">Administración</p>
+      <h1 class="mt-2 text-3xl font-black">Gestión de usuarios</h1>
+      <p class="mt-2 text-dartMuted">Usuarios creados por admin, dominio corporativo y activación por link.</p>
     </div>
-    <a href="/dashboard" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold hover:bg-white">Volver</a>
+    <a href="/dashboard" class="btn-secondary w-fit">Volver</a>
   </div>
 
-  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow">
-    <table class="w-full text-sm">
-      <thead class="bg-slate-100 text-slate-700">
-        <tr>
-          <th class="text-left px-4 py-3">Usuario</th>
-          <th class="text-left px-4 py-3">Nombre</th>
-          <th class="text-left px-4 py-3">RUT</th>
-          <th class="text-left px-4 py-3">Cargo / Área</th>
-          <th class="text-left px-4 py-3">Email</th>
-          <th class="text-left px-4 py-3">Rol actual</th>
-          <th class="text-left px-4 py-3">Cambiar rol</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for u in usuarios %}
-        <tr class="border-t border-slate-100">
-          <td class="px-4 py-3 font-semibold">{{ u.username }}</td>
-          <td class="px-4 py-3">{{ u.nombre or "-" }}</td>
-          <td class="px-4 py-3">{{ u.rut or "-" }}</td>
-          <td class="px-4 py-3">
-            <div>{{ u.cargo or "-" }}</div>
-            <div class="text-xs text-slate-500">{{ u.area or "" }}</div>
-          </td>
-          <td class="px-4 py-3">{{ u.email or "-" }}</td>
-          <td class="px-4 py-3">
-            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold uppercase tracking-wide">{{ roles[u.rol] if u.rol in roles else u.rol }}</span>
-          </td>
-          <td class="px-4 py-3">
-            <form method="post" action="/admin/usuarios/{{ u.username }}/rol" class="flex items-center gap-2">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-              <select name="rol" class="rounded-xl border border-slate-300 px-3 py-2">
-                {% for value, label in roles.items() %}
-                <option value="{{ value }}" {% if u.rol == value %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-              </select>
-              <button type="submit" class="rounded-xl bg-slate-950 px-3 py-2 font-semibold text-white hover:bg-cyan-700">Guardar</button>
-            </form>
-          </td>
-        </tr>
-        {% else %}
-        <tr>
-          <td colspan="7" class="px-4 py-6 text-center text-slate-500">No hay usuarios registrados.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  {% if activation_link %}
+  <div class="rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
+    <p class="text-sm font-bold text-cyan-900">Link de activación para pruebas</p>
+    <p class="mt-2 break-all font-mono text-sm text-cyan-800">{{ activation_link }}</p>
   </div>
+  {% endif %}
+  {% if status_message %}
+  <div class="rounded-2xl border p-4 {% if status_type == 'success' %}border-green-200 bg-green-50 text-green-800{% elif status_type == 'warning' %}border-amber-200 bg-amber-50 text-amber-800{% else %}border-cyan-200 bg-cyan-50 text-cyan-900{% endif %}">
+    <p class="text-sm font-bold">{{ status_message }}</p>
+  </div>
+  {% endif %}
+
+  <div class="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+    <section id="importar-usuarios" class="app-card app-card-body">
+      <h2 class="text-xl font-black">Crear usuario</h2>
+      <p class="mt-1 text-sm text-slate-500">Solo se aceptan correos @{{ allowed_domains|join(", @") }}.</p>
+      <form method="post" action="/admin/usuarios/crear" class="mt-5 grid gap-4 sm:grid-cols-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div>
+          <label class="mb-2 block text-sm font-bold text-slate-700">Nombre</label>
+          <input name="nombre" required value="{{ form_data.nombre if form_data else '' }}" class="form-input">
+          {% if form_errors and form_errors.nombre %}<p class="mt-2 text-sm font-semibold text-red-600">{{ form_errors.nombre }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-bold text-slate-700">RUT</label>
+          <input data-rut-input name="rut" required placeholder="12.345.678-9" value="{{ form_data.rut if form_data else '' }}" class="form-input">
+          {% if form_errors and form_errors.rut %}<p class="mt-2 text-sm font-semibold text-red-600">{{ form_errors.rut }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-bold text-slate-700">Email</label>
+          <input type="email" name="email" required placeholder="nombre@dart-mineria.lat" value="{{ form_data.email if form_data else '' }}" class="form-input">
+          {% if form_errors and form_errors.email %}<p class="mt-2 text-sm font-semibold text-red-600">{{ form_errors.email }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-bold text-slate-700">Rol</label>
+          <select name="rol" class="form-select">
+            {% for value, label in roles.items() %}
+            <option value="{{ value }}" {% if form_data and form_data.rol == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          {% if form_errors and form_errors.rol %}<p class="mt-2 text-sm font-semibold text-red-600">{{ form_errors.rol }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-bold text-slate-700">Teléfono</label>
+          <input data-cl-phone name="telefono" placeholder="+56 9 1234 5678" value="{{ form_data.telefono if form_data else '+56 9 ' }}" class="form-input">
+          {% if form_errors and form_errors.telefono %}<p class="mt-2 text-sm font-semibold text-red-600">{{ form_errors.telefono }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-bold text-slate-700">Cargo</label>
+          <input name="cargo" value="{{ form_data.cargo if form_data else '' }}" class="form-input">
+        </div>
+        <div class="sm:col-span-2">
+          <label class="mb-2 block text-sm font-bold text-slate-700">Área</label>
+          <input name="area" value="{{ form_data.area if form_data else '' }}" class="form-input">
+        </div>
+        <button class="btn-primary sm:col-span-2">Crear y generar activación</button>
+      </form>
+    </section>
+
+    <section class="app-card app-card-body">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <h2 class="text-xl font-black">Importar usuarios</h2>
+          <p class="mt-1 text-sm text-slate-500">CSV o Excel con columnas: nombre,rut,email,rol,telefono,cargo,area.</p>
+        </div>
+        {% if import_summary %}
+        <span class="rounded-full bg-slate-100 px-3 py-1 text-sm font-bold">Creados: {{ import_summary.creados }}</span>
+        {% endif %}
+      </div>
+      <form method="post" action="/admin/usuarios/importar" enctype="multipart/form-data" class="mt-5 flex flex-col gap-3 sm:flex-row">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="file" name="archivo" required accept=".csv,.xlsx,.xls,.xlsm" class="form-input min-w-0 flex-1">
+        <button class="btn-dark">Importar</button>
+      </form>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <a href="/admin/usuarios/plantilla" class="btn-secondary px-4 py-2 text-sm">Descargar plantilla</a>
+        <form method="post" action="/admin/test-email">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn-secondary px-4 py-2 text-sm">Probar email</button>
+        </form>
+      </div>
+      {% if import_error %}
+      <div class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{{ import_error }}</div>
+      {% endif %}
+
+      {% if import_summary %}
+      <div class="mt-5 grid gap-3 sm:grid-cols-5">
+        <div class="rounded-2xl bg-green-50 p-4 text-green-800"><p class="text-sm font-bold">Creados</p><p class="text-2xl font-black">{{ import_summary.creados }}</p></div>
+        <div class="rounded-2xl bg-amber-50 p-4 text-amber-800"><p class="text-sm font-bold">Duplicados</p><p class="text-2xl font-black">{{ import_summary.duplicados }}</p></div>
+        <div class="rounded-2xl bg-red-50 p-4 text-red-800"><p class="text-sm font-bold">Errores</p><p class="text-2xl font-black">{{ import_summary.errores }}</p></div>
+        <div class="rounded-2xl bg-cyan-50 p-4 text-cyan-800"><p class="text-sm font-bold">Emails OK</p><p class="text-2xl font-black">{{ import_summary.correos_enviados }}</p></div>
+        <div class="rounded-2xl bg-slate-100 p-4 text-slate-800"><p class="text-sm font-bold">Emails fallidos</p><p class="text-2xl font-black">{{ import_summary.correos_fallidos }}</p></div>
+      </div>
+      <form method="post" action="/admin/usuarios/importar/resultados" class="mt-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <textarea name="results_csv" class="hidden">{{ results_csv }}</textarea>
+        <button class="rounded-full border border-slate-300 px-4 py-2 text-sm font-bold hover:bg-slate-50">Descargar CSV de resultados</button>
+      </form>
+      {% endif %}
+      {% if import_results %}
+      <div class="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
+        <table class="w-full min-w-[980px] text-sm">
+          <thead class="bg-slate-100 text-slate-700">
+            <tr>
+              <th class="px-3 py-2 text-left">Fila</th>
+              <th class="px-3 py-2 text-left">Nombre</th>
+              <th class="px-3 py-2 text-left">RUT</th>
+              <th class="px-3 py-2 text-left">Email</th>
+              <th class="px-3 py-2 text-left">Rol</th>
+              <th class="px-3 py-2 text-left">Teléfono</th>
+              <th class="px-3 py-2 text-left">Estado</th>
+              <th class="px-3 py-2 text-left">Detalle</th>
+              <th class="px-3 py-2 text-left">Link</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for result in import_results %}
+            <tr class="border-t border-slate-100">
+              <td class="px-3 py-2">{{ result.fila }}</td>
+              <td class="px-3 py-2">{{ result.nombre }}</td>
+              <td class="px-3 py-2">{{ result.rut }}</td>
+              <td class="px-3 py-2">{{ result.email }}</td>
+              <td class="px-3 py-2">{{ result.rol }}</td>
+              <td class="px-3 py-2">{{ result.telefono or "-" }}</td>
+              <td class="px-3 py-2 font-bold">{{ result.estado }}</td>
+              <td class="px-3 py-2">{{ result.detalle }}</td>
+              <td class="max-w-72 break-all px-3 py-2 font-mono text-xs">{{ result.activation_link or "-" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </section>
+  </div>
+
+  <section class="app-card overflow-hidden">
+    <div class="app-card-header flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <h2 class="text-xl font-black">Usuarios</h2>
+        <p class="mt-1 text-sm text-dartMuted">Busca por nombre, RUT, email, área o usuario.</p>
+      </div>
+      <div class="flex flex-col gap-3 sm:flex-row">
+        <input id="user-search" class="form-input sm:w-72" placeholder="Buscar usuario">
+        <select id="role-filter" class="form-select sm:w-44">
+          <option value="">Todos los roles</option>
+          {% for value, label in roles.items() %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+        </select>
+        <select id="state-filter" class="form-select sm:w-44">
+          <option value="">Todos los estados</option>
+          <option value="activo">Activo</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="inactivo">Desactivado</option>
+        </select>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="app-table min-w-[1080px]">
+        <thead>
+          <tr>
+            <th class="px-4 py-3 text-left">Usuario</th>
+            <th class="px-4 py-3 text-left">Contacto</th>
+            <th class="px-4 py-3 text-left">Rol</th>
+            <th class="px-4 py-3 text-left">Estado</th>
+            <th class="px-4 py-3 text-left">Cambiar rol</th>
+            <th class="px-4 py-3 text-left">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="users-table-body">
+          {% for u in usuarios %}
+          <tr data-role="{{ u.rol }}" data-state="{{ u.estado_cuenta or 'activo' }}" data-search="{{ u.nombre }} {{ u.username }} {{ u.rut }} {{ u.email }} {{ u.area }} {{ u.cargo }}" class="border-t border-slate-100">
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-3">
+                {% if u.foto_perfil %}
+                <img src="{{ u.foto_perfil if u.foto_perfil[:5] == 'data:' else '/static/' + u.foto_perfil }}" alt="" class="h-11 w-11 rounded-full object-cover" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+                <span class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-cyan-100 font-black text-cyan-800" hidden>{{ (u.nombre or u.username)[:2].upper() }}</span>
+                {% else %}
+                <span class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-cyan-100 font-black text-cyan-800">{{ (u.nombre or u.username)[:2].upper() }}</span>
+                {% endif %}
+                <div>
+                  <div class="font-black">{{ u.nombre or u.username }}</div>
+                  <div class="text-xs text-slate-500">{{ u.username }}{% if u.rut %} · {{ u.rut }}{% endif %}</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-3">
+              <div class="font-semibold">{{ u.email or "-" }}</div>
+              <div class="text-xs text-slate-500">{{ u.telefono or "Sin teléfono" }}</div>
+              <div class="text-xs text-slate-500">{{ u.cargo or "-" }}{% if u.area %} · {{ u.area }}{% endif %}</div>
+            </td>
+            <td class="px-4 py-3"><span class="status-badge bg-slate-100 text-slate-700">{{ roles[u.rol] if u.rol in roles else u.rol }}</span></td>
+            <td class="px-4 py-3"><span class="status-badge {% if u.estado_cuenta == 'activo' %}status-activo{% elif u.estado_cuenta == 'pendiente' %}status-pendiente{% else %}status-desactivado{% endif %}">{{ u.estado_cuenta or "activo" }}</span></td>
+            <td class="px-4 py-3">
+              <form method="post" action="/admin/usuarios/{{ u.username }}/rol" class="flex items-center gap-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <select name="rol" class="rounded-xl border border-slate-300 px-3 py-2">
+                  {% for value, label in roles.items() %}
+                  <option value="{{ value }}" {% if u.rol == value %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+                <button class="rounded-xl bg-slate-950 px-3 py-2 font-bold text-white hover:bg-cyan-700">Guardar</button>
+              </form>
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex flex-wrap gap-2">
+                <form method="post" action="/admin/usuarios/{{ u.username }}/estado">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <input type="hidden" name="estado" value="{{ 'inactivo' if u.estado_cuenta == 'activo' else 'activo' }}">
+                  <button class="rounded-xl border border-slate-300 px-3 py-2 font-bold hover:bg-slate-50">{{ "Desactivar" if u.estado_cuenta == "activo" else "Activar" }}</button>
+                </form>
+                <form method="post" action="/admin/usuarios/{{ u.username }}/reenviar-activacion">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <button class="rounded-xl border border-cyan-200 px-3 py-2 font-bold text-cyan-700 hover:bg-cyan-50">Reenviar link</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="px-4 py-8 text-center text-slate-500">No hay usuarios registrados.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
 </div>
+<script>
+  function formatRut(value) {
+    const cleaned = value.replace(/\./g, "").replace(/\s/g, "").replace(/[^0-9kK-]/g, "").toUpperCase();
+    let body = "";
+    let dv = "";
+    if (cleaned.includes("-")) {
+      const parts = cleaned.split("-");
+      body = parts[0].replace(/\D/g, "").slice(0, 8);
+      dv = parts.slice(1).join("").replace(/[^0-9K]/g, "").slice(0, 1);
+    } else {
+      const compact = cleaned.replace(/[^0-9K]/g, "");
+      if (compact.length > 8) {
+        body = compact.slice(0, 8).replace(/\D/g, "");
+        dv = compact.slice(8, 9).replace(/[^0-9K]/g, "");
+      } else {
+        body = compact.replace(/\D/g, "").slice(0, 8);
+      }
+    }
+    body = body.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return dv ? `${body}-${dv}` : body;
+  }
+
+  function enforceChilePhone(input) {
+    const prefix = "+56 9 ";
+    let digits = input.value.replace(/\D/g, "");
+    if (digits.startsWith("569")) {
+      digits = digits.slice(3);
+    } else if (digits.startsWith("56")) {
+      digits = digits.slice(2);
+    } else if (digits.startsWith("9")) {
+      digits = digits.slice(1);
+    }
+    digits = digits.slice(0, 8);
+    const formatted = digits.length > 4 ? `${digits.slice(0, 4)} ${digits.slice(4)}` : digits;
+    input.value = prefix + formatted;
+  }
+
+  document.querySelectorAll("[data-rut-input]").forEach((input) => {
+    input.value = formatRut(input.value);
+    input.addEventListener("input", () => {
+      input.value = formatRut(input.value);
+    });
+  });
+
+  document.querySelectorAll("[data-cl-phone]").forEach((input) => {
+    if (!input.value.trim()) input.value = "+56 9 ";
+    enforceChilePhone(input);
+    input.addEventListener("focus", () => {
+      if (!input.value.startsWith("+56 9 ")) input.value = "+56 9 ";
+    });
+    input.addEventListener("input", () => enforceChilePhone(input));
+    input.addEventListener("keydown", (event) => {
+      if ((event.key === "Backspace" || event.key === "Delete") && input.selectionStart <= 6) {
+        event.preventDefault();
+      }
+    });
+  });
+
+  const userSearch = document.getElementById("user-search");
+  const roleFilter = document.getElementById("role-filter");
+  const stateFilter = document.getElementById("state-filter");
+  function filterUsers() {
+    const term = (userSearch?.value || "").toLowerCase();
+    const role = roleFilter?.value || "";
+    const state = stateFilter?.value || "";
+    document.querySelectorAll("#users-table-body tr[data-role]").forEach((row) => {
+      const matchesText = row.dataset.search.toLowerCase().includes(term);
+      const matchesRole = !role || row.dataset.role === role;
+      const matchesState = !state || row.dataset.state === state;
+      row.style.display = matchesText && matchesRole && matchesState ? "" : "none";
+    });
+  }
+  userSearch?.addEventListener("input", filterUsers);
+  roleFilter?.addEventListener("change", filterUsers);
+  stateFilter?.addEventListener("change", filterUsers);
+</script>
 {% endblock %}

@@ -3,101 +3,305 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title if title else "D.A.R.T" }}</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <title>{{ title if title else "Plataforma interna" }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dartBg: "#F4F7FA",
+                        dartSidebar: "#0B1726",
+                        dartText: "#111827",
+                        dartMuted: "#64748B",
+                        petroleum: "#0F3D4C",
+                        techCyan: "#00A7B5",
+                        safety: "#A7F432",
+                        alert: "#FACC15",
+                        critical: "#EF4444",
+                        line: "#E2E8F0"
+                    },
+                    fontFamily: { sans: ["Inter", "sans-serif"] }
+                }
+            }
+        }
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <style>
+        :root {
+            --bg: #F4F7FA;
+            --sidebar: #0B1726;
+            --text: #111827;
+            --muted: #64748B;
+            --petroleum: #0F3D4C;
+            --cyan: #00A7B5;
+            --safety: #A7F432;
+            --line: #E2E8F0;
+        }
+        * { letter-spacing: 0; }
+        body { background: var(--bg); color: var(--text); font-family: Inter, sans-serif; }
+        .app-card { border: 1px solid var(--line); border-radius: 8px; background: #fff; box-shadow: 0 1px 2px rgba(15, 23, 42, .04); }
+        .app-card-header { border-bottom: 1px solid var(--line); padding: 18px 20px; }
+        .app-card-body { padding: 20px; }
+        .btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; border-radius: 8px; background: var(--cyan); color: #fff; font-weight: 800; padding: .75rem 1rem; transition: .15s ease; }
+        .btn-primary:hover { background: #078c99; }
+        .btn-dark { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; border-radius: 8px; background: var(--petroleum); color: #fff; font-weight: 800; padding: .75rem 1rem; transition: .15s ease; }
+        .btn-dark:hover { background: #0B1726; }
+        .btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--text); font-weight: 800; padding: .75rem 1rem; transition: .15s ease; }
+        .btn-secondary:hover { border-color: #94A3B8; background: #F8FAFC; }
+        .btn-danger { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; border-radius: 8px; background: #EF4444; color: #fff; font-weight: 800; padding: .75rem 1rem; }
+        .form-input, .form-select, .form-textarea { width: 100%; border: 1px solid #CBD5E1; border-radius: 8px; background: #fff; padding: .75rem 1rem; outline: none; transition: .15s ease; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0, 167, 181, .14); }
+        .form-label { display: block; margin-bottom: .5rem; font-size: .875rem; font-weight: 800; color: #334155; }
+        .app-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .875rem; }
+        .app-table th { background: #F8FAFC; color: #475569; font-weight: 800; text-align: left; padding: .8rem 1rem; border-bottom: 1px solid var(--line); }
+        .app-table td { padding: .9rem 1rem; border-bottom: 1px solid #EEF2F7; vertical-align: middle; }
+        .app-table tr:hover td { background: #F8FAFC; }
+        .art-thumb { width: 56px; height: 56px; max-width: 56px; max-height: 56px; object-fit: cover; border: 1px solid var(--line); border-radius: 8px; background: #F8FAFC; padding: 3px; flex-shrink: 0; }
+        .status-badge { display: inline-flex; align-items: center; border-radius: 999px; padding: .28rem .7rem; font-size: .75rem; font-weight: 900; text-transform: uppercase; }
+        .status-pendiente { background: #FEF3C7; color: #92400E; }
+        .status-aprobada, .status-aprobado, .status-activo, .status-respondido { background: #DCFCE7; color: #166534; }
+        .status-enviado { background: #DBEAFE; color: #1E40AF; }
+        .status-observado, .status-con_observacion { background: #FFEDD5; color: #9A3412; }
+        .status-fallido, .status-expirado, .status-anulado { background: #FEE2E2; color: #991B1B; }
+        .status-corregir, .status-observada { background: #FFEDD5; color: #9A3412; }
+        .status-rechazada, .status-bloqueado { background: #FEE2E2; color: #991B1B; }
+        .status-finalizada { background: #DBEAFE; color: #1E40AF; }
+        .status-borrador, .status-inactivo, .status-desactivado { background: #E5E7EB; color: #374151; }
+        .status-pendiente-cuenta { background: #FEF3C7; color: #92400E; }
+        .alert-error { border: 1px solid #FECACA; border-radius: 8px; background: #FEF2F2; color: #991B1B; padding: .9rem 1rem; font-weight: 700; }
+        .alert-success { border: 1px solid #BBF7D0; border-radius: 8px; background: #F0FDF4; color: #166534; padding: .9rem 1rem; font-weight: 700; }
+        .avatar { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; background: #E0F7FA; color: #0F3D4C; font-weight: 900; overflow: hidden; }
+        .app-logo { display: inline-flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 12px; }
+        .logo-xs { width: 32px; height: 32px; }
+        .logo-sm { width: 44px; height: 44px; }
+        .logo-md { width: 48px; height: 48px; }
+        .logo-lg { width: 64px; height: 64px; }
+        .app-logo img { width: 100%; height: 100%; object-fit: contain; }
+        .brand-logo-img { max-width: 100%; transform: none; }
+        .public-navbar { position: sticky; top: 0; z-index: 40; }
+        .public-feature-card { border: 1px solid var(--line); border-radius: 8px; background: #FFFFFF; padding: 1.1rem; box-shadow: 0 1px 2px rgba(15, 23, 42, .04); }
+        .public-icon { display: inline-flex; width: 2.5rem; height: 2.5rem; align-items: center; justify-content: center; border-radius: 10px; background: #E0F7FA; color: #0F3D4C; }
+        .art-placeholder { display: flex; align-items: center; justify-content: center; border: 1px dashed var(--line); border-radius: 8px; background: #F8FAFC; color: var(--muted); font-size: .75rem; font-weight: 900; }
+        .art-placeholder[hidden] { display: none; }
+        .evidence-img { width: 100%; border: 1px solid var(--line); border-radius: 8px; object-fit: cover; background: #F8FAFC; }
+        .app-sidebar { background: #0B1726 !important; color: #FFFFFF; }
+        .sidebar-brand { color: #FFFFFF; }
+        .sidebar-section-title { color: #93A4B8; }
+        .sidebar-link { position: relative; display: flex; align-items: center; gap: .75rem; border-radius: 8px; padding: .75rem .9rem; color: #D7E1EA; font-weight: 800; transition: .15s ease; }
+        .sidebar-link:hover { background: rgba(255,255,255,.09); color: #FFFFFF; }
+        .sidebar-link-active { background: #C9F3F7; color: #0B1726; box-shadow: inset 4px 0 0 var(--cyan); }
+        .sidebar-link-active:hover { background: #D8F7FA; color: #0B1726; }
+        .sidebar-icon { display: inline-flex; width: 2rem; height: 2rem; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 8px; background: rgba(255,255,255,.08); color: #CBD5E1; transition: .15s ease; }
+        .sidebar-icon svg { width: 1.15rem; height: 1.15rem; stroke-width: 2; }
+        .sidebar-link:hover .sidebar-icon { background: rgba(0,167,181,.18); color: #FFFFFF; }
+        .sidebar-link-active .sidebar-icon { background: #00A7B5; color: #FFFFFF; }
+        body.sidebar-collapsed .sidebar-link[data-tooltip]:hover::after { content: attr(data-tooltip); position: absolute; left: calc(100% + 10px); top: 50%; z-index: 80; transform: translateY(-50%); white-space: nowrap; border: 1px solid #E2E8F0; border-radius: 8px; background: #FFFFFF; color: #111827; box-shadow: 0 10px 30px rgba(15,23,42,.14); padding: .45rem .65rem; font-size: .78rem; font-weight: 800; }
+        .sidebar-user-card { border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.07); color: #FFFFFF; }
+        .sidebar-user-card .sidebar-user-role { color: #B8C7D8; }
+        .metric-card { border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 18px; box-shadow: 0 1px 2px rgba(15, 23, 42, .04); }
+        .app-shell { min-height: 100vh; display: flex; }
+        .app-sidebar { width: 272px; min-width: 272px; transition: width .22s ease, min-width .22s ease, transform .22s ease; }
+        .app-main { min-width: 0; flex: 1; transition: margin .22s ease; }
+        .sidebar-label, .sidebar-brand-text, .sidebar-section-title, .sidebar-user-details { transition: opacity .16s ease, width .16s ease; }
+        body.sidebar-collapsed .app-sidebar { width: 82px; min-width: 82px; }
+        body.sidebar-collapsed .sidebar-label,
+        body.sidebar-collapsed .sidebar-brand-text,
+        body.sidebar-collapsed .sidebar-section-title,
+        body.sidebar-collapsed .sidebar-user-details { opacity: 0; width: 0; overflow: hidden; pointer-events: none; }
+        body.sidebar-collapsed .sidebar-link { justify-content: center; padding-left: .75rem; padding-right: .75rem; }
+        body.sidebar-collapsed .sidebar-link .ml-auto { display: none; }
+        body.sidebar-collapsed .sidebar-user-card { padding: .75rem; }
+        @media (min-width: 1024px) {
+            body.sidebar-collapsed .app-sidebar { width: 78px; min-width: 78px; }
+            body.sidebar-collapsed .app-sidebar > div:first-child { justify-content: center; padding-left: .75rem; padding-right: .75rem; }
+            body.sidebar-collapsed .sidebar-brand { gap: 0; }
+            body.sidebar-collapsed .sidebar-logo-wrap { width: 44px; height: 44px; border-radius: 12px; box-shadow: 0 12px 28px rgba(0, 167, 181, .22); }
+            body.sidebar-collapsed nav { display: flex; flex-direction: column; align-items: center; gap: .7rem; padding: 1.35rem .75rem; }
+            body.sidebar-collapsed .sidebar-section-title { display: none; padding: 0; margin: 0; }
+            body.sidebar-collapsed .sidebar-link { width: 52px; height: 52px; justify-content: center; border-radius: 16px; padding: 0; background: transparent; box-shadow: none; color: #CBD5E1; }
+            body.sidebar-collapsed .sidebar-link:hover { background: transparent; color: #FFFFFF; transform: translateY(-1px); }
+            body.sidebar-collapsed .sidebar-link-active { background: transparent; color: #FFFFFF; box-shadow: none; }
+            body.sidebar-collapsed .sidebar-icon { width: 42px; height: 42px; margin: auto; border-radius: 13px; background: rgba(255,255,255,.08); }
+            body.sidebar-collapsed .sidebar-icon svg { width: 1.25rem; height: 1.25rem; }
+            body.sidebar-collapsed .sidebar-link-active .sidebar-icon { background: #00A7B5; color: #FFFFFF; box-shadow: 0 10px 24px rgba(0, 167, 181, .26); }
+            body.sidebar-collapsed .sidebar-link:hover .sidebar-icon { background: rgba(0,167,181,.22); }
+        }
+        .sidebar-overlay { display: none; }
+        .user-menu { display: none; }
+        .user-menu-open .user-menu { display: block; }
+        @media (max-width: 1023px) {
+            .app-shell { display: block; }
+            .app-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 60; width: 272px !important; min-width: 272px !important; transform: translateX(-100%); }
+            body.sidebar-mobile-open .app-sidebar { transform: translateX(0); }
+            body.sidebar-mobile-open .sidebar-overlay { display: block; }
+            body.sidebar-collapsed .sidebar-label,
+            body.sidebar-collapsed .sidebar-brand-text,
+            body.sidebar-collapsed .sidebar-section-title,
+            body.sidebar-collapsed .sidebar-user-details { opacity: 1; width: auto; pointer-events: auto; }
+            body.sidebar-collapsed .sidebar-link { justify-content: flex-start; padding: .75rem .9rem; }
+        }
+        @media (max-width: 720px) {
+            .responsive-table { min-width: 0 !important; }
+            .responsive-table thead { display: none; }
+            .responsive-table,
+            .responsive-table tbody,
+            .responsive-table tr,
+            .responsive-table td { display: block; width: 100%; }
+            .responsive-table tbody { padding: .75rem; }
+            .responsive-table tr { border: 1px solid var(--line); border-radius: 8px; background: #FFFFFF; margin-bottom: .85rem; overflow: hidden; box-shadow: 0 1px 2px rgba(15, 23, 42, .04); }
+            .responsive-table tr:hover td { background: #FFFFFF; }
+            .responsive-table td { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #EEF2F7; padding: .75rem .9rem; text-align: right; }
+            .responsive-table td:last-child { border-bottom: 0; }
+            .responsive-table td::before { content: attr(data-label); flex-shrink: 0; color: var(--muted); font-size: .75rem; font-weight: 900; text-align: left; text-transform: uppercase; }
+            .responsive-table td[data-label="ART"],
+            .responsive-table td[data-label="Foto"] { align-items: flex-start; text-align: left; }
+            .responsive-table td[data-label="ART"] > div { margin-left: auto; max-width: min(100%, 260px); }
+            .responsive-table td[data-label="Acciones"] .btn-secondary,
+            .responsive-table td[data-label="Acción"] .btn-secondary { width: auto; white-space: nowrap; }
+            .responsive-table td[colspan] { display: block; text-align: center; }
+            .responsive-table td[colspan]::before { content: ""; display: none; }
+        }
+        @media print {
+            .app-logo { overflow: visible !important; background: #FFFFFF !important; box-shadow: none !important; }
+            .app-logo img,
+            .brand-logo-img {
+                width: 100% !important;
+                height: 100% !important;
+                max-width: 100% !important;
+                object-fit: contain !important;
+                transform: none !important;
+            }
+        }
+    </style>
 </head>
 
-<body class="min-h-screen bg-slate-100 text-slate-950">
+<body class="min-h-screen">
     {% if user %}
-    <div class="min-h-screen lg:flex">
-        <input id="menu-toggle" type="checkbox" class="peer hidden">
+    <div class="app-shell">
+        <button id="sidebar-overlay" class="sidebar-overlay fixed inset-0 z-50 bg-slate-950/50 lg:hidden" type="button" aria-label="Cerrar menú"></button>
 
-        <header class="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 lg:hidden">
-            <a href="/dashboard" class="inline-flex items-center gap-2 font-black tracking-tight">
-                <span class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-cyan-500 text-white">D</span>
-                <span>D.A.R.T</span>
-            </a>
-            <label for="menu-toggle" class="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700">
-                Menú
-            </label>
-        </header>
-
-        <label for="menu-toggle" class="fixed inset-0 z-40 hidden bg-slate-950/50 peer-checked:block lg:hidden"></label>
-
-        <aside class="fixed inset-y-0 left-0 z-50 flex w-72 -translate-x-full flex-col overflow-hidden bg-slate-950 text-white shadow-2xl transition peer-checked:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0">
+        <aside id="app-sidebar" class="app-sidebar flex flex-col overflow-hidden shadow-2xl lg:sticky lg:top-0 lg:h-screen">
             <div class="flex h-20 items-center justify-between border-b border-white/10 px-5">
-                <a href="/dashboard" class="inline-flex items-center gap-3 font-black tracking-tight">
-                    <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-500 text-lg text-white shadow-lg shadow-cyan-500/30">D</span>
-                    <span class="text-2xl">D.A.R.T</span>
+                <a href="/dashboard" class="sidebar-brand inline-flex items-center font-black">
+                    {% set brand_logo_size = 'sm' %}
+                    {% set brand_logo_theme = 'dark' %}
+                    {% set brand_logo_compact = true %}
+                    {% include "components/brand_logo.html" with context %}
                 </a>
-                <label for="menu-toggle" class="rounded-xl px-3 py-2 text-sm font-bold text-slate-300 lg:hidden">Cerrar</label>
+                <button id="sidebar-close" class="rounded-lg px-3 py-2 text-sm font-bold text-slate-300 lg:hidden" type="button">Cerrar</button>
             </div>
 
-            <nav class="flex-1 space-y-2 px-4 py-6 text-sm font-semibold">
-                <a href="/dashboard" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-slate-200 hover:bg-white/10 hover:text-white">
-                    <span class="text-cyan-300">▦</span> Dashboard
-                </a>
-                <a href="/art/nueva" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-slate-200 hover:bg-white/10 hover:text-white">
-                    <span class="text-cyan-300">＋</span> Nueva ART
-                </a>
-                <a href="/perfil" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-slate-200 hover:bg-white/10 hover:text-white">
-                    <span class="text-cyan-300">◉</span> Mi perfil
+            <nav class="flex-1 space-y-1 px-4 py-6 text-sm">
+                <p class="sidebar-section-title px-3 pb-2 text-xs font-black uppercase">Operación</p>
+                <a href="/dashboard" title="Dashboard" data-tooltip="Dashboard" class="sidebar-link {% if request.url.path == '/dashboard' %}sidebar-link-active{% endif %}">
+                    <span class="sidebar-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect>
+                        </svg>
+                    </span>
+                    <span class="sidebar-label whitespace-nowrap">Dashboard</span>
                 </a>
                 {% if user.rol == 'admin' or user.rol == 'supervisor' %}
-                <a href="/supervisor/art" class="relative flex items-center gap-3 rounded-2xl px-4 py-3 text-slate-200 hover:bg-white/10 hover:text-white">
-                    <span class="text-cyan-300">✓</span> Revisar ART
+                <a href="/art/nueva" title="Nueva ART" data-tooltip="Nueva ART" class="sidebar-link {% if request.url.path == '/art/nueva' %}sidebar-link-active{% endif %}">
+                    <span class="sidebar-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M12 18v-6"></path><path d="M9 15h6"></path>
+                        </svg>
+                    </span>
+                    <span class="sidebar-label whitespace-nowrap">Nueva ART</span>
+                </a>
+                {% endif %}
+                {% if user.rol == 'trabajador' %}
+                <a href="/mis-art-asignadas" title="Mis ART asignadas" data-tooltip="Mis ART asignadas" class="sidebar-link {% if request.url.path == '/mis-art-asignadas' %}sidebar-link-active{% endif %}">
+                    <span class="sidebar-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                        </svg>
+                    </span>
+                    <span class="sidebar-label whitespace-nowrap">Mis ART asignadas</span>
+                </a>
+                {% endif %}
+                {% if user.rol == 'admin' or user.rol == 'supervisor' %}
+                <a href="/supervisor/art" title="Revisar ART" data-tooltip="Revisar ART" class="sidebar-link {% if request.url.path in ['/supervisor/art', '/admin/art'] %}sidebar-link-active{% endif %}">
+                    <span class="sidebar-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><path d="M9 5a3 3 0 0 1 6 0"></path><path d="m9 14 2 2 4-4"></path>
+                        </svg>
+                    </span>
+                    <span class="sidebar-label whitespace-nowrap">Revisar ART</span>
                     {% if user.pendientes and user.pendientes > 0 %}
-                    <span class="ml-auto inline-flex min-w-6 items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-black text-white">{{ user.pendientes }}</span>
+                    <span class="ml-auto status-badge status-rechazada px-2 py-0.5">{{ user.pendientes }}</span>
                     {% endif %}
                 </a>
                 {% endif %}
                 {% if user.rol == 'admin' %}
-                <a href="/admin/usuarios" class="flex items-center gap-3 rounded-2xl px-4 py-3 text-slate-200 hover:bg-white/10 hover:text-white">
-                    <span class="text-cyan-300">◎</span> Usuarios
+                <p class="sidebar-section-title px-3 pb-2 pt-5 text-xs font-black uppercase">Administración</p>
+                <a href="/admin/usuarios" title="Usuarios" data-tooltip="Usuarios" class="sidebar-link {% if request.url.path == '/admin/usuarios' %}sidebar-link-active{% endif %}">
+                    <span class="sidebar-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                    </span>
+                    <span class="sidebar-label whitespace-nowrap">Usuarios</span>
                 </a>
                 {% endif %}
-                <div class="flex items-center gap-2">
-                    <div class="relative">
-                        <button hx-get="/notificaciones/fragment" hx-trigger="click" hx-swap="outerHTML" class="relative rounded-full px-3 py-2 text-slate-600 hover:bg-slate-100">🔔
-                            {% if user.notificaciones_no_leidas and user.notificaciones_no_leidas > 0 %}
-                            <span class="absolute -top-1 -right-1 inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white">{{ user.notificaciones_no_leidas }}</span>
-                            {% endif %}
-                        </button>
-                    </div>
-                    <a href="/logout" class="rounded-full px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">Salir</a>
-                </div>
             </nav>
 
-            <div class="border-t border-white/10 bg-cyan-600/15 p-4">
-                <div class="rounded-3xl bg-cyan-500 p-4 text-slate-950 shadow-xl shadow-cyan-950/20">
-                    <p class="text-xs font-bold uppercase tracking-wide opacity-80">Sesión activa</p>
-                    <p class="mt-1 truncate text-lg font-black">{{ user.nombre or user.email or user.username }}</p>
-                    <div class="mt-4 grid grid-cols-2 gap-2">
-                        <a href="/perfil" class="rounded-2xl bg-white/85 px-3 py-2 text-center text-sm font-bold hover:bg-white">Perfil</a>
-                        <a href="/logout" class="rounded-2xl bg-slate-950 px-3 py-2 text-center text-sm font-bold text-white hover:bg-slate-800">Salir</a>
-                    </div>
-                </div>
-            </div>
         </aside>
 
-        <main class="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <div class="app-main">
+            <header class="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-line bg-white px-4 sm:px-6">
+                <div class="flex min-w-0 items-center gap-3">
+                    <button id="sidebar-toggle" class="btn-secondary px-3 py-2 text-sm" type="button" aria-label="Abrir o cerrar menú">☰</button>
+                    <div class="min-w-0">
+                        <h1 class="truncate text-lg font-black text-dartText">{% block page_title %}{{ title if title else "Panel interno" }}{% endblock %}</h1>
+                        <p class="hidden text-xs font-bold text-dartMuted sm:block">Plataforma interna de seguridad minera</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <a href="/notificaciones" class="relative inline-flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-sm font-bold text-dartMuted hover:bg-slate-50">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"></path><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path>
+                        </svg>
+                        <span class="hidden sm:inline">Alertas</span>
+                        {% if user.notificaciones_no_leidas and user.notificaciones_no_leidas > 0 %}
+                        <span class="absolute -right-2 -top-2 inline-flex min-w-5 items-center justify-center rounded-full bg-critical px-1.5 text-[11px] font-black text-white">{{ user.notificaciones_no_leidas }}</span>
+                        {% endif %}
+                    </a>
+                    <div id="top-user-menu-wrap" class="relative">
+                        <button id="top-user-button" type="button" class="flex items-center gap-2 rounded-lg border border-line bg-white px-2 py-1.5 hover:bg-slate-50">
+                            {% if user.foto_perfil %}
+                            <img src="{{ user.foto_perfil if user.foto_perfil[:5] == 'data:' else url_for('static', path=user.foto_perfil) }}" alt="" class="h-8 w-8 rounded-full object-cover" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+                            <span class="avatar h-8 w-8 text-xs" hidden>{{ (user.nombre or user.username)[:2].upper() }}</span>
+                            {% else %}
+                            <span class="avatar h-8 w-8 text-xs">{{ (user.nombre or user.username)[:2].upper() }}</span>
+                            {% endif %}
+                            <span class="hidden max-w-32 truncate text-sm font-black sm:block">{{ user.nombre or user.username }}</span>
+                        </button>
+                        <div id="top-user-menu" class="user-menu absolute right-0 mt-2 w-52 rounded-lg border border-line bg-white p-2 text-sm font-bold text-dartText shadow-xl">
+                            <a href="/perfil" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-slate-50">
+                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="10" r="3"></circle><path d="M7 20.7a6 6 0 0 1 10 0"></path></svg>
+                                Mi perfil
+                            </a>
+                            <a href="/perfil/editar" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-slate-50">
+                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.72l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                Configuración
+                            </a>
+                            <a href="/logout" class="flex items-center gap-2 rounded-lg px-3 py-2 text-critical hover:bg-red-50">
+                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path></svg>
+                                Cerrar sesión
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            <main class="px-4 py-6 sm:px-6 lg:px-8">
     {% else %}
-    <nav class="bg-white text-slate-900 px-5 py-4 shadow-sm border-b border-slate-200">
-        <div class="mx-auto flex max-w-7xl items-center justify-between gap-4">
-            <a href="/" class="inline-flex items-center gap-3 text-2xl font-black tracking-tight">
-                <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-500 text-white">D</span>
-                <span>D.A.R.T</span>
-            </a>
-            <div class="flex items-center gap-2 text-sm font-bold text-slate-600">
-                <a href="/login" class="rounded-full px-4 py-2 hover:bg-slate-100 hover:text-cyan-700">Iniciar sesión</a>
-                <a href="/registro" class="rounded-full bg-lime-300 px-5 py-2 text-slate-950 hover:bg-lime-200">Crear cuenta</a>
-            </div>
-        </div>
-    </nav>
+    {% include "components/public_navbar.html" %}
     <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
     {% endif %}
 
@@ -106,9 +310,61 @@
 
     </main>
 
+    {% if not user %}
+    {% include "components/public_footer.html" %}
+    {% endif %}
+
     {% if user %}
         </div>
     </div>
+    <script>
+        (function () {
+            const body = document.body;
+            const toggle = document.getElementById("sidebar-toggle");
+            const close = document.getElementById("sidebar-close");
+            const overlay = document.getElementById("sidebar-overlay");
+            const topUserButton = document.getElementById("top-user-button");
+            const topUserMenuWrap = document.getElementById("top-user-menu-wrap");
+            const isDesktop = () => window.matchMedia("(min-width: 1024px)").matches;
+
+            if (localStorage.getItem("dart.sidebar") === "collapsed") {
+                body.classList.add("sidebar-collapsed");
+            }
+
+            function toggleSidebar() {
+                if (isDesktop()) {
+                    body.classList.toggle("sidebar-collapsed");
+                    localStorage.setItem("dart.sidebar", body.classList.contains("sidebar-collapsed") ? "collapsed" : "expanded");
+                } else {
+                    body.classList.toggle("sidebar-mobile-open");
+                }
+            }
+            function closeMobileSidebar() {
+                body.classList.remove("sidebar-mobile-open");
+            }
+            function closeMenus() {
+                topUserMenuWrap?.classList.remove("user-menu-open");
+            }
+
+            toggle?.addEventListener("click", (event) => {
+                event.stopPropagation();
+                toggleSidebar();
+            });
+            close?.addEventListener("click", closeMobileSidebar);
+            overlay?.addEventListener("click", closeMobileSidebar);
+            topUserButton?.addEventListener("click", (event) => {
+                event.stopPropagation();
+                topUserMenuWrap?.classList.toggle("user-menu-open");
+            });
+            document.addEventListener("click", closeMenus);
+            window.addEventListener("keydown", (event) => {
+                if (event.key === "Escape") {
+                    closeMobileSidebar();
+                    closeMenus();
+                }
+            });
+        })();
+    </script>
     {% endif %}
 </body>
 </html>

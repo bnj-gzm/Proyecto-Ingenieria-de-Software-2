@@ -1,227 +1,177 @@
 {% extends "base.html" %}
 
+{% block page_title %}Nueva ART{% endblock %}
+
 {% block content %}
+<div class="space-y-6">
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div>
+      <p class="text-sm font-black uppercase text-techCyan">Registro preventivo</p>
+      <h1 class="mt-2 text-3xl font-black">Nueva ART/AST Digital</h1>
+      <p class="mt-2 text-dartMuted">Completa antecedentes, controles críticos, evidencia y trabajadores asignados.</p>
+      <p class="mt-3 text-sm font-semibold text-dartMuted">Supervisor responsable: <span class="text-dartText">{{ user.nombre or user.email or user.username }}</span></p>
+    </div>
+    <a href="/dashboard" class="btn-secondary">Cancelar</a>
+  </div>
 
-<div class="mb-6">
-    <a href="/" class="text-cyan-600 hover:underline font-semibold">
-        ← Volver
-    </a>
-</div>
-
-<form action="/art/guardar"
-      method="post"
-      enctype="multipart/form-data"
-      class="bg-white rounded-2xl shadow border border-slate-200 overflow-hidden">
+  <form action="/art/guardar" method="post" enctype="multipart/form-data" class="space-y-6">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
-    <div class="bg-cyan-700 text-white px-8 py-6">
-        <h1 class="text-3xl font-bold">Nueva ART/AST Digital</h1>
-        <p class="text-cyan-100 mt-2">
-            Complete la información de la tarea, checklist, EPP, riesgos, controles y evidencia.
-        </p>
-    </div>
-
-    <div class="p-8 space-y-10">
-
-        <section>
-            <h2 class="text-xl font-bold mb-4 text-slate-800">A) Antecedentes de la tarea</h2>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                    <label class="font-semibold">Empresa / Contratista</label>
-                    <input name="empresa" required
-                           class="mt-1 w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500 outline-none"
-                           placeholder="Ej: Empresa contratista SpA">
-                </div>
-
-                <div>
-                    <label class="font-semibold">Trabajador asignado</label>
-                    <select name="asignado_a" required
-                            class="mt-1 w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500 outline-none">
-                        {% for trabajador in trabajadores %}
-                        <option value="{{ trabajador.username }}">
-                            {{ trabajador.nombre or trabajador.username }}{% if trabajador.cargo %} — {{ trabajador.cargo }}{% endif %}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div>
-                    <label class="font-semibold">Área de trabajo</label>
-                    <input name="area" required
-                           class="mt-1 w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500 outline-none"
-                           placeholder="Ej: Planta, taller, mina, bodega">
-                </div>
-
-                <div>
-                    <label class="font-semibold">Fecha</label>
-                    <input type="date" name="fecha" required
-                           class="mt-1 w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500 outline-none">
-                </div>
-
-                <div>
-                    <label class="font-semibold">Tipo de tarea</label>
-                    <select name="tipo_tarea" required
-                            class="mt-1 w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500 outline-none">
-                        <option value="Rutinaria">Rutinaria</option>
-                        <option value="No rutinaria">No rutinaria</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="font-semibold">Supervisor asignado</label>
-                    <select name="supervisor_asignado" required
-                            class="mt-1 w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500 outline-none">
-                        {% for supervisor in supervisores %}
-                        <option value="{{ supervisor.username }}">
-                            {{ supervisor.nombre or supervisor.username }}{% if supervisor.area %} — {{ supervisor.area }}{% endif %}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-
-            {% if not trabajadores or not supervisores %}
-            <div class="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-800">
-                Para crear ART completas debe existir al menos un usuario normal y un supervisor registrado.
-            </div>
-            {% endif %}
-
-            <div class="mt-5">
-                <label class="font-semibold">Descripción de la tarea</label>
-                <textarea name="descripcion" required rows="4"
-                          class="mt-1 w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500 outline-none"
-                          placeholder="Describa la actividad que se realizará..."></textarea>
-            </div>
-        </section>
-
-        <section>
-            <h2 class="text-xl font-bold mb-4 text-slate-800">B) Checklist de seguridad</h2>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {% for item in checklist %}
-                <label class="flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
-                    <input type="checkbox"
-                           name="checklist"
-                           value="{{ item }}"
-                           required
-                           class="mt-1 w-5 h-5">
-                    <span>{{ item }}</span>
-                </label>
-                {% endfor %}
-            </div>
-        </section>
-
-        <section>
-            <h2 class="text-xl font-bold mb-4 text-slate-800">C) Elementos de Protección Personal</h2>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                {% for item in epp %}
-                <label class="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
-                    <input type="checkbox"
-                           name="epp"
-                           value="{{ item }}"
-                           class="w-5 h-5">
-                    <span>{{ item }}</span>
-                </label>
-                {% endfor %}
-            </div>
-        </section>
-
-        <section>
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-slate-800">D) Riesgos y controles</h2>
-
-                <button type="button"
-                        hx-get="/partials/riesgo-row"
-                        hx-target="#riesgos-body"
-                        hx-swap="beforeend"
-                        class="bg-slate-900 text-white px-4 py-2 rounded-xl font-semibold hover:bg-slate-800">
-                    + Agregar fila
-                </button>
-            </div>
-
-            <div class="overflow-x-auto border border-slate-200 rounded-xl">
-                <table class="w-full text-sm">
-                    <thead class="bg-slate-100">
-                        <tr>
-                            <th class="text-left px-4 py-3 w-1/3">Secuencia del trabajo</th>
-                            <th class="text-left px-4 py-3 w-1/3">¿Qué me puede suceder?</th>
-                            <th class="text-left px-4 py-3 w-1/3">¿Qué debo hacer?</th>
-                        </tr>
-                    </thead>
-
-                    <tbody id="riesgos-body">
-                        <tr class="border-t">
-                            <td class="p-3">
-                                <textarea name="secuencia" rows="3" required
-                                          class="w-full border rounded-lg px-3 py-2"
-                                          placeholder="Ej: Traslado al área"></textarea>
-                            </td>
-                            <td class="p-3">
-                                <textarea name="riesgo" rows="3" required
-                                          class="w-full border rounded-lg px-3 py-2"
-                                          placeholder="Ej: Caídas, golpes, atrapamiento"></textarea>
-                            </td>
-                            <td class="p-3">
-                                <textarea name="control" rows="3" required
-                                          class="w-full border rounded-lg px-3 py-2"
-                                          placeholder="Ej: Uso de EPP, señalización, bloqueo"></textarea>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <section>
-            <h2 class="text-xl font-bold mb-4 text-slate-800">E) Evidencia y observaciones</h2>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                    <label class="font-semibold">Adjuntar imágenes de evidencia</label>
-                    <input type="file"
-                           name="evidencia"
-                           multiple
-                           required
-                           accept="image/*"
-                           class="mt-1 w-full border rounded-xl px-4 py-3 bg-white">
-                    <p class="text-sm text-slate-500 mt-2">
-                        Puede adjuntar fotografías del área, herramientas, EPP u observaciones.
-                    </p>
-                </div>
-
-                <div>
-                    <label class="font-semibold">Observaciones</label>
-                    <textarea name="observaciones" rows="5" required
-                              class="mt-1 w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-cyan-500 outline-none"
-                              placeholder="Observaciones adicionales..."></textarea>
-                </div>
-            </div>
-        </section>
-
-        <section class="bg-yellow-50 border border-yellow-300 rounded-xl p-5">
-            <h3 class="font-bold text-yellow-800">Importante</h3>
-            <p class="text-yellow-800 mt-1">
-                Si se identifica un riesgo crítico o una condición insegura, se debe informar al supervisor
-                y aplicar medidas de control antes de continuar la tarea.
-            </p>
-        </section>
-
-        <div class="flex justify-end gap-3">
-            <a href="/"
-               class="px-5 py-3 rounded-xl border border-slate-300 font-semibold hover:bg-slate-100">
-                Cancelar
-            </a>
-
-            <button type="submit"
-                    {% if not trabajadores or not supervisores %}disabled{% endif %}
-                    class="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-3 rounded-xl font-bold">
-                Guardar ART/AST
-            </button>
+    <section class="app-card">
+      <div class="app-card-header">
+        <h2 class="text-xl font-black">Datos generales</h2>
+        <p class="mt-1 text-sm text-dartMuted">Define la tarea y el contexto operacional que revisarán los trabajadores asignados.</p>
+      </div>
+      <div class="app-card-body grid gap-5 md:grid-cols-2">
+        <div>
+          <label class="form-label">Empresa / Contratista</label>
+          <input name="empresa" required class="form-input" placeholder="Ej: Empresa contratista SpA">
         </div>
+        <div>
+          <label class="form-label">Área de trabajo</label>
+          <input name="area" required class="form-input" placeholder="Ej: Planta, taller, mina, bodega">
+        </div>
+        <div>
+          <label class="form-label">Fecha</label>
+          <div class="rounded-lg border border-line bg-slate-50 px-4 py-3 font-black">{{ fecha_actual }}</div>
+        </div>
+        <div>
+          <label class="form-label">Tipo de tarea</label>
+          <select name="tipo_tarea" required class="form-select">
+            <option value="Rutinaria">Rutinaria</option>
+            <option value="No rutinaria">No rutinaria</option>
+          </select>
+        </div>
+        <div class="md:col-span-2">
+          <label class="form-label">Descripción de la tarea</label>
+          <textarea name="descripcion" required rows="4" class="form-textarea" placeholder="Describe la actividad que se realizará..."></textarea>
+        </div>
+      </div>
+    </section>
 
+    <section class="app-card">
+      <div class="app-card-header flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h2 class="text-xl font-black">Trabajadores asignados</h2>
+          <p class="mt-1 text-sm text-dartMuted">Selecciona al menos {{ min_trabajadores }} trabajadores activos distintos.</p>
+        </div>
+        <span id="worker-counter" class="status-badge bg-slate-100 text-dartText normal-case">Seleccionados: 0 / mínimo requerido: {{ min_trabajadores }}</span>
+      </div>
+      <div class="app-card-body space-y-4">
+        <input id="worker-search" type="search" class="form-input" placeholder="Buscar por nombre, RUT, correo, cargo, área o teléfono">
+        <div id="worker-error" class="alert-error hidden">Debes asignar al menos {{ min_trabajadores }} trabajadores distintos a la ART.</div>
+        <div class="grid gap-3 md:grid-cols-2">
+          {% for trabajador in trabajadores %}
+          <label class="worker-option flex cursor-pointer items-start gap-4 rounded-lg border border-line bg-white p-4 transition hover:border-cyan-300 hover:bg-cyan-50/40" data-search="{{ trabajador.nombre }} {{ trabajador.username }} {{ trabajador.rut }} {{ trabajador.email }} {{ trabajador.telefono }} {{ trabajador.cargo }} {{ trabajador.area }}">
+            <input type="checkbox" name="trabajadores_asignados" value="{{ trabajador.id }}" class="worker-checkbox mt-1 h-5 w-5">
+            <span class="min-w-0 flex-1">
+              <span class="block text-base font-black text-dartText">{{ trabajador.nombre or trabajador.username }}</span>
+              <span class="mt-2 grid gap-1 text-sm text-dartMuted sm:grid-cols-2">
+                <span><strong>RUT:</strong> {{ trabajador.rut or "Sin RUT registrado" }}</span>
+                <span><strong>Cargo:</strong> {{ trabajador.cargo or "Sin cargo registrado" }}</span>
+                <span><strong>Área:</strong> {{ trabajador.area or "Sin área registrada" }}</span>
+                <span><strong>Teléfono:</strong> {{ trabajador.telefono or "Sin teléfono registrado" }}</span>
+              </span>
+              <span class="mt-2 block break-all text-sm font-semibold text-techCyan">{{ trabajador.email or "Sin correo registrado" }}</span>
+            </span>
+          </label>
+          {% else %}
+          <div class="md:col-span-2 rounded-lg border border-amber-200 bg-amber-50 p-4 font-bold text-amber-800">
+            No hay trabajadores activos disponibles para asignar.
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <section class="app-card overflow-hidden">
+      <div class="app-card-header flex items-center justify-between gap-3">
+        <div>
+          <h2 class="text-xl font-black">Riesgos y controles</h2>
+          <p class="mt-1 text-sm text-dartMuted">Define secuencia, riesgo y medida de control.</p>
+        </div>
+        <button type="button" hx-get="/partials/riesgo-row" hx-target="#riesgos-body" hx-swap="beforeend" class="btn-dark px-3 py-2 text-sm">Agregar fila</button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="app-table min-w-[820px]">
+          <thead>
+            <tr>
+              <th>Secuencia del trabajo</th>
+              <th>¿Qué me puede suceder?</th>
+              <th>¿Qué debo hacer?</th>
+            </tr>
+          </thead>
+          <tbody id="riesgos-body">
+            <tr>
+              <td><textarea name="secuencia" rows="3" required class="form-textarea" placeholder="Ej: Traslado al área"></textarea></td>
+              <td><textarea name="riesgo" rows="3" required class="form-textarea" placeholder="Ej: Caídas, golpes, atrapamiento"></textarea></td>
+              <td><textarea name="control" rows="3" required class="form-textarea" placeholder="Ej: Uso de EPP, señalización, bloqueo"></textarea></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="app-card">
+      <div class="app-card-header">
+        <h2 class="text-xl font-black">Evidencia y observaciones</h2>
+      </div>
+      <div class="app-card-body grid gap-5 md:grid-cols-2">
+        <div>
+          <label class="form-label">Adjuntar imágenes de evidencia</label>
+          <input type="file" name="evidencia" multiple accept=".jpg,.jpeg,.png,.webp" class="form-input bg-white">
+          <p class="mt-2 text-sm text-dartMuted">JPG, PNG o WEBP. Máximo 5 MB por imagen.</p>
+        </div>
+        <div>
+          <label class="form-label">Observaciones</label>
+          <textarea name="observaciones" rows="5" required class="form-textarea" placeholder="Observaciones adicionales..."></textarea>
+        </div>
+      </div>
+    </section>
+
+    <div class="app-card app-card-body flex flex-col gap-3 border-l-4 border-l-alert sm:flex-row sm:items-center sm:justify-between">
+      <p class="text-sm font-bold text-dartMuted">Al guardar, podrás enviar el enlace individual a cada trabajador desde el detalle de la ART.</p>
+      <button type="submit" {% if trabajadores|length < min_trabajadores %}disabled{% endif %} class="btn-primary disabled:cursor-not-allowed disabled:opacity-50">Guardar ART/AST</button>
     </div>
-</form>
-
+  </form>
+</div>
+<script>
+  const minWorkers = {{ min_trabajadores }};
+  const workerCounter = document.getElementById("worker-counter");
+  const workerError = document.getElementById("worker-error");
+  const workerSearch = document.getElementById("worker-search");
+  const form = document.querySelector("form[action='/art/guardar']");
+  function selectedWorkers() {
+    return Array.from(document.querySelectorAll("input[name='trabajadores_asignados']:checked"));
+  }
+  function updateWorkerCounter() {
+    const total = selectedWorkers().length;
+    workerCounter.textContent = `Seleccionados: ${total} / mínimo requerido: ${minWorkers}`;
+    workerCounter.classList.toggle("bg-cyan-100", total >= minWorkers);
+    workerCounter.classList.toggle("text-cyan-900", total >= minWorkers);
+    document.querySelectorAll(".worker-option").forEach((option) => {
+      const checked = option.querySelector("input").checked;
+      option.classList.toggle("border-cyan-400", checked);
+      option.classList.toggle("bg-cyan-50", checked);
+      option.classList.toggle("shadow-sm", checked);
+    });
+  }
+  document.querySelectorAll("input[name='trabajadores_asignados']").forEach((input) => {
+    input.addEventListener("change", updateWorkerCounter);
+  });
+  workerSearch?.addEventListener("input", () => {
+    const term = workerSearch.value.toLowerCase();
+    document.querySelectorAll(".worker-option").forEach((option) => {
+      option.style.display = option.dataset.search.toLowerCase().includes(term) ? "" : "none";
+    });
+  });
+  form?.addEventListener("submit", (event) => {
+    if (selectedWorkers().length < minWorkers) {
+      event.preventDefault();
+      workerError.classList.remove("hidden");
+      workerError.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  });
+  updateWorkerCounter();
+</script>
 {% endblock %}
