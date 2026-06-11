@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import html
+import json
 import logging
 import smtplib
+import urllib.error
+import urllib.request
 from email.message import EmailMessage
 
 from backend.src.config.settings import settings
@@ -26,10 +29,16 @@ def smtp_configured() -> bool:
     )
 
 
+def resend_configured() -> bool:
+    return bool(settings.resend_api_key and (settings.email_from or settings.smtp_from))
+
+
 def send_email(to_email: str, subject: str, html_body: str, text_body: str | None = None) -> bool:
     if not settings.email_enabled:
-        logger.info("EMAIL_ENABLED=false; no se envía correo SMTP a %s.", to_email)
+        logger.info("EMAIL_ENABLED=false; no se envía correo a %s.", to_email)
         return False
+    if settings.email_provider == "resend":
+        return _send_resend(to_email, subject, html_body, text_body)
     if not smtp_configured():
         logger.error("SMTP no está configurado correctamente.")
         return False
@@ -51,6 +60,42 @@ def send_email(to_email: str, subject: str, html_body: str, text_body: str | Non
         return True
     except Exception:
         logger.exception("No se pudo enviar correo a %s con asunto %s.", to_email, subject)
+        return False
+
+
+def _send_resend(to_email: str, subject: str, html_body: str, text_body: str | None = None) -> bool:
+    if not resend_configured():
+        logger.error("Resend no está configurado correctamente.")
+        return False
+
+    payload = {
+        "from": settings.email_from or settings.smtp_from,
+        "to": [to_email],
+        "subject": subject,
+        "html": html_body,
+        "text": text_body or _html_to_text_fallback(html_body),
+    }
+    request = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {settings.resend_api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            if 200 <= response.status < 300:
+                logger.info("Correo Resend enviado a %s con asunto %s.", to_email, subject)
+                return True
+            logger.error("Resend respondió estado %s al enviar a %s.", response.status, to_email)
+            return False
+    except urllib.error.HTTPError as exc:
+        logger.error("Resend respondió estado %s al enviar a %s.", exc.code, to_email)
+        return False
+    except Exception:
+        logger.exception("No se pudo enviar correo Resend a %s con asunto %s.", to_email, subject)
         return False
 
 
@@ -170,6 +215,24 @@ def build_password_reset_email(action_url: str) -> tuple[str, str, str]:
         footer_note="Enlace válido por 2 horas.",
     )
     text_body = render_text_email("Restablece tu contraseña D.A.R.T", intro, "Restablecer contraseña", action_url, "Enlace válido por 2 horas.")
+    return subject, html_body, text_body
+
+
+def build_art_assignment_email(action_url: str, art: dict, trabajador_nombre: str) -> tuple[str, str, str]:
+    subject = f"ART asignada: {art.get('tipo_tarea', 'Trabajo seguro')}"
+    intro = (
+        f"Hola {trabajador_nombre or 'trabajador/a'}, tienes una ART asignada para completar tu validación "
+        f"de seguridad. Tarea: {art.get('descripcion', '')}. Este enlace es personal y expira en 7 días."
+    )
+    html_body = render_email_template(
+        title="Completa tu ART asignada",
+        intro=intro,
+        action_text="Responder ART",
+        action_url=action_url,
+        footer_note="Enlace válido por 7 días.",
+        security_note="Este enlace es personal. No lo compartas con otras personas.",
+    )
+    text_body = render_text_email("Completa tu ART asignada", intro, "Responder ART", action_url, "Enlace válido por 7 días.")
     return subject, html_body, text_body
 
 

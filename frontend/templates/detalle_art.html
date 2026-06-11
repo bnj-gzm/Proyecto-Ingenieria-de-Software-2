@@ -34,10 +34,14 @@
 
   <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
     <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Empresa</p><p class="mt-2 font-black">{{ registro.empresa }}</p></div>
-    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Trabajador</p><p class="mt-2 font-black">{{ registro.trabajador }}</p></div>
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Asignados</p><p class="mt-2 font-black">{{ registro.progreso_asignaciones.total if registro.progreso_asignaciones else registro.trabajador }}</p></div>
     <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Fecha</p><p class="mt-2 font-black">{{ registro.fecha }}</p></div>
     <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Supervisor</p><p class="mt-2 font-black">{{ registro.supervisor }}</p></div>
   </section>
+
+  {% if mensaje %}
+  <div class="alert-success">{{ mensaje }}</div>
+  {% endif %}
 
   <div class="grid gap-6 xl:grid-cols-[1fr_360px]">
     <div class="space-y-6">
@@ -46,13 +50,111 @@
         <div class="app-card-body grid gap-4 md:grid-cols-2">
           <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Área</p><p class="font-black">{{ registro.area }}</p></div>
           <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Tipo de tarea</p><p class="font-black">{{ registro.tipo_tarea }}</p></div>
-          <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Asignado a</p><p class="font-black">{{ registro.asignado_a or registro.trabajador }}</p></div>
+          <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Progreso trabajadores</p><p class="font-black">{{ registro.progreso_asignaciones.respondidos if registro.progreso_asignaciones else 0 }} / {{ registro.progreso_asignaciones.total if registro.progreso_asignaciones else 0 }} respondidos</p></div>
           <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Creado</p><p class="font-black">{{ registro.creado_en }}</p></div>
         </div>
       </section>
 
+      {% if user.rol == 'admin' or user.rol == 'supervisor' %}
+      <section class="app-card overflow-hidden">
+        <div class="app-card-header flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 class="text-xl font-black">Trabajadores asignados y respuestas</h2>
+            <p class="mt-1 text-sm text-dartMuted">Seguimiento individual de respuestas, observaciones y firmas.</p>
+          </div>
+          <form method="post" action="/art/{{ registro.id }}/enviar-trabajadores">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn-primary disabled:cursor-not-allowed disabled:opacity-50" type="submit" {% if registro.progreso_asignaciones.total < min_trabajadores %}disabled{% endif %}>Enviar encuesta a trabajadores</button>
+          </form>
+        </div>
+        <div class="grid gap-3 border-b border-line p-4 sm:grid-cols-2 xl:grid-cols-5">
+          <div class="rounded-lg bg-slate-50 p-4"><p class="text-xs font-black uppercase text-dartMuted">Asignados</p><p class="mt-1 text-2xl font-black">{{ registro.progreso_asignaciones.total }}</p></div>
+          <div class="rounded-lg bg-slate-50 p-4"><p class="text-xs font-black uppercase text-dartMuted">Recibidas</p><p class="mt-1 text-2xl font-black">{{ registro.progreso_asignaciones.respondidos }} / {{ registro.progreso_asignaciones.total }}</p></div>
+          <div class="rounded-lg bg-slate-50 p-4"><p class="text-xs font-black uppercase text-dartMuted">Pendientes</p><p class="mt-1 text-2xl font-black">{{ registro.progreso_asignaciones.faltantes }}</p></div>
+          <div class="rounded-lg bg-slate-50 p-4"><p class="text-xs font-black uppercase text-dartMuted">Con observaciones</p><p class="mt-1 text-2xl font-black">{{ registro.progreso_asignaciones.con_observaciones }}</p></div>
+          <div class="rounded-lg bg-slate-50 p-4"><p class="text-xs font-black uppercase text-dartMuted">Firmas</p><p class="mt-1 text-2xl font-black">{{ registro.progreso_asignaciones.firmas }} / {{ registro.progreso_asignaciones.total }}</p></div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="app-table responsive-table">
+            <thead>
+              <tr>
+                <th>Trabajador</th>
+                <th>RUT</th>
+                <th>Cargo</th>
+                <th>Estado respuesta</th>
+                <th>Estado correo</th>
+                <th>Respuesta</th>
+                <th>Firma</th>
+                <th>Evidencia</th>
+                <th>Observaciones</th>
+                <th>Revisión</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for asignacion in registro.asignaciones %}
+              <tr>
+                <td data-label="Trabajador">
+                  <p class="font-bold">{{ asignacion.nombre }}</p>
+                  <p class="text-xs text-dartMuted">{{ asignacion.email }}</p>
+                </td>
+                <td data-label="RUT">{{ asignacion.rut or "Sin RUT" }}</td>
+                <td data-label="Cargo">{{ asignacion.cargo or "Sin cargo" }}{% if asignacion.area %}<br><span class="text-xs text-dartMuted">{{ asignacion.area }}</span>{% endif %}</td>
+                <td data-label="Estado respuesta">
+                  <span class="status-badge status-{{ asignacion.estado_respuesta }}">{{ asignacion.estado_respuesta }}</span>
+                </td>
+                <td data-label="Estado correo">
+                  {% if asignacion.estado_envio == 'envio_fallido' %}
+                  <span class="font-bold text-amber-700">Correo no enviado</span><br><span class="text-xs text-dartMuted">Puede responder desde su cuenta.</span>
+                  {% elif asignacion.estado_envio == 'enlace_generado' %}
+                  <span class="font-bold text-dartText">Link generado</span>
+                  {% elif asignacion.estado_envio == 'enviado' %}
+                  <span class="font-bold text-blue-700">Enviado</span>
+                  {% else %}
+                  <span class="text-dartMuted">Pendiente</span>
+                  {% endif %}
+                </td>
+                <td data-label="Respuesta">{{ asignacion.fecha_respuesta or "-" }}</td>
+                <td data-label="Firma">{{ "Recibida" if asignacion.firma_valor or asignacion.firma_imagen_base64 else "Pendiente" }}</td>
+                <td data-label="Evidencia">{{ "Sí" if asignacion.evidencia_trabajador else "No" }}</td>
+                <td data-label="Observaciones">{{ "Con observaciones" if asignacion.con_observacion else "Sin observaciones" }}</td>
+                <td data-label="Revisión">
+                  {% if asignacion.estado_respuesta in ['aprobado', 'observado', 'rechazado'] %}
+                  <span class="status-badge status-{{ asignacion.estado_respuesta }}">{{ asignacion.estado_respuesta }}</span>
+                  {% elif asignacion.estado_respuesta in ['respondido', 'con_observacion'] %}
+                  <span class="status-badge status-pendiente">Pendiente</span>
+                  {% else %}
+                  <span class="text-dartMuted">-</span>
+                  {% endif %}
+                </td>
+                <td data-label="Acción">
+                  {% if asignacion.estado_respuesta in ['respondido', 'con_observacion', 'aprobado', 'observado', 'rechazado'] %}
+                  <a href="/art/{{ registro.id }}/respuesta/{{ asignacion.id }}" class="btn-secondary px-3 py-2 text-sm">Ver / Revisar</a>
+                  {% else %}
+                  <div class="flex flex-col gap-2">
+                    <form method="post" action="/art/{{ registro.id }}/enviar-trabajador/{{ asignacion.id }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                      <button class="btn-secondary px-3 py-2 text-sm" type="submit">Enviar/Reenviar correo</button>
+                    </form>
+                    {% if not email_enabled and asignacion.token_acceso %}
+                    <a href="/art/trabajador/{{ asignacion.token_acceso }}" class="text-xs font-bold text-techCyan hover:underline">Ver link de prueba</a>
+                    {% endif %}
+                  </div>
+                  {% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="10" class="py-8 text-center text-dartMuted">Aún no hay trabajadores asignados.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      {% endif %}
+
+      {% if registro.checklist %}
       <section class="app-card">
-        <div class="app-card-header"><h2 class="text-xl font-black">Checklist respondido</h2></div>
+        <div class="app-card-header"><h2 class="text-xl font-black">Checklist general registrado</h2></div>
         <div class="app-card-body grid gap-3 md:grid-cols-2">
           {% for item in registro.checklist %}
           <div class="rounded-lg border border-green-200 bg-green-50 p-3 text-sm font-bold text-green-800">{{ item }}</div>
@@ -61,6 +163,7 @@
           {% endfor %}
         </div>
       </section>
+      {% endif %}
 
       <section class="app-card">
         <div class="app-card-header"><h2 class="text-xl font-black">Riesgos y controles</h2></div>
@@ -79,7 +182,7 @@
       </section>
 
       <section class="app-card">
-        <div class="app-card-header"><h2 class="text-xl font-black">Observaciones</h2></div>
+        <div class="app-card-header"><h2 class="text-xl font-black">Observaciones generales</h2></div>
         <div class="app-card-body text-dartMuted">{{ registro.observaciones or "Sin observaciones." }}</div>
       </section>
 
@@ -109,7 +212,7 @@
 
     <aside class="space-y-6">
       <section class="app-card">
-        <div class="app-card-header"><h2 class="text-xl font-black">Evidencia fotográfica</h2></div>
+        <div class="app-card-header"><h2 class="text-xl font-black">Evidencia general de la ART</h2></div>
         <div class="app-card-body">
           {% if registro.evidencia %}
           <div class="grid gap-3">
@@ -121,21 +224,21 @@
             {% endfor %}
           </div>
           {% else %}
-          <div class="rounded-lg border border-dashed border-line p-6 text-center text-dartMuted">No se adjuntaron imágenes.</div>
+          <div class="rounded-lg border border-dashed border-line p-4 text-center text-sm text-dartMuted">Sin evidencia adjunta.</div>
           {% endif %}
         </div>
       </section>
 
+      {% if registro.epp %}
       <section class="app-card">
-        <div class="app-card-header"><h2 class="text-xl font-black">EPP seleccionados</h2></div>
+        <div class="app-card-header"><h2 class="text-xl font-black">EPP general definido</h2></div>
         <div class="app-card-body flex flex-wrap gap-2">
           {% for item in registro.epp %}
           <span class="status-badge bg-cyan-100 text-cyan-800">{{ item }}</span>
-          {% else %}
-          <p class="text-dartMuted">Sin EPP.</p>
           {% endfor %}
         </div>
       </section>
+      {% endif %}
 
       {% if puede_descargar_pdf %}
       <section class="app-card app-card-body border-l-4 border-l-green-500">

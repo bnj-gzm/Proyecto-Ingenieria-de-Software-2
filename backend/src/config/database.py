@@ -128,6 +128,49 @@ def init_db() -> None:
         cur.execute("ALTER TABLE art_records ADD COLUMN IF NOT EXISTS comentario_supervisor TEXT DEFAULT ''")
         cur.execute("ALTER TABLE art_records ADD COLUMN IF NOT EXISTS revisado_por TEXT DEFAULT ''")
         cur.execute("ALTER TABLE art_records ADD COLUMN IF NOT EXISTS revisado_en TEXT DEFAULT ''")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS art_trabajadores_asignados (
+                id SERIAL PRIMARY KEY,
+                art_id TEXT NOT NULL REFERENCES art_records(id) ON DELETE CASCADE,
+                trabajador_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                email TEXT NOT NULL DEFAULT '',
+                nombre TEXT NOT NULL DEFAULT '',
+                rut TEXT NOT NULL DEFAULT '',
+                cargo TEXT NOT NULL DEFAULT '',
+                area TEXT NOT NULL DEFAULT '',
+                telefono TEXT NOT NULL DEFAULT '',
+                token_acceso TEXT NOT NULL UNIQUE,
+                token_expires_at TIMESTAMP NULL,
+                estado_envio TEXT NOT NULL DEFAULT 'pendiente',
+                estado_respuesta TEXT NOT NULL DEFAULT 'pendiente',
+                fecha_envio TIMESTAMP NULL,
+                fecha_respuesta TIMESTAMP NULL,
+                respuestas_json TEXT NOT NULL DEFAULT '{}',
+                evidencia_trabajador_json TEXT NOT NULL DEFAULT '[]',
+                firma_tipo TEXT NOT NULL DEFAULT '',
+                firma_valor TEXT NOT NULL DEFAULT '',
+                firma_imagen_path TEXT NOT NULL DEFAULT '',
+                firma_imagen_base64 TEXT NOT NULL DEFAULT '',
+                documento_firma TEXT NOT NULL DEFAULT '',
+                comentario_revision TEXT NOT NULL DEFAULT '',
+                fecha_revision TIMESTAMP NULL,
+                supervisor_revisor_id INTEGER NULL REFERENCES users(id),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (art_id, trabajador_id)
+            )
+        """)
+        cur.execute("ALTER TABLE art_trabajadores_asignados ADD COLUMN IF NOT EXISTS rut TEXT DEFAULT ''")
+        cur.execute("ALTER TABLE art_trabajadores_asignados ADD COLUMN IF NOT EXISTS telefono TEXT DEFAULT ''")
+        cur.execute("ALTER TABLE art_trabajadores_asignados ADD COLUMN IF NOT EXISTS estado_envio TEXT DEFAULT 'pendiente'")
+        cur.execute("ALTER TABLE art_trabajadores_asignados ADD COLUMN IF NOT EXISTS evidencia_trabajador_json TEXT DEFAULT '[]'")
+        cur.execute("ALTER TABLE art_trabajadores_asignados ADD COLUMN IF NOT EXISTS comentario_revision TEXT DEFAULT ''")
+        cur.execute("ALTER TABLE art_trabajadores_asignados ADD COLUMN IF NOT EXISTS fecha_revision TIMESTAMP NULL")
+        cur.execute("ALTER TABLE art_trabajadores_asignados ADD COLUMN IF NOT EXISTS supervisor_revisor_id INTEGER NULL REFERENCES users(id)")
+        cur.execute("UPDATE art_trabajadores_asignados SET estado_envio = 'envio_fallido', estado_respuesta = 'pendiente' WHERE estado_respuesta = 'fallido'")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_art_asignados_art_id ON art_trabajadores_asignados (art_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_art_asignados_trabajador_id ON art_trabajadores_asignados (trabajador_id)")
+        cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_art_asignados_token ON art_trabajadores_asignados (token_acceso)")
         conn.commit()
     finally:
         cur.close()

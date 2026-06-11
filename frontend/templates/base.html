@@ -63,7 +63,10 @@
         .art-thumb { width: 56px; height: 56px; max-width: 56px; max-height: 56px; object-fit: cover; border: 1px solid var(--line); border-radius: 8px; background: #F8FAFC; padding: 3px; flex-shrink: 0; }
         .status-badge { display: inline-flex; align-items: center; border-radius: 999px; padding: .28rem .7rem; font-size: .75rem; font-weight: 900; text-transform: uppercase; }
         .status-pendiente { background: #FEF3C7; color: #92400E; }
-        .status-aprobada, .status-activo { background: #DCFCE7; color: #166534; }
+        .status-aprobada, .status-aprobado, .status-activo, .status-respondido { background: #DCFCE7; color: #166534; }
+        .status-enviado { background: #DBEAFE; color: #1E40AF; }
+        .status-observado, .status-con_observacion { background: #FFEDD5; color: #9A3412; }
+        .status-fallido, .status-expirado, .status-anulado { background: #FEE2E2; color: #991B1B; }
         .status-corregir, .status-observada { background: #FFEDD5; color: #9A3412; }
         .status-rechazada, .status-bloqueado { background: #FEE2E2; color: #991B1B; }
         .status-finalizada { background: #DBEAFE; color: #1E40AF; }
@@ -202,6 +205,7 @@
                     </span>
                     <span class="sidebar-label whitespace-nowrap">Dashboard</span>
                 </a>
+                {% if user.rol == 'admin' or user.rol == 'supervisor' %}
                 <a href="/art/nueva" title="Nueva ART" data-tooltip="Nueva ART" class="sidebar-link {% if request.url.path == '/art/nueva' %}sidebar-link-active{% endif %}">
                     <span class="sidebar-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -210,6 +214,17 @@
                     </span>
                     <span class="sidebar-label whitespace-nowrap">Nueva ART</span>
                 </a>
+                {% endif %}
+                {% if user.rol == 'trabajador' %}
+                <a href="/mis-art-asignadas" title="Mis ART asignadas" data-tooltip="Mis ART asignadas" class="sidebar-link {% if request.url.path == '/mis-art-asignadas' %}sidebar-link-active{% endif %}">
+                    <span class="sidebar-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                        </svg>
+                    </span>
+                    <span class="sidebar-label whitespace-nowrap">Mis ART asignadas</span>
+                </a>
+                {% endif %}
                 {% if user.rol == 'admin' or user.rol == 'supervisor' %}
                 <a href="/supervisor/art" title="Revisar ART" data-tooltip="Revisar ART" class="sidebar-link {% if request.url.path in ['/supervisor/art', '/admin/art'] %}sidebar-link-active{% endif %}">
                     <span class="sidebar-icon">

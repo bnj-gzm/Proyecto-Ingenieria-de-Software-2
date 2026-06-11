@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block page_title %}Respuesta trabajador{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div>
+      <a href="/art/{{ registro.id }}" class="text-sm font-black text-techCyan hover:underline">Volver a la ART</a>
+      <h1 class="mt-2 text-3xl font-black">Respuesta de {{ asignacion.nombre }}</h1>
+      <p class="mt-2 text-dartMuted">Validación individual enviada para la ART {{ registro.id }}.</p>
+    </div>
+    <span class="status-badge status-{{ asignacion.estado_respuesta }}">{{ asignacion.estado_respuesta }}</span>
+  </div>
+
+  <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Fecha respuesta</p><p class="mt-2 font-black">{{ asignacion.fecha_respuesta or "-" }}</p></div>
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">RUT</p><p class="mt-2 font-black">{{ asignacion.rut or "Sin RUT" }}</p></div>
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Cargo</p><p class="mt-2 font-black">{{ asignacion.cargo or "Sin cargo" }}</p></div>
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Firma</p><p class="mt-2 font-black">{{ "Recibida" if asignacion.firma_valor or asignacion.firma_imagen_base64 else "Pendiente" }}</p></div>
+  </section>
+
+  <section class="app-card">
+    <div class="app-card-header"><h2 class="text-xl font-black">Datos del trabajador</h2></div>
+    <div class="app-card-body grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Nombre completo</p><p class="font-black">{{ asignacion.nombre }}</p></div>
+      <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">RUT</p><p class="font-black">{{ asignacion.rut or "Sin RUT registrado" }}</p></div>
+      <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Cargo</p><p class="font-black">{{ asignacion.cargo or "Sin cargo registrado" }}</p></div>
+      <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Área</p><p class="font-black">{{ asignacion.area or "Sin área registrada" }}</p></div>
+      <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Correo</p><p class="break-all font-black">{{ asignacion.email or "Sin correo registrado" }}</p></div>
+      <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Teléfono</p><p class="font-black">{{ asignacion.respuestas.datos_trabajador.telefono if asignacion.respuestas.datos_trabajador else asignacion.telefono or "Sin teléfono registrado" }}</p></div>
+    </div>
+  </section>
+
+  <section class="app-card overflow-hidden">
+    <div class="app-card-header"><h2 class="text-xl font-black">Respuestas de seguridad</h2></div>
+    <div class="overflow-x-auto">
+      <table class="app-table responsive-table">
+        <thead>
+          <tr>
+            <th>Sección</th>
+            <th>Pregunta</th>
+            <th>Respuesta</th>
+            <th>Observación</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in asignacion.respuestas.preguntas or [] %}
+          <tr>
+            <td data-label="Sección">{{ item.seccion }}</td>
+            <td data-label="Pregunta">{{ item.pregunta }}</td>
+            <td data-label="Respuesta"><span class="status-badge {% if item.respuesta == 'si' %}status-respondido{% elif item.respuesta == 'no' %}status-observado{% else %}status-borrador{% endif %}">{{ item.respuesta }}</span></td>
+            <td data-label="Observación">{{ item.observacion or "-" }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="py-8 text-center text-dartMuted">No hay respuestas registradas.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="grid gap-6 lg:grid-cols-2">
+    <div class="app-card">
+      <div class="app-card-header"><h2 class="text-xl font-black">EPP declarados</h2></div>
+      <div class="app-card-body flex flex-wrap gap-2">
+        {% for item in asignacion.respuestas.epp or [] %}
+        <span class="status-badge bg-cyan-100 text-cyan-900">{{ item }}</span>
+        {% else %}
+        <p class="text-dartMuted">Sin EPP registrado.</p>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="app-card">
+      <div class="app-card-header"><h2 class="text-xl font-black">Observaciones</h2></div>
+      <div class="app-card-body text-dartMuted">{{ asignacion.respuestas.observaciones or "Sin observaciones generales." }}</div>
+    </div>
+  </section>
+
+  <section class="app-card">
+    <div class="app-card-header"><h2 class="text-xl font-black">Evidencia del trabajador</h2></div>
+    <div class="app-card-body">
+      {% if asignacion.evidencia_trabajador %}
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {% for imagen in asignacion.evidencia_trabajador %}
+        <a href="{{ imagen.src }}" target="_blank" rel="noopener">
+          <img src="{{ imagen.src }}" alt="Evidencia de {{ asignacion.nombre }}" class="h-40 w-full rounded-lg border border-line object-cover" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+          <div class="rounded-lg border border-dashed border-line p-4 text-center text-sm text-dartMuted" hidden>Imagen no disponible</div>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="rounded-lg border border-dashed border-line p-4 text-center text-sm text-dartMuted">Sin evidencia adjunta.</div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="app-card">
+    <div class="app-card-header"><h2 class="text-xl font-black">Firma digital</h2></div>
+    <div class="app-card-body">
+      <p class="mb-3 text-sm font-bold text-dartMuted">Documento / confirmación: {{ asignacion.firma_valor or "-" }}</p>
+      {% if asignacion.firma_imagen_base64 %}
+      <img src="{{ asignacion.firma_imagen_base64 }}" alt="Firma digital de {{ asignacion.nombre }}" class="max-h-64 rounded-lg border border-line bg-white p-4">
+      {% else %}
+      <div class="rounded-lg border border-dashed border-line p-6 text-center text-dartMuted">Firma no disponible.</div>
+      {% endif %}
+    </div>
+  </section>
+
+  {% if user and (user.rol == 'admin' or user.rol == 'supervisor') %}
+  <section class="app-card">
+    <div class="app-card-header">
+      <h2 class="text-xl font-black">Revisión individual del supervisor</h2>
+      <p class="mt-1 text-sm text-dartMuted">La aprobación u observación aplica solo a esta validación del trabajador.</p>
+    </div>
+    <form method="post" action="/art/{{ registro.id }}/trabajador/{{ asignacion.id }}/revision" class="app-card-body space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div>
+        <label class="form-label">Resultado</label>
+        <select name="resultado" required class="form-select">
+          <option value="respondido" {% if asignacion.estado_respuesta == 'respondido' %}selected{% endif %}>Mantener pendiente de revisión</option>
+          <option value="con_observacion" {% if asignacion.estado_respuesta == 'con_observacion' %}selected{% endif %}>Mantener con observación del trabajador</option>
+          <option value="aprobado" {% if asignacion.estado_respuesta == 'aprobado' %}selected{% endif %}>Aprobar validación</option>
+          <option value="observado" {% if asignacion.estado_respuesta == 'observado' %}selected{% endif %}>Observar / solicitar corrección</option>
+          <option value="rechazado" {% if asignacion.estado_respuesta == 'rechazado' %}selected{% endif %}>Rechazar validación</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Comentario de revisión</label>
+        <textarea name="comentario_revision" rows="4" class="form-textarea" placeholder="Obligatorio si observas o rechazas.">{{ asignacion.comentario_revision or "" }}</textarea>
+      </div>
+      {% if asignacion.fecha_revision %}
+      <p class="text-sm font-bold text-dartMuted">Última revisión: {{ asignacion.fecha_revision }}</p>
+      {% endif %}
+      <button class="btn-primary" type="submit">Guardar revisión individual</button>
+    </form>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
