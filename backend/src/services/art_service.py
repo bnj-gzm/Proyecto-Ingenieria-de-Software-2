@@ -17,6 +17,26 @@ _SELECT = """
     FROM art_records
 """
 
+_LIST_SELECT = """
+    SELECT id, empresa, trabajador, area, fecha, tipo_tarea, descripcion,
+           supervisor, creado_en, estado, creado_por, asignado_a,
+           supervisor_asignado, comentario_supervisor, revisado_por, revisado_en
+    FROM art_records
+"""
+
+_EMPTY_ASSIGNMENT_SUMMARY = {
+    "total": 0,
+    "respondidos": 0,
+    "enviados": 0,
+    "pendientes": 0,
+    "fallidos": 0,
+    "firmas": 0,
+    "con_observaciones": 0,
+    "aprobados": 0,
+    "evidencias": 0,
+    "faltantes": 0,
+}
+
 
 def _normalize_evidence_path(value: Any) -> str:
     if not value:
@@ -77,6 +97,15 @@ def _deserialize(row: dict) -> dict:
     row["epp"] = _load_json_list(row.pop("epp_json"))
     row["riesgos"] = _load_json_list(row.pop("riesgos_json"))
     row["evidencia"] = _normalize_evidence_list(_load_json_list(row.pop("evidencia_json")))
+    return row
+
+
+def _deserialize_list(row: dict) -> dict:
+    row["checklist"] = []
+    row["epp"] = []
+    row["riesgos"] = []
+    row["evidencia"] = []
+    row["observaciones"] = ""
     return row
 
 
@@ -498,9 +527,11 @@ def cargar_registros(limite: int = 50, con_asignaciones: bool = True) -> list[di
     conn = _connect()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        query = _SELECT + f"ORDER BY creado_en DESC, id DESC LIMIT {limite}"
+        select = _SELECT if con_asignaciones else _LIST_SELECT
+        deserializer = _deserialize if con_asignaciones else _deserialize_list
+        query = select + f"ORDER BY creado_en DESC, id DESC LIMIT {limite}"
         cur.execute(query)
-        registros = [_deserialize(dict(row)) for row in cur.fetchall()]
+        registros = [deserializer(dict(row)) for row in cur.fetchall()]
         if con_asignaciones:
             for registro in registros:
                 registro["asignaciones"] = cargar_asignaciones_art(registro["id"])
@@ -508,7 +539,7 @@ def cargar_registros(limite: int = 50, con_asignaciones: bool = True) -> list[di
         else:
             for registro in registros:
                 registro["asignaciones"] = []
-                registro["progreso_asignaciones"] = {"total": 0, "respondidos": 0, "enviados": 0, "pendientes": 0, "fallidos": 0, "firmas": 0, "con_observaciones": 0, "aprobados": 0, "evidencias": 0, "faltantes": 0}
+                registro["progreso_asignaciones"] = _EMPTY_ASSIGNMENT_SUMMARY.copy()
         return registros
     finally:
         cur.close()
@@ -519,15 +550,17 @@ def cargar_registros_por_usuario(username: str, limite: int = 50, con_asignacion
     conn = _connect()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
+        select = _SELECT if con_asignaciones else _LIST_SELECT
+        deserializer = _deserialize if con_asignaciones else _deserialize_list
         cur.execute(
-            _SELECT
+            select
             + f"""
             WHERE creado_por = %s
             ORDER BY creado_en DESC, id DESC LIMIT {limite}
             """,
             (username,),
         )
-        registros = [_deserialize(dict(row)) for row in cur.fetchall()]
+        registros = [deserializer(dict(row)) for row in cur.fetchall()]
         if con_asignaciones:
             for registro in registros:
                 registro["asignaciones"] = cargar_asignaciones_art(registro["id"])
@@ -535,7 +568,7 @@ def cargar_registros_por_usuario(username: str, limite: int = 50, con_asignacion
         else:
             for registro in registros:
                 registro["asignaciones"] = []
-                registro["progreso_asignaciones"] = {"total": 0, "respondidos": 0, "enviados": 0, "pendientes": 0, "fallidos": 0, "firmas": 0, "con_observaciones": 0, "aprobados": 0, "evidencias": 0, "faltantes": 0}
+                registro["progreso_asignaciones"] = _EMPTY_ASSIGNMENT_SUMMARY.copy()
         return registros
     finally:
         cur.close()
@@ -546,8 +579,10 @@ def cargar_registros_por_supervisor(username: str, limite: int = 50, con_asignac
     conn = _connect()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        cur.execute(_SELECT + f"WHERE supervisor_asignado = %s ORDER BY creado_en DESC, id DESC LIMIT {limite}", (username,))
-        registros = [_deserialize(dict(row)) for row in cur.fetchall()]
+        select = _SELECT if con_asignaciones else _LIST_SELECT
+        deserializer = _deserialize if con_asignaciones else _deserialize_list
+        cur.execute(select + f"WHERE supervisor_asignado = %s ORDER BY creado_en DESC, id DESC LIMIT {limite}", (username,))
+        registros = [deserializer(dict(row)) for row in cur.fetchall()]
         if con_asignaciones:
             for registro in registros:
                 registro["asignaciones"] = cargar_asignaciones_art(registro["id"])
@@ -555,7 +590,7 @@ def cargar_registros_por_supervisor(username: str, limite: int = 50, con_asignac
         else:
             for registro in registros:
                 registro["asignaciones"] = []
-                registro["progreso_asignaciones"] = {"total": 0, "respondidos": 0, "enviados": 0, "pendientes": 0, "fallidos": 0, "firmas": 0, "con_observaciones": 0, "aprobados": 0, "evidencias": 0, "faltantes": 0}
+                registro["progreso_asignaciones"] = _EMPTY_ASSIGNMENT_SUMMARY.copy()
         return registros
     finally:
         cur.close()

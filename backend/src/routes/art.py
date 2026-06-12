@@ -10,8 +10,9 @@ from backend.src.config.settings import settings
 from backend.src.config.frontend import templates
 from backend.src.middleware.auth import get_current_user
 from backend.src.middleware.csrf import create_csrf_token, set_csrf_cookie, validate_csrf_token
-from backend.src.roles import SUPERVISOR, can_create_art
+from backend.src.roles import SUPERVISOR, USER, can_create_art
 from backend.src.services.art_service import (
+    actualizar_revision_asignacion,
     cargar_asignaciones_art,
     cargar_asignaciones_por_trabajador,
     cargar_registros,
@@ -20,9 +21,16 @@ from backend.src.services.art_service import (
     cargar_trabajadores_art,
     eliminar_registro,
     guardar_registro,
+    guardar_respuesta_asignacion,
+    guardar_respuesta_asignacion_por_id,
     guardar_trabajadores_art,
+    marcar_envio_asignacion,
+    obtener_asignacion_art,
+    obtener_asignacion_para_trabajador,
+    obtener_asignacion_por_token,
     obtener_trabajador_art,
     obtener_registro,
+    preparar_envio_asignacion,
     actualizar_registro,
     validar_trabajador_art,
     resetear_validaciones_trabajadores,
@@ -258,14 +266,8 @@ def dashboard(request: Request, user=Depends(get_current_user)):
         registros = cargar_registros_por_supervisor(user["username"], limite=15, con_asignaciones=False)
         art_asignadas = []
     else:
-        registros = cargar_registros_por_usuario(user["username"])
-    art_asignadas = []
-    if user.get("rol") not in {"admin", SUPERVISOR}:
-        for registro in registros:
-            validacion = obtener_trabajador_art(registro["id"], user["username"])
-            if validacion:
-                registro["validacion_trabajador"] = validacion
-                art_asignadas.append(registro)
+        registros = []
+        art_asignadas = cargar_asignaciones_por_trabajador(user["id"], limite=10)
     return templates.TemplateResponse(
         request,
         "dashboard.html",
@@ -616,6 +618,20 @@ def respuesta_art_asignada_view(request: Request, id_asignacion: int, user=Depen
         request,
         "art_respuesta_trabajador.html",
         {"request": request, "user": user, "registro": registro, "asignacion": asignacion},
+    )
+
+
+@router.get("/mis-art-asignadas", response_class=HTMLResponse)
+def mis_art_asignadas(request: Request, user=Depends(get_current_user)):
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    if user.get("rol") != USER:
+        return RedirectResponse("/dashboard", status_code=303)
+    art_asignadas = cargar_asignaciones_por_trabajador(user["id"], limite=30)
+    return templates.TemplateResponse(
+        request,
+        "mis_art_asignadas.html",
+        {"request": request, "user": user, "art_asignadas": art_asignadas},
     )
 
 

@@ -1,15 +1,67 @@
 from __future__ import annotations
 
 import json
+import logging
+import os
 import psycopg2
+from psycopg2 import extensions, pool
 from typing import Any
 
 from backend.src.config.settings import settings
 
 DATABASE_URL = settings.database_url
+SCHEMA_VERSION = "2026_06_art_supervisor_flow_v2"
+logger = logging.getLogger("dart")
+
+_CONNECTION_POOL: pool.ThreadedConnectionPool | None = None
 
 
-def _connect() -> psycopg2.extensions.connection:
+class _PooledConnection:
+    def __init__(self, conn: psycopg2.extensions.connection, owner: pool.ThreadedConnectionPool):
+        self._conn = conn
+        self._owner = owner
+        self._closed = False
+
+    def __getattr__(self, name: str):
+        return getattr(self._conn, name)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        if exc_type:
+            self.rollback()
+        self.close()
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        discard = bool(getattr(self._conn, "closed", False))
+        try:
+            if not discard and self._conn.status != extensions.STATUS_READY:
+                self._conn.rollback()
+        except psycopg2.Error:
+            discard = True
+        self._owner.putconn(self._conn, close=discard)
+
+
+def _get_pool() -> pool.ThreadedConnectionPool:
+    global _CONNECTION_POOL
+    if _CONNECTION_POOL is None:
+        max_connections = max(1, int(os.getenv("DB_POOL_MAX", "5")))
+        _CONNECTION_POOL = pool.ThreadedConnectionPool(1, max_connections, DATABASE_URL)
+    return _CONNECTION_POOL
+
+
+def _connect():
+    if os.getenv("DB_POOL_DISABLED", "").lower() in {"1", "true", "yes"}:
+        return psycopg2.connect(DATABASE_URL)
+    db_pool = _get_pool()
+    return _PooledConnection(db_pool.getconn(), db_pool)
+
+
+def _raw_connect() -> psycopg2.extensions.connection:
     return psycopg2.connect(DATABASE_URL)
 
 
@@ -45,6 +97,17 @@ def init_db() -> None:
     conn = _connect()
     cur = conn.cursor()
     try:
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS schema_migrations (
+                version TEXT PRIMARY KEY,
+                applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute("SELECT 1 FROM schema_migrations WHERE version = %s", (SCHEMA_VERSION,))
+        if cur.fetchone():
+            conn.commit()
+            logger.info("Schema %s ya aplicado; se omite init_db completo.", SCHEMA_VERSION)
+            return
         cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -184,6 +247,27 @@ def init_db() -> None:
         cur.execute("CREATE INDEX IF NOT EXISTS idx_art_asignados_art_id ON art_trabajadores_asignados (art_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_art_asignados_trabajador_id ON art_trabajadores_asignados (trabajador_id)")
         cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_art_asignados_token ON art_trabajadores_asignados (token_acceso)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_art_records_creado_por ON art_records (creado_por)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_art_records_supervisor_asignado ON art_records (supervisor_asignado)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_art_records_estado ON art_records (estado)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_art_records_estado_supervisor ON art_records (estado, supervisor_asignado)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_art_records_creado_en_id ON art_records (creado_en DESC, id DESC)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_art_records_supervisor_creado ON art_records (supervisor_asignado, creado_en DESC, id DESC)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_art_records_creador_creado ON art_records (creado_por, creado_en DESC, id DESC)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_art_trabajadores_art_id ON art_trabajadores (art_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_art_trabajadores_username ON art_trabajadores (username)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_art_trabajadores_username_art ON art_trabajadores (username, art_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_art_asignados_estado_respuesta ON art_trabajadores_asignados (estado_respuesta)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_art_asignados_trabajador_created ON art_trabajadores_asignados (trabajador_id, created_at DESC)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_art_asignados_trabajador_art ON art_trabajadores_asignados (trabajador_id, art_id)")
+        cur.execute(
+            """
+            INSERT INTO schema_migrations (version)
+            VALUES (%s)
+            ON CONFLICT (version) DO NOTHING
+            """,
+            (SCHEMA_VERSION,),
+        )
         conn.commit()
     finally:
         cur.close()
