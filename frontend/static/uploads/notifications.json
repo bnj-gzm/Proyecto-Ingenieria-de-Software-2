@@ -142,5 +142,113 @@
     "action_url": "/art/35842c51",
     "read": false,
     "created_at": "2026-06-06T17:42:15.097544"
+  },
+  {
+    "id": "80e42156-e14e-4e14-b26c-cd19b44aefd7",
+    "user": "prueba1",
+    "title": "ART dcc27bcd asignada",
+    "message": "Ignacio te asignó una ART para completar y validar.",
+    "action_url": "/art/dcc27bcd",
+    "read": false,
+    "created_at": "2026-06-12T20:28:28.814974"
+  },
+  {
+    "id": "7403b1f4-2541-417d-8426-d83ad4d570f2",
+    "user": "benjamin.guzman",
+    "title": "ART dcc27bcd asignada",
+    "message": "Ignacio te asignó una ART para completar y validar.",
+    "action_url": "/art/dcc27bcd",
+    "read": false,
+    "created_at": "2026-06-12T20:28:28.826671"
+  },
+  {
+    "id": "809fa8f4-db8a-4c0b-b479-d5ee4ef1269f",
+    "user": "prueba2",
+    "title": "ART dcc27bcd asignada",
+    "message": "Ignacio te asignó una ART para completar y validar.",
+    "action_url": "/art/dcc27bcd",
+    "read": false,
+    "created_at": "2026-06-12T20:28:28.836025"
+  },
+  {
+    "id": "1cacab19-28f9-4465-a387-713860102beb",
+    "user": "prueba3",
+    "title": "ART dcc27bcd asignada",
+    "message": "Ignacio te asignó una ART para completar y validar.",
+    "action_url": "/art/dcc27bcd",
+    "read": false,
+    "created_at": "2026-06-12T20:28:28.847124"
+  },
+  {
+    "id": "708ee715-2a4b-485c-98f2-c6ed889e966c",
+    "user": "prueba4",
+    "title": "ART dcc27bcd asignada",
+    "message": "Ignacio te asignó una ART para completar y validar.",
+    "action_url": "/art/dcc27bcd",
+    "read": false,
+    "created_at": "2026-06-12T20:28:28.856414"
+  },
+  {
+    "id": "82ab44d5-ea5c-486e-b87c-be008c100991",
+    "user": "prueba5",
+    "title": "ART dcc27bcd asignada",
+    "message": "Ignacio te asignó una ART para completar y validar.",
+    "action_url": "/art/dcc27bcd",
+    "read": false,
+    "created_at": "2026-06-12T20:28:28.866435"
+  },
+  {
+    "id": "d931795f-3344-4b5f-8a4d-3682ff3fa036",
+    "user": "prueba1",
+    "title": "ART 2f1a9704 asignada",
+    "message": "Ignacio te asignó una ART para completar y validar.",
+    "action_url": "/art/2f1a9704",
+    "read": false,
+    "created_at": "2026-06-12T21:18:30.996992"
+  },
+  {
+    "id": "6dc28cc5-3d86-4456-9633-0d66f08d78b9",
+    "user": "benjamin.guzman",
+    "title": "ART 2f1a9704 asignada",
+    "message": "Ignacio te asignó una ART para completar y validar.",
+    "action_url": "/art/2f1a9704",
+    "read": false,
+    "created_at": "2026-06-12T21:18:31.016511"
+  },
+  {
+    "id": "1b03c22b-31fc-4305-acf3-e1f610697a5c",
+    "user": "prueba2",
+    "title": "ART 2f1a9704 asignada",
+    "message": "Ignacio te asignó una ART para completar y validar.",
+    "action_url": "/art/2f1a9704",
+    "read": false,
+    "created_at": "2026-06-12T21:18:31.026458"
+  },
+  {
+    "id": "9ee6f20b-3ec2-442a-a07b-c3f3c74958bb",
+    "user": "prueba3",
+    "title": "ART 2f1a9704 asignada",
+    "message": "Ignacio te asignó una ART para completar y validar.",
+    "action_url": "/art/2f1a9704",
+    "read": false,
+    "created_at": "2026-06-12T21:18:31.034758"
+  },
+  {
+    "id": "1053e306-c835-4918-888c-71e9ab35af67",
+    "user": "prueba4",
+    "title": "ART 2f1a9704 asignada",
+    "message": "Ignacio te asignó una ART para completar y validar.",
+    "action_url": "/art/2f1a9704",
+    "read": false,
+    "created_at": "2026-06-12T21:18:31.044142"
+  },
+  {
+    "id": "05bb79c6-9b64-42f5-9697-1649498ced09",
+    "user": "prueba5",
+    "title": "ART 2f1a9704 asignada",
+    "message": "Ignacio te asignó una ART para completar y validar.",
+    "action_url": "/art/2f1a9704",
+    "read": false,
+    "created_at": "2026-06-12T21:18:31.052232"
   }
 ]

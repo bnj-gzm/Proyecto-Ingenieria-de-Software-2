@@ -30,7 +30,7 @@
         <div><dt class="font-black text-dartMuted">Descripción</dt><dd class="text-dartMuted">{{ item.art.descripcion }}</dd></div>
       </dl>
       <div class="mt-5">
-        {% if item.estado_respuesta in ['respondido', 'con_observacion', 'aprobado', 'observado', 'rechazado'] %}
+        {% if item.estado_respuesta in ['respondido', 'con_observacion', 'aprobado', 'rechazado'] %}
         <a href="/art/asignada/{{ item.id }}/respuesta" class="btn-secondary w-full">Ver mi respuesta</a>
         {% else %}
         <a href="/art/asignada/{{ item.id }}/responder" class="btn-primary w-full">Completar mi validación</a>

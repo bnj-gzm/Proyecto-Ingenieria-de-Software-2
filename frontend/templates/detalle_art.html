@@ -66,69 +66,89 @@
 
       <section class="app-card overflow-hidden">
         <div class="app-card-header">
-          <h2 class="text-xl font-black">Validación del equipo ejecutor</h2>
-          <p class="mt-1 text-sm text-dartMuted">Condiciones físicas y psicológicas declaradas por cada integrante asignado.</p>
+          <h2 class="text-xl font-black">Trabajadores asignados</h2>
+          <p class="mt-1 text-sm text-dartMuted">Seguimiento individual de respuesta, firma y revisión por trabajador.</p>
         </div>
         <div class="overflow-x-auto">
-          <table class="app-table min-w-[860px]">
+          <table class="app-table min-w-[1040px]">
             <thead>
               <tr>
-                <th>Rol</th>
                 <th>Nombre</th>
                 <th>Cargo</th>
-                <th>Condición</th>
+                <th>Respuesta</th>
+                <th>Revisión</th>
                 <th>Firma digital</th>
                 <th>Observación</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
+              {% for asignacion in registro.asignaciones %}
+              {% set respondio = asignacion.estado_respuesta in ['respondido', 'con_observacion', 'aprobado', 'rechazado'] %}
+              {% set finalizado = asignacion.estado_respuesta in ['aprobado', 'rechazado'] %}
               <tr>
-                <td class="font-black uppercase text-dartMuted">Líder</td>
-                <td>{{ registro.supervisor }}</td>
-                <td>Supervisor</td>
-                <td><span class="status-badge status-aprobada">Asignado</span></td>
-                <td>{{ registro.creado_en }}</td>
-                <td>-</td>
-              </tr>
-              {% for trabajador in trabajadores_art %}
-              <tr>
-                <td class="font-black uppercase text-dartMuted">Trabajador {{ loop.index }}</td>
-                <td>{{ trabajador.nombre }}</td>
-                <td>{{ trabajador.cargo or "-" }}</td>
                 <td>
-                  {% if trabajador.condicion_ok is sameas true %}
-                  <span class="status-badge status-aprobada">Sí</span>
-                  {% elif trabajador.condicion_ok is sameas false %}
-                  <span class="status-badge status-rechazada">No</span>
+                  <p class="font-black">{{ asignacion.nombre or asignacion.username or "Trabajador" }}</p>
+                  <p class="mt-1 text-xs text-dartMuted">{{ asignacion.email or "Sin correo" }}</p>
+                </td>
+                <td>{{ asignacion.cargo or "-" }}</td>
+                <td>
+                  {% if respondio %}
+                  <span class="status-badge status-respondido">Respondido</span>
+                  {% else %}
+                  <span class="status-badge status-pendiente">Pendiente</span>
+                  {% endif %}
+                  {% if asignacion.fecha_respuesta %}
+                  <p class="mt-1 text-xs text-dartMuted">{{ asignacion.fecha_respuesta }}</p>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if finalizado %}
+                  <span class="status-badge status-{{ asignacion.estado_respuesta }}">{{ asignacion.estado_respuesta }}</span>
+                  {% else %}
+                  <span class="status-badge status-borrador">Sin revisión</span>
+                  {% endif %}
+                  {% if asignacion.fecha_revision %}
+                  <p class="mt-1 text-xs text-dartMuted">{{ asignacion.fecha_revision }}</p>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if asignacion.firma_valor or asignacion.firma_imagen_base64 %}
+                  <span class="status-badge status-aprobada">Recibida</span>
                   {% else %}
                   <span class="status-badge status-pendiente">Pendiente</span>
                   {% endif %}
                 </td>
-                <td>
-                  {% if trabajador.validado_en %}
-                  {{ trabajador.nombre }} validó con su cuenta el {{ trabajador.validado_en }}
-                  {% else %}
-                  Pendiente
-                  {% endif %}
+                <td class="max-w-[220px]">
+                  <p class="truncate text-sm text-dartMuted">{{ asignacion.comentario_revision or asignacion.respuestas.observaciones or "Sin observación" }}</p>
                 </td>
-                <td>{{ trabajador.observacion or "-" }}</td>
+                <td>
+                  <div class="flex flex-wrap gap-2">
+                    {% if respondio %}
+                    <a href="/art/{{ registro.id }}/respuesta/{{ asignacion.id }}" class="btn-secondary px-3 py-2 text-sm">Ver respuesta</a>
+                    {% if not finalizado %}
+                    <a href="/art/{{ registro.id }}/respuesta/{{ asignacion.id }}#revision" class="btn-primary px-3 py-2 text-sm">Revisar</a>
+                    {% endif %}
+                    {% if asignacion.estado_respuesta == 'aprobado' %}
+                    <a href="/art/{{ registro.id }}/trabajador/{{ asignacion.id }}/pdf" class="btn-dark px-3 py-2 text-sm">Descargar PDF del trabajador</a>
+                    {% endif %}
+                    {% else %}
+                    <form method="post" action="/art/{{ registro.id }}/enviar-trabajador/{{ asignacion.id }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                      <button class="btn-secondary px-3 py-2 text-sm" type="submit">Reenviar correo</button>
+                    </form>
+                    {% endif %}
+                    {% if asignacion.evidencia_trabajador %}
+                    <a href="/art/{{ registro.id }}/respuesta/{{ asignacion.id }}#evidencia-trabajador" class="btn-secondary px-3 py-2 text-sm">Ver evidencia</a>
+                    {% endif %}
+                  </div>
+                </td>
               </tr>
               {% else %}
-              <tr><td colspan="6" class="text-center text-dartMuted">No hay trabajadores asignados.</td></tr>
+              <tr><td colspan="7" class="text-center text-dartMuted">No hay trabajadores asignados.</td></tr>
               {% endfor %}
             </tbody>
           </table>
-        </div>
-      </section>
-
-      <section class="app-card">
-        <div class="app-card-header"><h2 class="text-xl font-black">Checklist general registrado</h2></div>
-        <div class="app-card-body grid gap-3 md:grid-cols-2">
-          {% for item in registro.checklist %}
-          <div class="rounded-lg border border-green-200 bg-green-50 p-3 text-sm font-bold text-green-800">{{ item }}</div>
-          {% else %}
-          <p class="text-dartMuted">No se marcaron ítems.</p>
-          {% endfor %}
         </div>
       </section>
 
@@ -153,36 +173,6 @@
         <div class="app-card-body text-dartMuted">{{ registro.observaciones or "Sin observaciones." }}</div>
       </section>
 
-      {% if puede_revisar %}
-      <section class="app-card">
-        <div class="app-card-header"><h2 class="text-xl font-black">Resolver revisión</h2></div>
-        {% if todos_validados %}
-        <form method="post" action="/supervisor/art/{{ registro.id }}/estado" class="app-card-body space-y-4">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <div>
-            <label class="form-label">Resultado</label>
-            <select name="estado" required class="form-select">
-              <option value="aprobada" {% if registro.estado == 'aprobada' %}selected{% endif %}>Aceptar ART</option>
-              <option value="rechazada" {% if registro.estado == 'rechazada' %}selected{% endif %}>Rechazar ART</option>
-              <option value="pendiente" {% if registro.estado == 'pendiente' %}selected{% endif %}>Mantener pendiente</option>
-            </select>
-          </div>
-          <div>
-            <label class="form-label">Comentario</label>
-            <textarea name="comentario_supervisor" required rows="4" class="form-textarea" placeholder="Escribe la observación de revisión">{{ registro.comentario_supervisor }}</textarea>
-          </div>
-          <button type="submit" class="btn-primary">Guardar revisión</button>
-        </form>
-        {% else %}
-        <div class="app-card-body">
-            <div class="rounded-lg border border-orange-200 bg-orange-50 p-4 text-orange-800">
-                <p class="font-bold">Acción bloqueada</p>
-                <p class="text-sm">Debes esperar a que todos los trabajadores asignados completen y validen la ART antes de poder entregar una resolución.</p>
-            </div>
-        </div>
-        {% endif %}
-      </section>
-      {% endif %}
     </div>
 
     <aside class="space-y-6">
@@ -203,17 +193,6 @@
           {% endif %}
         </div>
       </section>
-
-      {% if registro.epp %}
-      <section class="app-card">
-        <div class="app-card-header"><h2 class="text-xl font-black">EPP general definido</h2></div>
-        <div class="app-card-body flex flex-wrap gap-2">
-          {% for item in registro.epp %}
-          <span class="status-badge bg-cyan-100 text-cyan-800">{{ item }}</span>
-          {% endfor %}
-        </div>
-      </section>
-      {% endif %}
 
       {% if puede_descargar_pdf %}
       <section class="app-card app-card-body border-l-4 border-l-green-500">

@@ -27,6 +27,7 @@ _LIST_SELECT = """
 _EMPTY_ASSIGNMENT_SUMMARY = {
     "total": 0,
     "respondidos": 0,
+    "revisados": 0,
     "enviados": 0,
     "pendientes": 0,
     "fallidos": 0,
@@ -149,7 +150,8 @@ def _new_token() -> str:
 
 def _assignment_summary(asignaciones: list[dict[str, Any]]) -> dict[str, int]:
     total = len(asignaciones)
-    response_done_states = {"respondido", "con_observacion", "aprobado", "observado", "rechazado"}
+    response_done_states = {"respondido", "con_observacion", "aprobado", "rechazado"}
+    reviewed_states = {"aprobado", "rechazado"}
     respondidos = sum(1 for item in asignaciones if item.get("estado_respuesta") in response_done_states)
     enviados = sum(1 for item in asignaciones if item.get("estado_envio") == "enviado")
     pendientes = sum(1 for item in asignaciones if item.get("estado_respuesta") == "pendiente")
@@ -157,10 +159,12 @@ def _assignment_summary(asignaciones: list[dict[str, Any]]) -> dict[str, int]:
     firmas = sum(1 for item in asignaciones if item.get("firma_valor") or item.get("firma_imagen_base64"))
     con_observaciones = sum(1 for item in asignaciones if item.get("con_observacion"))
     aprobados = sum(1 for item in asignaciones if item.get("estado_respuesta") == "aprobado")
+    revisados = sum(1 for item in asignaciones if item.get("estado_respuesta") in reviewed_states)
     evidencias = sum(1 for item in asignaciones if item.get("evidencia_trabajador"))
     return {
         "total": total,
         "respondidos": respondidos,
+        "revisados": revisados,
         "enviados": enviados,
         "pendientes": pendientes,
         "fallidos": fallidos,
@@ -170,6 +174,52 @@ def _assignment_summary(asignaciones: list[dict[str, Any]]) -> dict[str, int]:
         "evidencias": evidencias,
         "faltantes": max(total - respondidos, 0),
     }
+
+
+def cargar_resumenes_asignaciones(id_art_list: list[str]) -> dict[str, dict[str, int]]:
+    ids = [id_art for id_art in dict.fromkeys(id_art_list) if id_art]
+    if not ids:
+        return {}
+    conn = _connect()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        cur.execute(
+            """
+            SELECT art_id,
+                   COUNT(*)::int AS total,
+                   COUNT(*) FILTER (
+                       WHERE estado_respuesta IN ('respondido', 'con_observacion', 'aprobado', 'rechazado')
+                   )::int AS respondidos,
+                   COUNT(*) FILTER (
+                       WHERE estado_respuesta IN ('aprobado', 'rechazado')
+                   )::int AS revisados,
+                   COUNT(*) FILTER (WHERE estado_respuesta = 'pendiente')::int AS pendientes,
+                   COUNT(*) FILTER (WHERE estado_envio = 'enviado')::int AS enviados,
+                   COUNT(*) FILTER (WHERE estado_envio = 'envio_fallido')::int AS fallidos
+            FROM art_trabajadores_asignados
+            WHERE art_id = ANY(%s)
+            GROUP BY art_id
+            """,
+            (ids,),
+        )
+        resumenes = {row["art_id"]: dict(row) for row in cur.fetchall()}
+        for id_art in ids:
+            resumenes.setdefault(
+                id_art,
+                {
+                    "art_id": id_art,
+                    "total": 0,
+                    "respondidos": 0,
+                    "revisados": 0,
+                    "pendientes": 0,
+                    "enviados": 0,
+                    "fallidos": 0,
+                },
+            )
+        return resumenes
+    finally:
+        cur.close()
+        conn.close()
 
 
 def cargar_asignaciones_art(id_art: str) -> list[dict[str, Any]]:
@@ -256,7 +306,7 @@ def preparar_envio_asignacion(id_asignacion: int) -> dict[str, Any] | None:
                     THEN %s ELSE token_acceso END,
                 token_expires_at = %s,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = %s AND estado_respuesta NOT IN ('respondido', 'con_observacion', 'aprobado', 'observado', 'rechazado')
+            WHERE id = %s AND estado_respuesta NOT IN ('respondido', 'con_observacion', 'aprobado', 'rechazado')
             RETURNING id, art_id, trabajador_id, email, nombre, rut, cargo, area, telefono, token_acceso,
                       token_expires_at, estado_envio, estado_respuesta, fecha_envio, fecha_respuesta,
                       respuestas_json, evidencia_trabajador_json, firma_tipo, firma_valor, firma_imagen_path,
@@ -285,7 +335,7 @@ def marcar_envio_asignacion(id_asignacion: int, estado_envio: bool | str) -> Non
             """
             UPDATE art_trabajadores_asignados
             SET estado_envio = %s, fecha_envio = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-            WHERE id = %s AND estado_respuesta NOT IN ('respondido', 'con_observacion', 'aprobado', 'observado', 'rechazado')
+            WHERE id = %s AND estado_respuesta NOT IN ('respondido', 'con_observacion', 'aprobado', 'rechazado')
             """,
             (estado, id_asignacion),
         )
@@ -513,7 +563,7 @@ def actualizar_revision_asignacion(id_asignacion: int, estado: str, comentario: 
                 fecha_revision = CURRENT_TIMESTAMP,
                 supervisor_revisor_id = %s,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = %s AND estado_respuesta IN ('respondido', 'con_observacion', 'aprobado', 'observado', 'rechazado')
+            WHERE id = %s AND estado_respuesta IN ('respondido', 'con_observacion')
             """,
             (estado, comentario, supervisor_revisor_id, id_asignacion),
         )

@@ -57,30 +57,6 @@
       </div>
     </section>
 
-    <section class="app-card">
-      <div class="app-card-header"><h2 class="text-xl font-black">Checklist de seguridad</h2></div>
-      <div class="app-card-body grid gap-3 md:grid-cols-2">
-        {% for item in checklist %}
-        <label class="flex items-start gap-3 rounded-lg border border-line bg-slate-50 p-4">
-          <input type="checkbox" name="checklist" value="{{ item }}" required {% if item in registro.checklist %}checked{% endif %} class="mt-1 h-5 w-5">
-          <span class="text-sm font-semibold">{{ item }}</span>
-        </label>
-        {% endfor %}
-      </div>
-    </section>
-
-    <section class="app-card">
-      <div class="app-card-header"><h2 class="text-xl font-black">Elementos de Protección Personal</h2></div>
-      <div class="app-card-body grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {% for item in epp %}
-        <label class="flex items-center gap-3 rounded-lg border border-line bg-slate-50 p-4">
-          <input type="checkbox" name="epp" value="{{ item }}" {% if item in registro.epp %}checked{% endif %} class="h-5 w-5">
-          <span class="text-sm font-semibold">{{ item }}</span>
-        </label>
-        {% endfor %}
-      </div>
-    </section>
-
     <section class="app-card overflow-hidden">
       <div class="app-card-header flex items-center justify-between gap-3">
         <div>
@@ -114,12 +90,12 @@
     </section>
 
     <section class="app-card">
-      <div class="app-card-header"><h2 class="text-xl font-black">Evidencia y observaciones</h2></div>
+      <div class="app-card-header"><h2 class="text-xl font-black">Evidencia general y observaciones</h2></div>
       <div class="app-card-body grid gap-5 md:grid-cols-2">
         <div>
-          <label class="form-label">Añadir nuevas imágenes de evidencia</label>
+          <label class="form-label">Añadir nuevas imágenes de evidencia general</label>
           <input type="file" name="evidencia" multiple accept=".jpg,.jpeg,.png,.webp" class="form-input bg-white">
-          <p class="mt-2 text-sm text-dartMuted">Las nuevas imágenes se sumarán a las existentes.</p>
+          <p class="mt-2 text-sm text-dartMuted">Opcional. Las nuevas imágenes se sumarán a las existentes.</p>
           {% if registro.evidencia %}
           <div class="mt-4 grid grid-cols-2 gap-3">
             {% for imagen in registro.evidencia %}
@@ -131,8 +107,8 @@
           {% endif %}
         </div>
         <div>
-          <label class="form-label">Observaciones</label>
-          <textarea name="observaciones" rows="5" required class="form-textarea">{{ registro.observaciones }}</textarea>
+          <label class="form-label">Observaciones generales</label>
+          <textarea name="observaciones" rows="5" class="form-textarea">{{ registro.observaciones }}</textarea>
         </div>
       </div>
     </section>

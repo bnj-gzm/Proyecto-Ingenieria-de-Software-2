@@ -15,7 +15,7 @@
 {% set assigned = namespace(total=0, pendientes=0, respondidas=0, observadas=0) %}
 {% for item in art_asignadas %}
   {% set assigned.total = assigned.total + 1 %}
-  {% if item.estado_respuesta in ['respondido', 'con_observacion', 'aprobado', 'observado', 'rechazado'] %}
+  {% if item.estado_respuesta in ['respondido', 'con_observacion', 'aprobado', 'rechazado'] %}
     {% set assigned.respondidas = assigned.respondidas + 1 %}
   {% else %}
     {% set assigned.pendientes = assigned.pendientes + 1 %}
@@ -70,7 +70,7 @@
               <span class="status-badge status-{{ item.estado_respuesta }}">{{ item.estado_respuesta }}</span>
             </td>
             <td data-label="Acción">
-              {% if item.estado_respuesta in ['respondido', 'con_observacion', 'aprobado', 'observado', 'rechazado'] %}
+              {% if item.estado_respuesta in ['respondido', 'con_observacion', 'aprobado', 'rechazado'] %}
               <a href="/art/asignada/{{ item.id }}/respuesta" class="btn-secondary px-3 py-2 text-sm">Ver respuesta</a>
               {% else %}
               <a href="/art/asignada/{{ item.id }}/responder" class="btn-primary px-3 py-2 text-sm">Completar</a>

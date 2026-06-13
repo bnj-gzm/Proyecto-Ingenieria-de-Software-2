@@ -14,7 +14,13 @@ from backend.src.middleware.auth import get_current_user
 from backend.src.middleware.auth import pwd_context
 from backend.src.middleware.csrf import create_csrf_token, set_csrf_cookie, validate_csrf_token
 from backend.src.roles import ROLE_LABELS, ROLES, SUPERVISOR, USER, can_manage_users, can_review_art
-from backend.src.services.art_service import cargar_registros, cargar_registros_por_supervisor, actualizar_revision_art, obtener_registro, cargar_trabajadores_art
+from backend.src.services.art_service import (
+    actualizar_revision_art,
+    cargar_registros,
+    cargar_registros_por_supervisor,
+    cargar_resumenes_asignaciones,
+    obtener_registro,
+)
 from backend.src.services.usuario_service import (
     actualizar_estado_cuenta,
     actualizar_rol,
@@ -228,6 +234,9 @@ def admin_list_art(request: Request, user=Depends(get_current_user)):
     if not can_review_art(user.get("rol", "")):
         return RedirectResponse("/", status_code=303)
     registros = cargar_registros(limite=100, con_asignaciones=False) if user.get("rol") == "admin" else cargar_registros_por_supervisor(user["username"], limite=100, con_asignaciones=False)
+    resumenes = cargar_resumenes_asignaciones([registro["id"] for registro in registros])
+    for registro in registros:
+        registro["progreso_asignaciones"] = resumenes.get(registro["id"], {})
     csrf_token = create_csrf_token()
     response = templates.TemplateResponse(
         request,
@@ -273,11 +282,6 @@ def admin_change_estado(
     if estado in {"aprobada", "rechazada"} and not comentario_supervisor.strip():
         raise HTTPException(status_code=400, detail="Debes ingresar un comentario de revisión")
         
-    trabajadores_art = cargar_trabajadores_art(id_art)
-    todos_validados = all(t.get("condicion_ok") is not None for t in trabajadores_art) if trabajadores_art else False
-    if not todos_validados:
-        raise HTTPException(status_code=400, detail="No puedes revisar la ART hasta que todos los trabajadores asignados la hayan completado y validado.")
-
     actualizar_revision_art(
         id_art,
         estado,

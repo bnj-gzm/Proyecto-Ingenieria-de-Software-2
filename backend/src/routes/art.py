@@ -21,6 +21,7 @@ from backend.src.services.art_service import (
     cargar_trabajadores_art,
     eliminar_registro,
     guardar_registro,
+    guardar_asignaciones_art,
     guardar_respuesta_asignacion,
     guardar_respuesta_asignacion_por_id,
     guardar_trabajadores_art,
@@ -36,7 +37,7 @@ from backend.src.services.art_service import (
     resetear_validaciones_trabajadores,
 )
 from backend.src.services.email_service import build_art_assignment_email, send_email
-from backend.src.services.pdf_service import generar_art_pdf
+from backend.src.services.pdf_service import generar_art_pdf, generar_respuesta_trabajador_pdf
 from backend.src.services.upload_service import save_art_image
 from backend.src.services.usuario_service import cargar_usuarios_asignables, cargar_usuarios_por_rol
 from backend.src.services.notification_service import add_notification
@@ -67,7 +68,8 @@ _EPP = [
 ]
 
 MIN_TRABAJADORES_ART = 6
-ANSWERED_ASSIGNMENT_STATES = {"respondido", "con_observacion", "aprobado", "observado", "rechazado"}
+ANSWERED_ASSIGNMENT_STATES = {"respondido", "con_observacion", "aprobado", "rechazado"}
+FINAL_REVIEW_STATES = {"aprobado", "rechazado"}
 
 _WORKER_QUESTIONS = [
     {"id": "condicion_fisica_psicologica", "section": "Condiciones físicas y psicológicas", "text": "¿Me encuentro en condiciones físicas y psicológicas aptas para realizar la actividad?", "critical": True},
@@ -152,7 +154,7 @@ async def _build_worker_response_payload(
     con_observacion = bool(observaciones.strip())
     for pregunta in _WORKER_QUESTIONS:
         respuesta = str(form.get(f"respuesta_{pregunta['id']}", "")).strip().lower()
-        if respuesta not in {"si", "no", "na"}:
+        if respuesta not in {"si", "no"}:
             raise HTTPException(status_code=400, detail="Debes responder todas las preguntas obligatorias.")
         obs = str(form.get(f"observacion_{pregunta['id']}", "")).strip()
         if pregunta["critical"] and respuesta == "no" and not obs and not observaciones.strip():
@@ -290,6 +292,7 @@ def nueva_art(request: Request, user=Depends(get_current_user)):
             "request": request,
             "user": user,
             "trabajadores": trabajadores,
+            "min_trabajadores": MIN_TRABAJADORES_ART,
             "fecha_actual": datetime.now().strftime("%Y-%m-%d"),
             "csrf_token": csrf_token,
         },
@@ -305,7 +308,8 @@ async def guardar_art(
     area: str = Form(...),
     tipo_tarea: str = Form(...),
     descripcion: str = Form(...),
-    trabajador_asignado: List[str] = Form(...),
+    trabajador_asignado: Optional[List[str]] = Form(None),
+    trabajadores_asignados: Optional[List[str]] = Form(None),
     supervisor_asignado: str = Form(...),
     checklist: Optional[List[str]] = Form(None),
     epp: Optional[List[str]] = Form(None),
@@ -322,25 +326,21 @@ async def guardar_art(
     if not can_create_art(user.get("rol", "")):
         raise HTTPException(status_code=403, detail="No tienes permiso para crear ART")
     validate_csrf_token(request, csrf_token)
-    usernames_asignados = list(dict.fromkeys(trabajador_asignado))
     trabajadores_disponibles = _usuarios_asignables()
-    trabajadores_asignados = [
-        trabajador for trabajador in trabajadores_disponibles if trabajador["username"] in usernames_asignados
+    seleccion = list(dict.fromkeys(trabajadores_asignados or trabajador_asignado or []))
+    ids_asignados = {int(item) for item in seleccion if str(item).isdigit()}
+    usernames_asignados = {item for item in seleccion if not str(item).isdigit()}
+    trabajadores_asignados_lista = [
+        trabajador
+        for trabajador in trabajadores_disponibles
+        if trabajador["id"] in ids_asignados or trabajador["username"] in usernames_asignados
     ]
-    if not trabajadores_asignados:
-        raise HTTPException(status_code=400, detail="Debes seleccionar al menos un trabajador registrado")
-    if len(checklist or []) != len(_CHECKLIST):
-        raise HTTPException(status_code=400, detail="Debes completar todo el checklist de seguridad")
-    if not epp:
-        raise HTTPException(status_code=400, detail="Debes seleccionar al menos un EPP")
-    if not observaciones.strip():
-        raise HTTPException(status_code=400, detail="Debes ingresar observaciones")
-    if not evidencia:
-        raise HTTPException(status_code=400, detail="Debes adjuntar al menos una imagen de evidencia")
+    if len(trabajadores_asignados_lista) < MIN_TRABAJADORES_ART:
+        raise HTTPException(status_code=400, detail=f"Debes seleccionar al menos {MIN_TRABAJADORES_ART} trabajadores registrados")
     supervisor_user = next((u for u in cargar_usuarios_por_rol(SUPERVISOR) if u["username"] == supervisor_asignado), None)
     trabajador = ", ".join(
         trabajador_user.get("nombre") or trabajador_user.get("email") or trabajador_user["username"]
-        for trabajador_user in trabajadores_asignados
+        for trabajador_user in trabajadores_asignados_lista
     )
     supervisor = (supervisor_user or {}).get("nombre") or supervisor_asignado
     riesgos = []
@@ -364,19 +364,20 @@ async def guardar_art(
         "tipo_tarea": tipo_tarea,
         "descripcion": descripcion,
         "supervisor": supervisor,
-        "checklist": checklist or [],
-        "epp": epp or [],
+        "checklist": [],
+        "epp": [],
         "riesgos": riesgos,
         "observaciones": observaciones,
         "evidencia": archivos,
         "creado_en": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "creado_por": user["username"],
-        "asignado_a": trabajadores_asignados[0]["username"],
+        "asignado_a": trabajadores_asignados_lista[0]["username"],
         "supervisor_asignado": supervisor_asignado,
     }
     guardar_registro(registro)
-    guardar_trabajadores_art(id_art, trabajadores_asignados)
-    for trabajador_user in trabajadores_asignados:
+    guardar_trabajadores_art(id_art, trabajadores_asignados_lista)
+    guardar_asignaciones_art(id_art, trabajadores_asignados_lista)
+    for trabajador_user in trabajadores_asignados_lista:
         add_notification(
             trabajador_user["username"],
             f"ART {id_art} asignada",
@@ -727,13 +728,45 @@ def revisar_respuesta_trabajador(
     asignacion = obtener_asignacion_art(id_art, id_asignacion)
     if not asignacion:
         raise HTTPException(status_code=404, detail="Respuesta no encontrada")
-    estados_validos = {"respondido", "con_observacion", "aprobado", "observado", "rechazado"}
+    if asignacion.get("estado_respuesta") in FINAL_REVIEW_STATES:
+        return RedirectResponse(f"/art/{id_art}?mensaje={quote('La revisión individual ya está cerrada.')}", status_code=303)
+    if asignacion.get("estado_respuesta") not in ANSWERED_ASSIGNMENT_STATES:
+        raise HTTPException(status_code=400, detail="El trabajador aún no ha enviado su respuesta")
+    estados_validos = FINAL_REVIEW_STATES
     if resultado not in estados_validos:
         raise HTTPException(status_code=400, detail="Resultado de revisión inválido")
-    if resultado in {"observado", "rechazado"} and not comentario_revision.strip():
-        raise HTTPException(status_code=400, detail="El comentario es obligatorio al observar o rechazar.")
+    if resultado == "rechazado" and not comentario_revision.strip():
+        raise HTTPException(status_code=400, detail="El comentario es obligatorio al rechazar.")
     actualizar_revision_asignacion(id_asignacion, resultado, comentario_revision.strip(), user["id"])
-    return RedirectResponse(f"/art/{id_art}/respuesta/{id_asignacion}", status_code=303)
+    message = "Revisión individual aprobada." if resultado == "aprobado" else "Revisión individual rechazada."
+    return RedirectResponse(f"/art/{id_art}?mensaje={quote(message)}", status_code=303)
+
+
+@router.get("/art/{id_art}/trabajador/{id_asignacion}/pdf")
+def descargar_respuesta_trabajador_pdf(
+    id_art: str,
+    id_asignacion: int,
+    user=Depends(get_current_user),
+):
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    registro = obtener_registro(id_art)
+    if not registro:
+        return RedirectResponse("/dashboard", status_code=303)
+    supervisor_asignado = _es_supervisor_asignado(registro, user)
+    if user.get("rol") != "admin" and not supervisor_asignado:
+        raise HTTPException(status_code=403, detail="No tienes permiso para descargar este PDF")
+    asignacion = obtener_asignacion_art(id_art, id_asignacion)
+    if not asignacion:
+        raise HTTPException(status_code=404, detail="Respuesta no encontrada")
+    if asignacion.get("estado_respuesta") != "aprobado":
+        raise HTTPException(status_code=400, detail="El PDF estará disponible cuando la respuesta esté aprobada")
+    pdf = generar_respuesta_trabajador_pdf(registro, asignacion)
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="art-{id_art}-trabajador-{id_asignacion}.pdf"'},
+    )
 
 
 @router.get("/art/{id_art}/editar", response_class=HTMLResponse)
@@ -768,8 +801,6 @@ def editar_art_view(request: Request, id_art: str, user=Depends(get_current_user
         "editar_art.html",
         {
             "request": request,
-            "checklist": _CHECKLIST,
-            "epp": _EPP,
             "user": user,
             "csrf_token": csrf_token,
             "registro": registro,
@@ -789,8 +820,6 @@ async def editar_art_post(
     tipo_tarea: str = Form(...),
     descripcion: str = Form(...),
     supervisor_asignado: str = Form(...),
-    checklist: Optional[List[str]] = Form(None),
-    epp: Optional[List[str]] = Form(None),
     secuencia: Optional[List[str]] = Form(None),
     riesgo: Optional[List[str]] = Form(None),
     control: Optional[List[str]] = Form(None),
@@ -808,14 +837,7 @@ async def editar_art_post(
         raise HTTPException(status_code=404, detail="Registro no encontrado")
     if not _puede_editar_art(registro_existente, user):
         raise HTTPException(status_code=403, detail="No tienes permiso para editar esta ART")
-        
-    if len(checklist or []) != len(_CHECKLIST):
-        raise HTTPException(status_code=400, detail="Debes completar todo el checklist de seguridad")
-    if not epp:
-        raise HTTPException(status_code=400, detail="Debes seleccionar al menos un EPP")
-    if not observaciones.strip():
-        raise HTTPException(status_code=400, detail="Debes ingresar observaciones")
-        
+
     supervisor_user = next((u for u in cargar_usuarios_por_rol(SUPERVISOR) if u["username"] == supervisor_asignado), None)
     trabajador = registro_existente.get("trabajador") or user.get("nombre") or user["username"]
     supervisor = (supervisor_user or {}).get("nombre") or supervisor_asignado
@@ -841,8 +863,8 @@ async def editar_art_post(
         "tipo_tarea": tipo_tarea,
         "descripcion": descripcion,
         "supervisor": supervisor,
-        "checklist": checklist or [],
-        "epp": epp or [],
+        "checklist": registro_existente.get("checklist", []),
+        "epp": registro_existente.get("epp", []),
         "riesgos": riesgos,
         "observaciones": observaciones,
         "evidencia": archivos,

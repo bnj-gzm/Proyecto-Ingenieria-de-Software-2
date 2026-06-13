@@ -11,7 +11,7 @@
       <p class="mt-2 text-dartMuted">Filtra, revisa estados y abre cada ficha para resolver o auditar.</p>
     </div>
     <div class="flex flex-col gap-3 sm:flex-row">
-      <input id="art-search" placeholder="Buscar trabajador, empresa o ID" class="form-input sm:w-72">
+      <input id="art-search" placeholder="Buscar empresa, tipo o ID" class="form-input sm:w-72">
       <select id="art-state" class="form-select sm:w-48">
         <option value="">Todos los estados</option>
         <option value="pendiente">Pendiente</option>
@@ -30,37 +30,36 @@
         <thead>
           <tr>
             <th>ID</th>
-            <th>Foto</th>
-            <th>Trabajador</th>
             <th>Empresa</th>
             <th>Tipo tarea</th>
             <th>Fecha</th>
+            <th>Supervisor</th>
+            <th>Asignados</th>
+            <th>Respondidos</th>
+            <th>Revisados</th>
+            <th>Pendientes</th>
             <th>Estado</th>
-            <th>Progreso</th>
-            <th>Acciones</th>
+            <th>Acción</th>
           </tr>
         </thead>
         <tbody id="art-table-body">
           {% for r in registros %}
-          <tr data-state="{{ r.estado }}" data-search="{{ r.id }} {{ r.trabajador }} {{ r.empresa }} {{ r.tipo_tarea }}">
+          {% set progreso = r.progreso_asignaciones or {} %}
+          <tr data-state="{{ r.estado }}" data-search="{{ r.id }} {{ r.empresa }} {{ r.tipo_tarea }} {{ r.supervisor }}">
             <td data-label="ID" class="font-mono font-bold">{{ r.id }}</td>
-            <td data-label="Foto">
-              {% if r.evidencia %}
-              <img src="{{ r.evidencia[0].src }}" alt="Evidencia ART {{ r.id }}" class="art-thumb" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
-              <div class="art-thumb flex items-center justify-center text-xs font-bold text-dartMuted" hidden>ART</div>
-              {% else %}
-              <span class="text-xs text-dartMuted">Sin foto</span>
-              {% endif %}
-            </td>
-            <td data-label="Trabajador" class="font-bold">{{ r.trabajador }}</td>
             <td data-label="Empresa">{{ r.empresa }}</td>
             <td data-label="Tipo tarea">{{ r.tipo_tarea }}</td>
             <td data-label="Fecha">{{ r.fecha }}</td>
+            <td data-label="Supervisor">{{ r.supervisor }}</td>
+            <td data-label="Asignados" class="font-black">{{ progreso.total or 0 }}</td>
+            <td data-label="Respondidos"><span class="status-badge status-respondido">{{ progreso.respondidos or 0 }}</span></td>
+            <td data-label="Revisados"><span class="status-badge status-aprobado">{{ progreso.revisados or 0 }}</span></td>
+            <td data-label="Pendientes"><span class="status-badge status-pendiente">{{ progreso.pendientes or 0 }}</span></td>
             <td data-label="Estado"><span class="status-badge status-{{ r.estado }}">{{ r.estado }}</span></td>
-            <td data-label="Acciones"><a href="/art/{{ r.id }}" class="btn-secondary px-3 py-2 text-sm">Ver y revisar</a></td>
+            <td data-label="Acción"><a href="/art/{{ r.id }}" class="btn-secondary px-3 py-2 text-sm">Ver detalle</a></td>
           </tr>
           {% else %}
-          <tr><td colspan="9" class="py-10 text-center text-dartMuted">No hay registros.</td></tr>
+          <tr><td colspan="11" class="py-10 text-center text-dartMuted">No hay registros.</td></tr>
           {% endfor %}
         </tbody>
       </table>

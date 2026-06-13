@@ -84,21 +84,22 @@
         <section class="app-card">
           <div class="app-card-header">
             <h2 class="text-xl font-black">{{ pregunta.section }}</h2>
+            <p class="mt-1 text-sm text-dartMuted">Responde según tu condición real antes de iniciar la actividad.</p>
           </div>
           <div class="app-card-body space-y-4">
       {% endif %}
-            <article class="question-row rounded-lg border border-line bg-white p-4" data-critical="{{ 'true' if pregunta.critical else 'false' }}" data-question="{{ pregunta.id }}">
-              <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div class="max-w-3xl">
-                  <p class="font-bold text-dartText">{{ loop.index }}. {{ pregunta.text }}</p>
-                  {% if pregunta.critical %}
-                  <p class="mt-1 text-xs font-black uppercase text-amber-700">Respuesta crítica</p>
-                  {% endif %}
+            <article class="question-row rounded-lg border border-line bg-white p-4 shadow-sm" data-critical="{{ 'true' if pregunta.critical else 'false' }}" data-question="{{ pregunta.id }}">
+              <div class="grid gap-4 lg:grid-cols-[1fr_180px] lg:items-start">
+                <div>
+                  <p class="font-bold leading-6 text-dartText">
+                    <span class="text-dartMuted">{{ loop.index }}.</span>
+                    {{ pregunta.text }}
+                    {% if pregunta.critical %}<span class="text-critical" title="Pregunta crítica">*</span>{% endif %}
+                  </p>
                 </div>
-                <div class="grid min-w-[260px] grid-cols-3 gap-2 text-sm font-bold">
-                  <label class="rounded-lg border border-line px-3 py-2 text-center hover:bg-slate-50"><input type="radio" name="respuesta_{{ pregunta.id }}" value="si" required class="mr-1">Sí</label>
-                  <label class="rounded-lg border border-line px-3 py-2 text-center hover:bg-slate-50"><input type="radio" name="respuesta_{{ pregunta.id }}" value="no" required class="mr-1">No</label>
-                  <label class="rounded-lg border border-line px-3 py-2 text-center hover:bg-slate-50"><input type="radio" name="respuesta_{{ pregunta.id }}" value="na" required class="mr-1">N/A</label>
+                <div class="grid grid-cols-2 gap-2 text-sm font-bold">
+                  <label class="rounded-lg border border-line px-3 py-2 text-center hover:border-green-300 hover:bg-green-50"><input type="radio" name="respuesta_{{ pregunta.id }}" value="si" required class="mr-1">Sí</label>
+                  <label class="rounded-lg border border-line px-3 py-2 text-center hover:border-red-300 hover:bg-red-50"><input type="radio" name="respuesta_{{ pregunta.id }}" value="no" required class="mr-1">No</label>
                 </div>
               </div>
               <textarea name="observacion_{{ pregunta.id }}" rows="2" class="question-observation form-textarea mt-3 hidden" placeholder="Explique la condición detectada"></textarea>
