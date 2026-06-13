@@ -3,100 +3,153 @@ from __future__ import annotations
 import html
 import json
 import logging
-import smtplib
-import urllib.error
-import urllib.request
-from email.message import EmailMessage
+from dataclasses import dataclass
 
 from backend.src.config.settings import settings
 
 logger = logging.getLogger("dart.email")
 
 
+@dataclass(frozen=True)
+class EmailSendResult:
+    ok: bool
+    provider: str
+    message_id: str = ""
+    error: str = ""
+
+
 def is_email_enabled() -> bool:
     return settings.email_enabled
 
 
-def smtp_configured() -> bool:
-    return all(
-        [
-            settings.smtp_host,
-            settings.smtp_port,
-            settings.smtp_user,
-            settings.smtp_password,
-            settings.smtp_from,
-        ]
-    )
-
-
 def resend_configured() -> bool:
-    return bool(settings.resend_api_key and (settings.email_from or settings.smtp_from))
+    return bool(settings.resend_api_key and settings.email_from)
 
 
 def send_email(to_email: str, subject: str, html_body: str, text_body: str | None = None) -> bool:
+    return send_email_result(to_email, subject, html_body, text_body).ok
+
+
+def send_email_result(to_email: str, subject: str, html_body: str, text_body: str | None = None) -> EmailSendResult:
     if not settings.email_enabled:
-        logger.info("EMAIL_ENABLED=false; no se envía correo a %s.", to_email)
-        return False
-    if settings.email_provider == "resend":
-        return _send_resend(to_email, subject, html_body, text_body)
-    if not smtp_configured():
-        logger.error("SMTP no está configurado correctamente.")
-        return False
-
-    message = EmailMessage()
-    message["Subject"] = subject
-    message["From"] = settings.smtp_from
-    message["To"] = to_email
-    message.set_content(text_body or _html_to_text_fallback(html_body))
-    message.add_alternative(html_body, subtype="html")
-
-    try:
-        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=20) as smtp:
-            if settings.smtp_use_tls:
-                smtp.starttls()
-            smtp.login(settings.smtp_user, settings.smtp_password)
-            smtp.send_message(message)
-        logger.info("Correo enviado a %s con asunto %s.", to_email, subject)
-        return True
-    except Exception:
-        logger.exception("No se pudo enviar correo a %s con asunto %s.", to_email, subject)
-        return False
+        error = "EMAIL_ENABLED=false"
+        logger.error("email_failed provider=resend to=%s subject=%s error=%s", to_email, subject, error)
+        return EmailSendResult(False, "resend", error=error)
+    return _send_resend(to_email, subject, html_body, text_body)
 
 
-def _send_resend(to_email: str, subject: str, html_body: str, text_body: str | None = None) -> bool:
+def _send_resend(to_email: str, subject: str, html_body: str, text_body: str | None = None) -> EmailSendResult:
     if not resend_configured():
-        logger.error("Resend no está configurado correctamente.")
-        return False
+        error = "Resend no configurado"
+        logger.error("email_failed provider=resend to=%s subject=%s error=%s", to_email, subject, error)
+        return EmailSendResult(False, "resend", error=error)
 
     payload = {
-        "from": settings.email_from or settings.smtp_from,
+        "from": settings.email_from,
         "to": [to_email],
         "subject": subject,
         "html": html_body,
         "text": text_body or _html_to_text_fallback(html_body),
     }
-    request = urllib.request.Request(
-        "https://api.resend.com/emails",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Authorization": f"Bearer {settings.resend_api_key}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
+    logger.info(
+        "email_send_attempt provider=resend api_key_prefix=%s payload=%s",
+        _api_key_prefix(settings.resend_api_key),
+        _safe_json(
+            {
+                "from": payload["from"],
+                "to": payload["to"],
+                "subject": payload["subject"],
+                "html_length": len(payload["html"]),
+                "text_length": len(payload["text"]),
+            }
+        ),
     )
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
-            if 200 <= response.status < 300:
-                logger.info("Correo Resend enviado a %s con asunto %s.", to_email, subject)
-                return True
-            logger.error("Resend respondió estado %s al enviar a %s.", response.status, to_email)
-            return False
-    except urllib.error.HTTPError as exc:
-        logger.error("Resend respondió estado %s al enviar a %s.", exc.code, to_email)
-        return False
-    except Exception:
-        logger.exception("No se pudo enviar correo Resend a %s con asunto %s.", to_email, subject)
-        return False
+        response = _send_with_resend_sdk(payload)
+        response_data = _response_to_dict(response)
+        message_id = str(response_data.get("id", "") or "")
+        if not message_id:
+            error = "Resend no retornó id de mensaje"
+            logger.error(
+                "email_failed provider=resend to=%s subject=%s error=%s response=%s",
+                to_email,
+                subject,
+                error,
+                _safe_json(response_data),
+            )
+            return EmailSendResult(False, "resend", error=error)
+        logger.info(
+            "email_sent provider=resend to=%s subject=%s message_id=%s response=%s",
+            to_email,
+            subject,
+            message_id,
+            _safe_json(response_data),
+        )
+        return EmailSendResult(True, "resend", message_id=message_id)
+    except Exception as exc:
+        response_data = _exception_response(exc)
+        logger.exception(
+            "email_failed provider=resend to=%s subject=%s api_key_prefix=%s error=%s response=%s",
+            to_email,
+            subject,
+            _api_key_prefix(settings.resend_api_key),
+            exc,
+            _safe_json(response_data),
+        )
+        return EmailSendResult(False, "resend", error=str(exc))
+
+
+def _send_with_resend_sdk(payload: dict):
+    try:
+        import resend
+    except ImportError as exc:
+        raise RuntimeError("SDK oficial de Resend no está instalado. Ejecuta pip install -r requirements.txt.") from exc
+    resend.api_key = settings.resend_api_key
+    if hasattr(resend, "emails") and hasattr(resend.emails, "send"):
+        logger.info("email_sdk_method provider=resend method=resend.emails.send")
+        return resend.emails.send(payload)
+    if hasattr(resend, "Emails") and hasattr(resend.Emails, "send"):
+        logger.info("email_sdk_method provider=resend method=resend.Emails.send")
+        return resend.Emails.send(payload)
+    raise RuntimeError("SDK oficial de Resend no expone un método de envío compatible.")
+
+
+def _api_key_prefix(api_key: str) -> str:
+    return f"{api_key[:5]}..." if api_key else "<empty>"
+
+
+def _response_to_dict(response) -> dict:
+    if isinstance(response, dict):
+        return response
+    if hasattr(response, "model_dump"):
+        return response.model_dump()
+    if hasattr(response, "dict"):
+        return response.dict()
+    if hasattr(response, "__dict__"):
+        return {key: value for key, value in vars(response).items() if not key.startswith("_")}
+    return {"raw": str(response)}
+
+
+def _exception_response(exc: Exception) -> dict:
+    data = {
+        "type": exc.__class__.__name__,
+        "message": str(exc),
+    }
+    for attr in ("status_code", "status", "code"):
+        value = getattr(exc, attr, None)
+        if value:
+            data[attr] = value
+    response = getattr(exc, "response", None)
+    if response is not None:
+        data["response"] = _response_to_dict(response)
+    body = getattr(exc, "body", None)
+    if body:
+        data["body"] = body
+    return data
+
+
+def _safe_json(data: dict) -> str:
+    return json.dumps(data, ensure_ascii=False, default=str)[:4000]
 
 
 def render_email_template(
@@ -204,6 +257,11 @@ def build_activation_email(action_url: str) -> tuple[str, str, str]:
     return subject, html_body, text_body
 
 
+def send_activation_email(to_email: str, action_url: str) -> EmailSendResult:
+    subject, html_body, text_body = build_activation_email(action_url)
+    return send_email_result(to_email, subject, html_body, text_body)
+
+
 def build_password_reset_email(action_url: str) -> tuple[str, str, str]:
     subject = "Restablece tu contraseña D.A.R.T"
     intro = "Recibimos una solicitud para restablecer la contraseña de tu cuenta D.A.R.T. Este enlace expira en 2 horas."
@@ -216,6 +274,11 @@ def build_password_reset_email(action_url: str) -> tuple[str, str, str]:
     )
     text_body = render_text_email("Restablece tu contraseña D.A.R.T", intro, "Restablecer contraseña", action_url, "Enlace válido por 2 horas.")
     return subject, html_body, text_body
+
+
+def send_reset_password_email(to_email: str, action_url: str) -> EmailSendResult:
+    subject, html_body, text_body = build_password_reset_email(action_url)
+    return send_email_result(to_email, subject, html_body, text_body)
 
 
 def build_art_assignment_email(action_url: str, art: dict, trabajador_nombre: str) -> tuple[str, str, str]:
@@ -234,6 +297,11 @@ def build_art_assignment_email(action_url: str, art: dict, trabajador_nombre: st
     )
     text_body = render_text_email("Completa tu ART asignada", intro, "Responder ART", action_url, "Enlace válido por 7 días.")
     return subject, html_body, text_body
+
+
+def send_art_assignment_email(to_email: str, action_url: str, art: dict, trabajador_nombre: str) -> EmailSendResult:
+    subject, html_body, text_body = build_art_assignment_email(action_url, art, trabajador_nombre)
+    return send_email_result(to_email, subject, html_body, text_body)
 
 
 def _html_to_text_fallback(html_body: str) -> str:

@@ -10,7 +10,8 @@ from backend.src.config.frontend import templates
 from backend.src.config.settings import settings
 from backend.src.middleware.auth import create_access_token, delete_auth_cookie, pwd_context, set_auth_cookie
 from backend.src.middleware.csrf import create_csrf_token, set_csrf_cookie, validate_csrf_token
-from backend.src.services.email_service import build_password_reset_email, send_email
+from backend.src.services.email_service import send_reset_password_email
+from backend.src.services.password_policy import validate_password_strength
 from backend.src.services.usuario_service import (
     activar_usuario,
     guardar_reset_token,
@@ -43,8 +44,7 @@ def email_corporativo_valido(email: str) -> bool:
 
 
 def _absolute_url(request: Request, path: str) -> str:
-    fallback_base_url = "https://www.dart-mineria.lat" if settings.email_enabled else str(request.base_url).rstrip("/")
-    base = settings.public_base_url or fallback_base_url
+    base = settings.public_base_url or "https://www.dart-mineria.lat"
     return f"{base}{path}"
 
 
@@ -166,10 +166,11 @@ def activar_cuenta_post(
     expires_at = user.get("activation_token_expires_at")
     if expires_at and expires_at < datetime.now():
         return _render_simple_form(request, "activar_cuenta.html", "Activar cuenta", error="El link de activación expiró.", token=token)
-    if len(password) < 8:
-        return _render_simple_form(request, "activar_cuenta.html", "Activar cuenta", error="La contraseña debe tener al menos 8 caracteres.", token=token, cuenta=user)
     if password != password_confirm:
         return _render_simple_form(request, "activar_cuenta.html", "Activar cuenta", error="Las contraseñas no coinciden.", token=token, cuenta=user)
+    password_ok, password_error = validate_password_strength(password)
+    if not password_ok:
+        return _render_simple_form(request, "activar_cuenta.html", "Activar cuenta", error=password_error, token=token, cuenta=user)
     activar_usuario(user["username"], pwd_context.hash(password))
     return _render_login(request, message="Cuenta activada. Ya puedes iniciar sesión.")
 
@@ -183,22 +184,16 @@ def olvide_password_form(request: Request):
 def olvide_password_post(request: Request, email: str = Form(...), csrf_token: str = Form(...)):
     validate_csrf_token(request, csrf_token)
     email = email.strip().lower()
-    reset_link = None
     if email_corporativo_valido(email):
         user = obtener_usuario_por_email(email)
         if user and user.get("estado_cuenta") == "activo":
             token = secrets.token_urlsafe(32)
             guardar_reset_token(user["username"], token, datetime.now() + timedelta(hours=2))
             reset_link = _absolute_url(request, f"/reset-password/{token}")
-            if settings.email_enabled:
-                logger.info("Link de reset generado para %s.", email)
-                subject, html_body, text_body = build_password_reset_email(reset_link)
-                send_email(email, subject, html_body, text_body)
-            else:
-                logger.info("Link de reset para %s: %s", email, reset_link)
+            result = send_reset_password_email(email, reset_link)
+            if not result.ok:
+                logger.error("email_failed flow=reset_password username=%s email=%s error=%s", user["username"], email, result.error)
     message = "Si el correo existe, enviaremos instrucciones para recuperar la cuenta."
-    if reset_link and not settings.email_enabled:
-        message = f"{message} Link de prueba: {reset_link}"
     return _render_simple_form(request, "olvide_password.html", "Olvidé mi contraseña", message=message)
 
 
@@ -228,9 +223,10 @@ def reset_password_post(
     expires_at = user.get("reset_token_expires_at")
     if expires_at and expires_at < datetime.now():
         return _render_simple_form(request, "reset_password.html", "Restablecer contraseña", error="El link de recuperación expiró.", token=token)
-    if len(password) < 8:
-        return _render_simple_form(request, "reset_password.html", "Restablecer contraseña", error="La contraseña debe tener al menos 8 caracteres.", token=token)
     if password != password_confirm:
         return _render_simple_form(request, "reset_password.html", "Restablecer contraseña", error="Las contraseñas no coinciden.", token=token)
+    password_ok, password_error = validate_password_strength(password)
+    if not password_ok:
+        return _render_simple_form(request, "reset_password.html", "Restablecer contraseña", error=password_error, token=token)
     resetear_password(user["username"], pwd_context.hash(password))
     return _render_login(request, message="Contraseña actualizada. Ya puedes iniciar sesión.")
