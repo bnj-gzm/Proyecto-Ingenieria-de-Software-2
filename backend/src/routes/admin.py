@@ -40,7 +40,7 @@ from backend.src.services.validation_service import (
 )
 from backend.src.services.pdf_service import generar_art_pdf
 from backend.src.services.notification_service import add_notification
-from backend.src.services.email_service import build_activation_email, render_email_template, render_text_email, send_email
+from backend.src.services.email_service import render_email_template, render_text_email, send_activation_email, send_email
 
 router = APIRouter()
 logger = logging.getLogger("dart.admin")
@@ -55,7 +55,7 @@ IMPORT_RESULT_COLUMNS = [
     "area",
     "estado",
     "detalle",
-    "activation_link",
+    "email_status",
 ]
 
 
@@ -75,8 +75,7 @@ def _username_desde_email(email: str) -> str:
 
 
 def _absolute_url(request: Request, path: str) -> str:
-    fallback_base_url = "https://www.dart-mineria.lat" if settings.email_enabled else str(request.base_url).rstrip("/")
-    base = settings.public_base_url or fallback_base_url
+    base = settings.public_base_url or "https://www.dart-mineria.lat"
     return f"{base}{path}"
 
 
@@ -84,10 +83,7 @@ def _crear_activation_link(request: Request, username: str) -> str:
     token = secrets.token_urlsafe(32)
     guardar_activation_token(username, token, datetime.now() + timedelta(hours=48))
     link = _absolute_url(request, f"/activar-cuenta/{token}")
-    if settings.email_enabled:
-        logger.info("Link de activación generado para %s.", username)
-    else:
-        logger.info("Link de activación para %s: %s", username, link)
+    logger.info("activation_token_created username=%s", username)
     return link
 
 
@@ -99,14 +95,13 @@ def _redirect_admin_usuarios(**params: str) -> RedirectResponse:
     return RedirectResponse(url, status_code=303)
 
 
-def _enviar_activacion_usuario(email: str, link: str) -> bool:
-    subject, html_body, text_body = build_activation_email(link)
-    return send_email(email, subject, html_body, text_body)
+def _enviar_activacion_usuario(email: str, link: str):
+    return send_activation_email(email, link)
 
 
 def _enviar_email_prueba(email: str, link: str) -> bool:
     subject = "Prueba de correo D.A.R.T"
-    intro = "Este correo confirma que el envío SMTP de D.A.R.T está configurado correctamente."
+    intro = "Este correo confirma que el envío de D.A.R.T mediante Resend está configurado correctamente."
     html_body = render_email_template(
         title="Prueba de correo D.A.R.T",
         intro=intro,
@@ -155,8 +150,6 @@ def _admin_context(request: Request, user: dict, **extra):
         "roles": ROLE_LABELS,
         "title": "Gestionar usuarios",
         "allowed_domains": sorted(settings.allowed_email_domains),
-        "activation_links_visible": not settings.email_enabled,
-        "activation_link": request.query_params.get("activation_link"),
         "status_message": request.query_params.get("message"),
         "status_type": request.query_params.get("type", "info"),
         **extra,
@@ -426,16 +419,12 @@ def admin_crear_usuario(
         debe_cambiar_password=True,
     )
     link = _crear_activation_link(request, username)
-    if not settings.email_enabled:
-        return _redirect_admin_usuarios(
-            activation_link=link,
-            message="Usuario creado. Copia este enlace de activación.",
-            type="info",
-        )
-    if _enviar_activacion_usuario(normalized["email"], link):
+    result = _enviar_activacion_usuario(normalized["email"], link)
+    if result.ok:
         return _redirect_admin_usuarios(message="Usuario creado. Se envió el enlace de activación al correo.", type="success")
+    logger.error("email_failed flow=activation username=%s email=%s error=%s", username, normalized["email"], result.error)
     return _redirect_admin_usuarios(
-        message="Usuario creado, pero no se pudo enviar el correo. Puedes reenviar la activación.",
+        message="Usuario creado, pero falló el envío del correo. Revisa configuración Resend/EMAIL_ENABLED y reenvía la activación.",
         type="warning",
     )
 
@@ -477,15 +466,11 @@ def admin_reenviar_activacion(
     if not target:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     link = _crear_activation_link(request, username)
-    if not settings.email_enabled:
-        return _redirect_admin_usuarios(
-            activation_link=link,
-            message="Activación renovada. Copia este enlace de activación.",
-            type="info",
-        )
-    if _enviar_activacion_usuario(target.get("email", ""), link):
+    result = _enviar_activacion_usuario(target.get("email", ""), link)
+    if result.ok:
         return _redirect_admin_usuarios(message="Se envió un nuevo enlace de activación.", type="success")
-    return _redirect_admin_usuarios(message="No se pudo enviar el correo de activación.", type="warning")
+    logger.error("email_failed flow=activation_resend username=%s email=%s error=%s", username, target.get("email", ""), result.error)
+    return _redirect_admin_usuarios(message="No se pudo enviar el correo de activación. Revisa Resend/EMAIL_ENABLED.", type="warning")
 
 
 @router.post("/admin/test-email")
@@ -505,7 +490,7 @@ def admin_test_email(
     test_link = _absolute_url(request, "/dashboard")
     if _enviar_email_prueba(email, test_link):
         return _redirect_admin_usuarios(message="Correo de prueba enviado al admin actual.", type="success")
-    return _redirect_admin_usuarios(message="No se pudo enviar el correo de prueba. Revisa SMTP en Railway.", type="warning")
+    return _redirect_admin_usuarios(message="No se pudo enviar el correo de prueba. Revisa Resend en Railway.", type="warning")
 
 
 @router.post("/admin/usuarios/importar", response_class=HTMLResponse)
@@ -550,6 +535,7 @@ async def admin_importar_usuarios(
         area = (row.get("area") or "").strip()
         detalle = ""
         link = ""
+        email_status = ""
         estado = "error"
         row_errors, normalized = _validar_datos_usuario(
             nombre,
@@ -595,15 +581,19 @@ async def admin_importar_usuarios(
             link = _crear_activation_link(request, username)
             estado = "creado"
             detalle = "Usuario creado en estado pendiente."
+            email_status = "pendiente"
             creados += 1
-            if settings.email_enabled:
-                if _enviar_activacion_usuario(email_normalizado, link):
-                    correos_enviados += 1
-                    detalle = "Usuario creado. Correo de activación enviado."
-                    link = ""
-                else:
-                    correos_fallidos += 1
-                    detalle = "Usuario creado, pero falló el envío del correo."
+            result = _enviar_activacion_usuario(email_normalizado, link)
+            link = ""
+            if result.ok:
+                correos_enviados += 1
+                email_status = "email_sent"
+                detalle = "Usuario creado. Correo de activación enviado."
+            else:
+                correos_fallidos += 1
+                email_status = "email_failed"
+                detalle = "Usuario creado, pero falló el envío del correo."
+                logger.error("email_failed flow=activation_import username=%s email=%s error=%s", username, email_normalizado, result.error)
         if not row_errors and rut_normalizado:
             ruts_en_archivo.add(rut_normalizado)
         if not row_errors and email_normalizado:
@@ -620,7 +610,7 @@ async def admin_importar_usuarios(
                 "area": area,
                 "estado": estado,
                 "detalle": detalle,
-                "activation_link": link,
+                "email_status": email_status,
             }
         )
     output = io.StringIO()

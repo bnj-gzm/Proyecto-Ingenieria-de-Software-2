@@ -36,7 +36,7 @@ from backend.src.services.art_service import (
     validar_trabajador_art,
     resetear_validaciones_trabajadores,
 )
-from backend.src.services.email_service import build_art_assignment_email, send_email
+from backend.src.services.email_service import send_art_assignment_email
 from backend.src.services.pdf_service import generar_art_pdf, generar_respuesta_trabajador_pdf
 from backend.src.services.upload_service import save_art_image
 from backend.src.services.usuario_service import cargar_usuarios_asignables, cargar_usuarios_por_rol
@@ -409,20 +409,14 @@ def enviar_art_trabajadores(
 
     enviados = 0
     fallidos = 0
-    links_prueba: list[dict[str, str]] = []
     base_url = _base_url(request)
     for asignacion in asignaciones:
         preparada = preparar_envio_asignacion(asignacion["id"])
         if not preparada:
             continue
         link = f"{base_url}/art/trabajador/{preparada['token_acceso']}"
-        if not settings.email_enabled:
-            marcar_envio_asignacion(preparada["id"], "enlace_generado")
-            links_prueba.append({"nombre": preparada.get("nombre", "Trabajador"), "link": link})
-            continue
-        subject, html_body, text_body = build_art_assignment_email(link, registro, preparada.get("nombre", ""))
-        enviado = send_email(preparada.get("email", ""), subject, html_body, text_body)
-        if enviado:
+        result = send_art_assignment_email(preparada.get("email", ""), link, registro, preparada.get("nombre", ""))
+        if result.ok:
             enviados += 1
             marcar_envio_asignacion(preparada["id"], "enviado")
         else:
@@ -430,8 +424,6 @@ def enviar_art_trabajadores(
             marcar_envio_asignacion(preparada["id"], "envio_fallido")
 
     message = f"Correos enviados: {enviados}. Correos no enviados: {fallidos}. Total asignados: {len(asignaciones)}."
-    if links_prueba:
-        message += " Modo prueba: links generados."
     return RedirectResponse(f"/art/{id_art}?mensaje={quote(message)}", status_code=303)
 
 
@@ -459,14 +451,9 @@ def enviar_art_trabajador(
     if not preparada:
         return RedirectResponse(f"/art/{id_art}?mensaje={quote('El trabajador ya respondió esta ART.')}", status_code=303)
     link = f"{_base_url(request)}/art/trabajador/{preparada['token_acceso']}"
-    if not settings.email_enabled:
-        marcar_envio_asignacion(preparada["id"], "enlace_generado")
-        message = f"Modo prueba: link generado para {preparada.get('nombre', 'trabajador')}: {link}"
-        return RedirectResponse(f"/art/{id_art}?mensaje={quote(message)}", status_code=303)
-    subject, html_body, text_body = build_art_assignment_email(link, registro, preparada.get("nombre", ""))
-    enviado = send_email(preparada.get("email", ""), subject, html_body, text_body)
-    marcar_envio_asignacion(preparada["id"], "enviado" if enviado else "envio_fallido")
-    message = "Correo enviado correctamente." if enviado else f"No se pudo enviar el correo. Link de prueba: {link}"
+    result = send_art_assignment_email(preparada.get("email", ""), link, registro, preparada.get("nombre", ""))
+    marcar_envio_asignacion(preparada["id"], "enviado" if result.ok else "envio_fallido")
+    message = "Correo enviado correctamente." if result.ok else "No se pudo enviar el correo. Revisa la configuración de email."
     return RedirectResponse(f"/art/{id_art}?mensaje={quote(message)}", status_code=303)
 
 

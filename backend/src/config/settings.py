@@ -26,17 +26,10 @@ class Settings:
             if domain.strip()
         }
         self.email_enabled = self._as_bool(os.getenv("EMAIL_ENABLED", "false"))
-        self.email_provider = os.getenv("EMAIL_PROVIDER", "smtp").strip().lower()
         self.public_base_url = os.getenv("APP_BASE_URL") or os.getenv("PUBLIC_BASE_URL", "")
         self.public_base_url = self.public_base_url.rstrip("/")
         self.email_from = os.getenv("EMAIL_FROM", "").strip()
         self.resend_api_key = os.getenv("RESEND_API_KEY", "")
-        self.smtp_host = os.getenv("SMTP_HOST", "").strip()
-        self.smtp_port = self._as_int(os.getenv("SMTP_PORT", "587"), 587)
-        self.smtp_user = os.getenv("SMTP_USER", "").strip()
-        self.smtp_password = os.getenv("SMTP_PASSWORD", "")
-        self.smtp_from = os.getenv("SMTP_FROM", "").strip()
-        self.smtp_use_tls = self._as_bool(os.getenv("SMTP_USE_TLS", "true"))
 
     @staticmethod
     def _required(name: str) -> str:
@@ -56,13 +49,5 @@ class Settings:
     @staticmethod
     def _as_bool(value: str) -> bool:
         return value.lower() in {"1", "true", "yes", "on"}
-
-    @staticmethod
-    def _as_int(value: str, default: int) -> int:
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            return default
-
 
 settings = Settings()

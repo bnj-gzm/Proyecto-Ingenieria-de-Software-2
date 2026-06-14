@@ -13,12 +13,6 @@
     <a href="/dashboard" class="btn-secondary w-fit">Volver</a>
   </div>
 
-  {% if activation_link %}
-  <div class="rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
-    <p class="text-sm font-bold text-cyan-900">Link de activación para pruebas</p>
-    <p class="mt-2 break-all font-mono text-sm text-cyan-800">{{ activation_link }}</p>
-  </div>
-  {% endif %}
   {% if status_message %}
   <div class="rounded-2xl border p-4 {% if status_type == 'success' %}border-green-200 bg-green-50 text-green-800{% elif status_type == 'warning' %}border-amber-200 bg-amber-50 text-amber-800{% else %}border-cyan-200 bg-cyan-50 text-cyan-900{% endif %}">
     <p class="text-sm font-bold">{{ status_message }}</p>
@@ -125,7 +119,7 @@
               <th class="px-3 py-2 text-left">Teléfono</th>
               <th class="px-3 py-2 text-left">Estado</th>
               <th class="px-3 py-2 text-left">Detalle</th>
-              <th class="px-3 py-2 text-left">Link</th>
+              <th class="px-3 py-2 text-left">Email</th>
             </tr>
           </thead>
           <tbody>
@@ -139,7 +133,17 @@
               <td class="px-3 py-2">{{ result.telefono or "-" }}</td>
               <td class="px-3 py-2 font-bold">{{ result.estado }}</td>
               <td class="px-3 py-2">{{ result.detalle }}</td>
-              <td class="max-w-72 break-all px-3 py-2 font-mono text-xs">{{ result.activation_link or "-" }}</td>
+              <td class="px-3 py-2">
+                {% if result.email_status == "email_sent" %}
+                <span class="status-badge bg-green-100 text-green-700">email_sent</span>
+                {% elif result.email_status == "email_failed" %}
+                <span class="status-badge bg-red-100 text-red-700">email_failed</span>
+                {% elif result.email_status %}
+                <span class="status-badge bg-slate-100 text-slate-700">{{ result.email_status }}</span>
+                {% else %}
+                -
+                {% endif %}
+              </td>
             </tr>
             {% endfor %}
           </tbody>

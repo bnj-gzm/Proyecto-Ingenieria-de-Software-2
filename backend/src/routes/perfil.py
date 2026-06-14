@@ -5,6 +5,7 @@ from backend.src.config.frontend import templates
 from backend.src.middleware.auth import get_current_user, pwd_context
 from backend.src.middleware.csrf import create_csrf_token, set_csrf_cookie, validate_csrf_token
 from backend.src.services.usuario_service import actualizar_foto_perfil, actualizar_password, actualizar_perfil, obtener_usuario
+from backend.src.services.password_policy import validate_password_strength
 from backend.src.services.validation_service import normalizar_telefono_chile, validar_telefono_chile
 from backend.src.services.art_service import cargar_registros_por_usuario
 from backend.src.services.notification_service import get_notifications
@@ -136,12 +137,13 @@ async def perfil_update(
     if nueva_foto != (user.get("foto_perfil") or ""):
         actualizar_foto_perfil(user["username"], nueva_foto)
     if password:
-        if len(password) < 8:
-            fresh_user = obtener_usuario(user["username"]) or user
-            return _render_profile_edit(request, fresh_user, error="La contraseña debe tener al menos 8 caracteres.")
         if password != password_confirm:
             fresh_user = obtener_usuario(user["username"]) or user
             return _render_profile_edit(request, fresh_user, error="Las contraseñas no coinciden.")
+        password_ok, password_error = validate_password_strength(password)
+        if not password_ok:
+            fresh_user = obtener_usuario(user["username"]) or user
+            return _render_profile_edit(request, fresh_user, error=password_error)
         actualizar_password(user["username"], pwd_context.hash(password))
     return RedirectResponse("/perfil", status_code=303)
 
