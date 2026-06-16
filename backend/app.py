@@ -2,10 +2,12 @@ import logging
 import time
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.src.config.database import init_db, _connect
+from backend.src.config.frontend import templates
 from backend.src.routes import auth, perfil, art, admin
 
 logging.basicConfig(
@@ -26,6 +28,47 @@ app = FastAPI(title="ART/AST Digital")
 app.state.upload_dir = _UPLOAD_DIR
 app.state.art_upload_dir = _ART_UPLOAD_DIR
 app.state.profile_upload_dir = _PROFILE_UPLOAD_DIR
+
+
+def _prefers_html(request: Request) -> bool:
+    accept = request.headers.get("accept", "")
+    return "text/html" in accept or "*/*" in accept
+
+
+@app.exception_handler(HTTPException)
+async def controlled_http_error(request: Request, exc: HTTPException):
+    logger.warning("HTTP_ERROR status=%s path=%s detail=%s", exc.status_code, request.url.path, exc.detail)
+    if not _prefers_html(request):
+        return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
+    return templates.TemplateResponse(
+        request,
+        "error.html",
+        {
+            "request": request,
+            "title": "No pudimos abrir esta página",
+            "status_code": exc.status_code,
+            "message": exc.detail or "La solicitud no pudo completarse.",
+        },
+        status_code=exc.status_code,
+    )
+
+
+@app.exception_handler(Exception)
+async def controlled_unhandled_error(request: Request, exc: Exception):
+    logger.exception("UNHANDLED_ERROR path=%s", request.url.path)
+    if not _prefers_html(request):
+        return JSONResponse({"detail": "Error interno controlado."}, status_code=500)
+    return templates.TemplateResponse(
+        request,
+        "error.html",
+        {
+            "request": request,
+            "title": "Servicio temporalmente no disponible",
+            "status_code": 500,
+            "message": "No pudimos completar la solicitud. Intenta nuevamente en unos segundos.",
+        },
+        status_code=500,
+    )
 
 
 @app.middleware("http")

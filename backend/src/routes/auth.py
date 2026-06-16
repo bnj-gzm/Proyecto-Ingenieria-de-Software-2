@@ -134,7 +134,7 @@ def login(request: Request, email: str = Form(...), password: str = Form(...), c
 
         config_ok, config_error = _login_runtime_ok()
         if not config_ok:
-            logger.error("login_runtime_unavailable email=%s cause=%s", email, config_error)
+            logger.error("LOGIN_FAIL email=%s cause=%s", email, config_error)
             return _render_login(
                 request,
                 "No pudimos iniciar sesión en este momento. Intenta nuevamente más tarde.",
@@ -143,14 +143,14 @@ def login(request: Request, email: str = Form(...), password: str = Form(...), c
 
         user = obtener_usuario_por_email(email)
         if user is None:
-            logger.info("login_failed_user_not_found email=%s", email)
+            logger.info("LOGIN_FAIL email=%s cause=user_not_found", email)
             return _render_login(request, "Correo o contraseña incorrectos")
 
         username = user.get("username") if isinstance(user, dict) else ""
         password_hash = user.get("password_hash") if isinstance(user, dict) else ""
         if not username or not password_hash:
             logger.error(
-                "login_user_record_incomplete email=%s username_present=%s password_hash_present=%s",
+                "LOGIN_FAIL email=%s cause=user_record_incomplete username_present=%s password_hash_present=%s",
                 email,
                 bool(username),
                 bool(password_hash),
@@ -160,22 +160,25 @@ def login(request: Request, email: str = Form(...), password: str = Form(...), c
         try:
             password_ok = pwd_context.verify(password, password_hash)
         except Exception:
-            logger.exception("login_password_verify_failed email=%s username=%s", email, username)
+            logger.exception("LOGIN_FAIL email=%s username=%s cause=password_verify_error", email, username)
             return _render_login(request, "Correo o contraseña incorrectos")
         if not password_ok:
+            logger.info("LOGIN_FAIL email=%s username=%s cause=bad_password", email, username)
             return _render_login(request, "Correo o contraseña incorrectos")
 
         if user.get("estado_cuenta") != "activo":
+            logger.info("LOGIN_FAIL email=%s username=%s cause=inactive_account", email, username)
             return _render_login(request, "Tu cuenta aún no está activa. Revisa el link enviado por administración.")
 
         response = RedirectResponse("/dashboard", status_code=303)
         set_auth_cookie(response, create_access_token(username))
+        logger.info("LOGIN_OK email=%s username=%s", email, username)
         return response
     except HTTPException as exc:
-        logger.warning("login_rejected status=%s detail=%s", exc.status_code, exc.detail)
+        logger.warning("LOGIN_FAIL status=%s detail=%s", exc.status_code, exc.detail)
         return _render_login(request, "La sesión expiró. Intenta iniciar sesión nuevamente.", status_code=exc.status_code)
     except Exception:
-        logger.exception("login_unhandled_error")
+        logger.exception("LOGIN_FAIL cause=unhandled_error")
         return _render_login(
             request,
             "No pudimos iniciar sesión en este momento. Intenta nuevamente más tarde.",

@@ -3,59 +3,203 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Iniciar sesión</title>
+<title>Iniciar sesión · D.A.R.T</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
+{% include "components/theme_engine.html" %}
 <style>
-  body { font-family: Inter, system-ui, sans-serif; background:#F4F7FA; color:#111827; }
-  .card { border:1px solid #E2E8F0; border-radius:8px; background:#fff; box-shadow:0 12px 30px rgba(15,23,42,.08); }
-  .input { width:100%; border:1px solid #CBD5E1; border-radius:8px; padding:.85rem 1rem; outline:none; }
-  .input:focus { border-color:#00A7B5; box-shadow:0 0 0 3px rgba(0,167,181,.14); }
+  :root,
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg-primary:#F8FAFC;
+    --bg-secondary:#FFFFFF;
+    --text-primary:#111827;
+    --text-secondary:#64748B;
+    --border:#E2E8F0;
+    --card:rgba(255,255,255,.9);
+    --muted:var(--text-secondary);
+    --accent:#0ea5e9;
+    --danger:#ef4444;
+    --space-1:4px;
+    --space-2:8px;
+    --space-3:12px;
+    --space-4:16px;
+    --space-5:24px;
+    --space-6:32px;
+    --radius-sm:8px;
+    --radius-md:12px;
+    --radius-lg:16px;
+    --shadow-sm:0 1px 2px rgba(15,23,42,.05);
+    --shadow-md:0 10px 24px rgba(15,23,42,.08);
+    --shadow-lg:0 24px 70px rgba(15,23,42,.10);
+    --ease-premium:cubic-bezier(.2,.8,.2,1);
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg-primary:#0b1220;
+    --bg-secondary:#111827;
+    --text-primary:#E5EEF8;
+    --text-secondary:#94A3B8;
+    --border:rgba(148,163,184,.22);
+    --card:rgba(15,23,42,.84);
+    --muted:var(--text-secondary);
+    --accent:#38bdf8;
+    --danger:#f87171;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.18);
+    --shadow-md:0 16px 36px rgba(0,0,0,.24);
+    --shadow-lg:0 24px 70px rgba(0,0,0,.34);
+  }
+  * { letter-spacing: 0; }
+  body {
+    min-height: 100vh;
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--text-primary);
+    background:
+      radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 32%),
+      linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  }
+  .login-shell { animation: pageIn .42s var(--ease-premium) both; }
+  @keyframes pageIn { from { opacity:0; transform: translateY(10px) scale(.99); } to { opacity:1; transform: translateY(0) scale(1); } }
+  .login-card {
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--card);
+    box-shadow: var(--shadow-lg);
+    backdrop-filter: blur(24px);
+  }
+  .field { position: relative; }
+  .input {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--card) 92%, var(--bg-secondary));
+    color: var(--text-primary);
+    padding: 1.25rem 1rem .62rem;
+    outline: none;
+    transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+  }
+  .input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent); }
+  .floating-label {
+    pointer-events: none;
+    position: absolute;
+    left: 1rem;
+    top: .96rem;
+    color: var(--text-secondary);
+    font-size: .9rem;
+    font-weight: 800;
+    transition: transform .18s cubic-bezier(.2,.8,.2,1), font-size .18s cubic-bezier(.2,.8,.2,1), color .18s ease;
+  }
+  .input:focus + .floating-label,
+  .input:not(:placeholder-shown) + .floating-label {
+    transform: translateY(-.55rem);
+    font-size: .68rem;
+    color: var(--accent);
+  }
+  .btn-primary {
+    display: inline-flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background: var(--accent);
+    padding: .9rem 1rem;
+    font-weight: 900;
+    color: white;
+    box-shadow: 0 14px 28px rgba(14,165,233,.20);
+    transition: transform .16s ease, box-shadow .16s ease;
+  }
+  .btn-secondary {
+    display: inline-flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--card);
+    padding: .82rem 1rem;
+    font-weight: 900;
+    color: var(--text-primary);
+    transition: transform .16s var(--ease-premium), background .16s var(--ease-premium), border-color .16s var(--ease-premium);
+  }
+  .btn-secondary:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--accent) 28%, var(--border)); background: color-mix(in srgb, var(--card) 82%, var(--bg-secondary)); }
+  .btn-primary:active, .btn-secondary:active { transform: scale(.98); }
+  .btn-primary:hover { background:#0284c7; transform: translateY(-1px); box-shadow: 0 18px 34px rgba(14,165,233,.26); }
+  .btn-primary.is-loading { pointer-events:none; opacity:.86; }
+  .spinner { display:none; width:1.05rem; height:1.05rem; border:2px solid rgba(255,255,255,.45); border-top-color:white; border-radius:999px; animation: spin .75s linear infinite; }
+  .is-loading .spinner { display:inline-block; }
+  .is-loading .login-label { display:none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .toast-card { border: 1px solid var(--border); border-left: 4px solid var(--danger); border-radius: 12px; background: var(--card); box-shadow: var(--shadow-lg); padding: .9rem 1rem; animation: toastIn .25s ease both; }
+  .toast-success { border-left-color: #16A34A; }
+  .text-slate-500, .text-slate-600 { color: var(--text-secondary) !important; }
+  .text-slate-900 { color: var(--text-primary) !important; }
+  .text-red-700 { color: color-mix(in srgb, var(--danger) 78%, var(--text-primary)) !important; }
+  .text-green-700 { color: color-mix(in srgb, #16A34A 78%, var(--text-primary)) !important; }
+  @keyframes toastIn { from { opacity:0; transform: translateY(-8px); } to { opacity:1; transform: translateY(0); } }
 </style>
 </head>
 <body>
-  <main class="grid min-h-screen lg:grid-cols-[1fr_0.82fr]">
-    <section class="hidden bg-[#0B1726] p-10 text-white lg:flex lg:flex-col lg:justify-between">
-      <a href="/" class="inline-flex items-center gap-3 text-2xl font-black">
-        {% set brand_logo_size = 'sm' %}
-        {% set brand_logo_theme = 'dark' %}
-        {% set brand_logo_compact = true %}
-        {% include "components/brand_logo.html" with context %}
-      </a>
-      <div>
-        <span class="inline-flex rounded-full bg-[#A7F432] px-3 py-1 text-xs font-black uppercase text-[#111827]">Acceso corporativo</span>
-        <h1 class="mt-6 max-w-xl text-5xl font-black leading-tight">Gestión segura de ART para operación minera.</h1>
-        <p class="mt-5 max-w-lg leading-7 text-slate-300">Ingreso reservado para trabajadores, supervisores y administradores autorizados.</p>
-      </div>
-      <p class="text-sm text-slate-400">Seguridad industrial · Trazabilidad · Evidencia</p>
-    </section>
-
-    <section class="flex items-center justify-center px-5 py-10">
-      <div class="card w-full max-w-md p-8">
-        <div class="mb-7">
-          {% set brand_logo_size = 'md' %}
-          {% set brand_logo_theme = 'light' %}
-          {% set brand_logo_compact = true %}
-          {% include "components/brand_logo.html" with context %}
+  <main class="login-shell flex min-h-screen items-center justify-center px-5 py-8">
+    <section class="mx-auto w-full max-w-[430px]">
+      <div class="login-card p-7 sm:p-8">
+        <div class="mb-7 text-center">
+          <div class="inline-flex">
+            {% set brand_logo_size = 'md' %}
+            {% set brand_logo_theme = 'light' %}
+            {% set brand_logo_compact = true %}
+            {% include "components/brand_logo.html" with context %}
+          </div>
           <h1 class="mt-5 text-3xl font-black">Iniciar sesión</h1>
-          <p class="mt-2 text-sm leading-6 text-[#64748B]">Ingresa con tu correo corporativo para continuar.</p>
+          <p class="mt-2 text-sm leading-6 text-slate-500">Ingresa con tu correo corporativo para continuar.</p>
         </div>
-        {% if error %}<div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{{ error }}</div>{% endif %}
-        {% if message %}<div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-bold text-green-700">{{ message }}</div>{% endif %}
-        <form action="/login" method="post" class="space-y-4">
+
+        <div id="login-toast-region" class="mb-4 grid gap-3">
+          {% if error %}<div class="toast-card"><p class="text-sm font-black text-red-700">No pudimos iniciar sesión</p><p class="mt-1 text-sm text-slate-600">{{ error }}</p></div>{% endif %}
+          {% if message %}<div class="toast-card toast-success"><p class="text-sm font-black text-green-700">Listo</p><p class="mt-1 text-sm text-slate-600">{{ message }}</p></div>{% endif %}
+        </div>
+
+        <form id="login-form" action="/login" method="post" class="space-y-4">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <div>
-            <label class="mb-2 block text-sm font-black text-slate-700">Correo electrónico</label>
-            <input class="input" type="email" name="email" placeholder="nombre@dart-mineria.lat" required autocomplete="email">
+          <div class="field">
+            <input class="input" type="email" name="email" placeholder=" " required autocomplete="email">
+            <label class="floating-label">Correo electrónico</label>
           </div>
-          <div>
-            <label class="mb-2 block text-sm font-black text-slate-700">Contraseña</label>
-            <input class="input" type="password" name="password" placeholder="Contraseña" required autocomplete="current-password">
+          <div class="field">
+            <input class="input" type="password" name="password" placeholder=" " required autocomplete="current-password">
+            <label class="floating-label">Contraseña</label>
           </div>
-          <button type="submit" class="w-full rounded-lg bg-[#00A7B5] px-4 py-3 font-black text-white hover:bg-[#078c99]">Ingresar</button>
+          <button id="login-button" type="submit" class="btn-primary"><span class="spinner"></span><span class="login-label">Ingresar</span></button>
         </form>
-        <p class="mt-5 text-center text-sm"><a href="/olvide-password" class="font-black text-[#0F3D4C] hover:text-[#00A7B5]">Olvidé mi contraseña</a></p>
+        <div class="mt-5 grid gap-3">
+          <p class="text-center text-sm"><a href="/olvide-password" class="font-black text-slate-900 transition hover:text-sky-500">Olvidé mi contraseña</a></p>
+          <a id="home-link" href="/" class="btn-secondary">Volver al inicio</a>
+        </div>
       </div>
+      <p class="mt-6 text-center text-xs font-bold text-slate-500">D.A.R.T · Plataforma interna de seguridad operacional</p>
     </section>
   </main>
+  <script>
+    (function () {
+      const form = document.getElementById("login-form");
+      const button = document.getElementById("login-button");
+      form?.addEventListener("submit", () => {
+        button?.classList.add("is-loading");
+        document.querySelector(".login-card")?.animate(
+          [{ opacity: 1, transform: "translateY(0) scale(1)" }, { opacity: .72, transform: "translateY(-4px) scale(.995)" }],
+          { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)", fill: "forwards" }
+        );
+      });
+      document.getElementById("home-link")?.addEventListener("click", (event) => {
+        event.preventDefault();
+        document.querySelector(".login-card")?.animate(
+          [{ opacity: 1, transform: "translateY(0) scale(1)" }, { opacity: 0, transform: "translateY(8px) scale(.99)" }],
+          { duration: 180, easing: "cubic-bezier(.2,.8,.2,1)", fill: "forwards" }
+        );
+        window.setTimeout(() => { window.location.href = "/"; }, 160);
+      });
+    })();
+  </script>
 </body>
 </html>

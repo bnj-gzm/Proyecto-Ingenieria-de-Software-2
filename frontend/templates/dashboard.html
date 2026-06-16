@@ -24,20 +24,44 @@
 {% endfor %}
 
 <div class="space-y-6">
-  <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-    <div>
+  <section class="premium-hero p-6 sm:p-8">
+    <div class="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+      <div>
       <p class="text-sm font-black uppercase text-techCyan">Mis ART asignadas</p>
       <h1 class="mt-2 text-3xl font-black sm:text-4xl">Bienvenido, {{ user.nombre or user.email or user.username }}</h1>
       <p class="mt-2 text-dartMuted">Estas son las ART que tienes asignadas para completar tu validación de seguridad.</p>
+      </div>
+      <a href="/mis-art-asignadas" class="btn-primary">Ver todas</a>
     </div>
-    <a href="/mis-art-asignadas" class="btn-secondary">Ver todas</a>
-  </div>
+  </section>
 
   <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Asignadas</p><p class="mt-3 text-4xl font-black">{{ assigned.total }}</p></div>
-    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Pendientes</p><p class="mt-3 text-4xl font-black text-amber-500">{{ assigned.pendientes }}</p></div>
-    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Respondidas</p><p class="mt-3 text-4xl font-black text-green-600">{{ assigned.respondidas }}</p></div>
-    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Con observaciones</p><p class="mt-3 text-4xl font-black text-orange-600">{{ assigned.observadas }}</p></div>
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Asignadas</p><p class="mt-3 text-4xl font-black">{{ assigned.total }}</p><span class="mt-4 block h-1.5 rounded-full bg-slate-100"><span class="block h-full w-full rounded-full bg-techCyan"></span></span></div>
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Pendientes</p><p class="mt-3 text-4xl font-black text-amber-500">{{ assigned.pendientes }}</p><p class="mt-2 text-sm font-bold text-dartMuted">Requieren acción</p></div>
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Respondidas</p><p class="mt-3 text-4xl font-black text-green-600">{{ assigned.respondidas }}</p><p class="mt-2 text-sm font-bold text-dartMuted">En trazabilidad</p></div>
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Con observaciones</p><p class="mt-3 text-4xl font-black text-orange-600">{{ assigned.observadas }}</p><p class="mt-2 text-sm font-bold text-dartMuted">Revisar detalle</p></div>
+  </section>
+
+  <section class="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+    <div class="app-card app-card-body chart-card">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <p class="text-sm font-black uppercase text-techCyan">Actividad</p>
+          <h2 class="mt-1 text-xl font-black">ART asignadas por fecha</h2>
+        </div>
+      </div>
+      <div class="chart-wrap mt-4"><canvas id="workerActivityChart"></canvas></div>
+    </div>
+    <div class="app-card app-card-body chart-card xl:col-span-2">
+      <p class="text-sm font-black uppercase text-techCyan">Distribución</p>
+      <h2 class="mt-1 text-xl font-black">Estado de respuestas</h2>
+      <div class="chart-wrap mt-4"><canvas id="workerDonutChart"></canvas></div>
+    </div>
+    <div class="app-card app-card-body chart-card">
+      <p class="text-sm font-black uppercase text-techCyan">Comparativo</p>
+      <h2 class="mt-1 text-xl font-black">Pendientes vs respondidas</h2>
+      <div class="chart-wrap mt-4"><canvas id="workerBarChart"></canvas></div>
+    </div>
   </section>
 
   <section id="mis-art" class="app-card overflow-hidden">
@@ -78,7 +102,7 @@
             </td>
           </tr>
           {% else %}
-          <tr><td colspan="5" class="py-10 text-center text-dartMuted">Aún no tienes ART asignadas.</td></tr>
+          <tr><td colspan="5" class="py-10 text-center"><span class="skeleton-line mx-auto w-48"></span><p class="mt-4 text-dartMuted">Aún no tienes ART asignadas.</p></td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -88,13 +112,21 @@
 {% else %}
 
 <div class="space-y-6">
-  <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-    <div>
+  <section class="premium-hero p-6 sm:p-8">
+    <div class="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+      <div>
       <p class="text-sm font-black uppercase text-techCyan">Panel operacional</p>
       <h1 class="mt-2 text-3xl font-black sm:text-4xl">Bienvenido, {{ user.nombre or user.email or user.username }}</h1>
       <p class="mt-2 text-dartMuted">Resumen de ART, revisión preventiva y evidencias recientes.</p>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        {% if user.rol == 'admin' or user.rol == 'supervisor' %}
+        <a href="/art/nueva" class="btn-primary">Crear ART</a>
+        <a href="/supervisor/art" class="btn-secondary">Revisar pendientes</a>
+        {% endif %}
+      </div>
     </div>
-  </div>
+  </section>
 
   <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
     <div class="metric-card">
@@ -116,6 +148,29 @@
       <p class="text-sm font-black uppercase text-dartMuted">Rechazadas</p>
       <p class="mt-3 text-4xl font-black text-orange-600">{{ stats.rechazadas }}</p>
       <p class="mt-2 text-sm text-dartMuted">No aprobadas</p>
+    </div>
+  </section>
+
+  <section class="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+    <div class="app-card app-card-body chart-card">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <p class="text-sm font-black uppercase text-techCyan">Actividad</p>
+          <h2 class="mt-1 text-xl font-black">ART recientes</h2>
+        </div>
+        <span class="status-badge bg-cyan-100 text-cyan-800">Chart.js</span>
+      </div>
+      <div class="chart-wrap mt-4"><canvas id="artActivityChart"></canvas></div>
+    </div>
+    <div class="app-card app-card-body chart-card xl:col-span-2">
+      <p class="text-sm font-black uppercase text-techCyan">Estados</p>
+      <h2 class="mt-1 text-xl font-black">Distribución ART</h2>
+      <div class="chart-wrap mt-4"><canvas id="artDonutChart"></canvas></div>
+    </div>
+    <div class="app-card app-card-body chart-card">
+      <p class="text-sm font-black uppercase text-techCyan">Comparativo</p>
+      <h2 class="mt-1 text-xl font-black">Estados ART</h2>
+      <div class="chart-wrap mt-4"><canvas id="artBarChart"></canvas></div>
     </div>
   </section>
 
@@ -165,7 +220,7 @@
             </td>
           </tr>
           {% else %}
-          <tr><td colspan="5" class="py-10 text-center text-dartMuted">No tienes ART enviadas por supervisores.</td></tr>
+          <tr><td colspan="5" class="py-10 text-center"><span class="skeleton-line mx-auto w-48"></span><p class="mt-4 text-dartMuted">No tienes ART enviadas por supervisores.</p></td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -218,7 +273,7 @@
               <td data-label="Acción"><a href="/art/{{ r.id }}" class="btn-secondary px-3 py-2 text-sm">Ver</a></td>
             </tr>
             {% else %}
-            <tr><td colspan="5" class="py-10 text-center text-dartMuted">Aún no hay ART recientes.</td></tr>
+            <tr><td colspan="5" class="py-10 text-center"><span class="skeleton-line mx-auto w-48"></span><p class="mt-4 text-dartMuted">Aún no hay ART recientes.</p></td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -230,15 +285,14 @@
         <h2 class="text-lg font-black">Accesos rápidos</h2>
         <div class="mt-4 grid gap-3">
           {% if user.rol == 'admin' %}
-          <a href="/admin/usuarios" class="btn-dark">Gestión de usuarios</a>
-          <a href="/admin/usuarios#importar-usuarios" class="btn-secondary">Importar usuarios</a>
-          <a href="/supervisor/art" class="btn-primary">ART pendientes</a>
-          <a href="#" class="btn-secondary opacity-70">Reportes</a>
+          <a href="/admin/usuarios" class="quick-action"><span class="quick-action-icon">U</span><span>Gestión de usuarios</span></a>
+          <a href="/admin/usuarios#importar-usuarios" class="quick-action"><span class="quick-action-icon">CSV</span><span>Importar usuarios</span></a>
+          <a href="/supervisor/art" class="quick-action"><span class="quick-action-icon">ART</span><span>ART pendientes</span></a>
           {% elif user.rol == 'supervisor' %}
-          <a href="/art/nueva" class="btn-primary">Crear nueva ART</a>
-          <a href="/supervisor/art" class="btn-primary">Revisar ART</a>
+          <a href="/art/nueva" class="quick-action"><span class="quick-action-icon">+</span><span>Crear nueva ART</span></a>
+          <a href="/supervisor/art" class="quick-action"><span class="quick-action-icon">✓</span><span>Revisar ART</span></a>
           {% else %}
-          <a href="#mis-art" class="btn-secondary">Ver mis ART</a>
+          <a href="#mis-art" class="quick-action"><span class="quick-action-icon">→</span><span>Ver mis ART</span></a>
           {% endif %}
         </div>
       </div>
@@ -250,4 +304,69 @@
   </div>
 </div>
 {% endif %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  (function () {
+    if (!window.Chart) return;
+    const gridColor = getComputedStyle(document.documentElement).getPropertyValue("--line").trim() || "#E2E8F0";
+    const textColor = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim() || "#64748B";
+    const colors = {
+      blue: "#0ea5e9",
+      green: "#22c55e",
+      amber: "#f59e0b",
+      red: "#ef4444",
+      slate: "#64748b",
+    };
+    const defaults = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: textColor, usePointStyle: true, boxWidth: 8 } } },
+      scales: {
+        x: { ticks: { color: textColor }, grid: { color: gridColor } },
+        y: { ticks: { color: textColor, precision: 0 }, grid: { color: gridColor }, beginAtZero: true },
+      },
+    };
+    function chart(id, config) {
+      const canvas = document.getElementById(id);
+      if (!canvas) return;
+      return new Chart(canvas, config);
+    }
+
+    {% if user.rol == 'trabajador' %}
+    const workerLabels = [{% for item in art_asignadas[:12] %}{{ (item.art.fecha or "Sin fecha")|tojson }}{% if not loop.last %},{% endif %}{% endfor %}];
+    chart("workerActivityChart", {
+      type: "line",
+      data: { labels: workerLabels, datasets: [{ label: "ART", data: workerLabels.map(() => 1), borderColor: colors.blue, backgroundColor: "rgba(14,165,233,.12)", fill: true, tension: .42, pointRadius: 4 }] },
+      options: defaults,
+    });
+    chart("workerDonutChart", {
+      type: "doughnut",
+      data: { labels: ["Pendientes", "Respondidas", "Observadas"], datasets: [{ data: [{{ assigned.pendientes }}, {{ assigned.respondidas }}, {{ assigned.observadas }}], backgroundColor: [colors.amber, colors.green, colors.red], borderWidth: 0 }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: "68%", plugins: defaults.plugins },
+    });
+    chart("workerBarChart", {
+      type: "bar",
+      data: { labels: ["Pendientes", "Respondidas", "Observadas"], datasets: [{ label: "Cantidad", data: [{{ assigned.pendientes }}, {{ assigned.respondidas }}, {{ assigned.observadas }}], backgroundColor: [colors.amber, colors.green, colors.red], borderRadius: 10 }] },
+      options: defaults,
+    });
+    {% else %}
+    const artLabels = [{% for r in registros[:12] %}{{ (r.fecha or "Sin fecha")|tojson }}{% if not loop.last %},{% endif %}{% endfor %}];
+    chart("artActivityChart", {
+      type: "line",
+      data: { labels: artLabels, datasets: [{ label: "ART", data: artLabels.map(() => 1), borderColor: colors.blue, backgroundColor: "rgba(14,165,233,.12)", fill: true, tension: .42, pointRadius: 4 }] },
+      options: defaults,
+    });
+    chart("artDonutChart", {
+      type: "doughnut",
+      data: { labels: ["Pendientes", "Aprobadas", "Rechazadas"], datasets: [{ data: [{{ stats.pendientes }}, {{ stats.aprobadas }}, {{ stats.rechazadas }}], backgroundColor: [colors.amber, colors.green, colors.red], borderWidth: 0 }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: "68%", plugins: defaults.plugins },
+    });
+    chart("artBarChart", {
+      type: "bar",
+      data: { labels: ["Pendientes", "Aprobadas", "Rechazadas"], datasets: [{ label: "Cantidad", data: [{{ stats.pendientes }}, {{ stats.aprobadas }}, {{ stats.rechazadas }}], backgroundColor: [colors.amber, colors.green, colors.red], borderRadius: 10 }] },
+      options: defaults,
+    });
+    {% endif %}
+  })();
+</script>
 {% endblock %}

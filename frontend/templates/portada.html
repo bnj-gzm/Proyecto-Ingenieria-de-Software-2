@@ -1,112 +1,79 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="space-y-16">
-  <section class="grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-    <div class="py-8 lg:py-14">
-      <span class="status-badge bg-safety text-dartText">Acceso exclusivo para personal autorizado</span>
-      <h1 class="mt-6 max-w-4xl text-4xl font-black leading-tight text-dartText sm:text-5xl lg:text-6xl">Control digital para trabajos seguros en terreno</h1>
-      <p class="mt-5 max-w-2xl text-lg font-semibold leading-8 text-dartMuted">Plataforma interna para análisis de riesgos, revisión preventiva y trazabilidad operacional.</p>
-      <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <a href="/login" class="btn-primary">Iniciar sesión</a>
-        <p class="text-sm font-bold text-dartMuted">Acceso exclusivo para personal autorizado.</p>
+<div class="space-y-10">
+  <section class="grid items-center gap-8 py-8 lg:grid-cols-[minmax(0,1fr)_420px] lg:py-14">
+    <div class="max-w-3xl">
+      <span class="inline-flex rounded-full border border-line bg-white/70 px-3 py-1 text-xs font-black uppercase text-techCyan shadow-sm">Plataforma interna D.A.R.T</span>
+      <h1 class="mt-5 text-4xl font-black leading-[1.05] text-dartText sm:text-5xl lg:text-[3.55rem]">Gestión ART clara para operación segura.</h1>
+      <p class="mt-5 max-w-2xl text-base font-semibold leading-7 text-dartMuted sm:text-lg">Crea, valida y respalda análisis de riesgo con una experiencia sobria, rápida y trazable.</p>
+      <div class="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <a href="/login" class="btn-primary px-5 py-3">Iniciar sesión</a>
+        <p class="text-sm font-bold text-dartMuted">Acceso exclusivo para personal autorizado</p>
       </div>
     </div>
 
-    <div class="app-card overflow-hidden">
-      <div class="relative min-h-[420px] bg-dartSidebar p-8 text-white sm:p-10">
-        <div class="absolute inset-0 opacity-25" style="background-image: linear-gradient(135deg, rgba(0,167,181,.65), transparent 46%), repeating-linear-gradient(90deg, rgba(255,255,255,.08) 0 1px, transparent 1px 46px);"></div>
-        <div class="relative flex h-full min-h-[340px] flex-col justify-between">
-          <div class="rounded-lg border border-white/10 bg-white/95 p-6 shadow-2xl">
-            {% set brand_logo_size = 'lg' %}
-            {% set brand_logo_theme = 'dark' %}
-            {% set brand_logo_compact = false %}
-            {% include "components/brand_logo.html" with context %}
+    <aside class="app-card overflow-hidden">
+      <div class="border-b border-line bg-white/80 p-4">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <p class="text-xs font-black uppercase text-dartMuted">Panel operacional</p>
+            <p class="mt-1 font-black text-dartText">ART activa</p>
           </div>
-          <div class="mt-8 grid gap-3 sm:grid-cols-3">
-            <div class="rounded-lg border border-white/12 bg-white/92 p-4 text-[#111827] shadow-sm">
-              <p class="text-[11px] font-black uppercase tracking-[0.16em] text-[#0F3D4C]">ART digital</p>
-              <p class="mt-2 text-sm font-semibold text-[#475569]">Registro preventivo</p>
-            </div>
-            <div class="rounded-lg border border-white/12 bg-white/92 p-4 text-[#111827] shadow-sm">
-              <p class="text-[11px] font-black uppercase tracking-[0.16em] text-[#0F3D4C]">Roles</p>
-              <p class="mt-2 text-sm font-semibold text-[#475569]">Control interno</p>
-            </div>
-            <div class="rounded-lg border border-white/12 bg-white/92 p-4 text-[#111827] shadow-sm">
-              <p class="text-[11px] font-black uppercase tracking-[0.16em] text-[#0F3D4C]">Evidencia</p>
-              <p class="mt-2 text-sm font-semibold text-[#475569]">Fotos y respaldo</p>
-            </div>
-          </div>
+          <span class="status-badge status-pendiente">Pendiente</span>
         </div>
       </div>
-    </div>
+      <div class="space-y-4 p-5">
+        <div class="grid grid-cols-3 gap-3">
+          <div class="info-tile"><p class="text-xs font-black uppercase text-dartMuted">ART</p><p class="mt-2 text-2xl font-black">24</p></div>
+          <div class="info-tile"><p class="text-xs font-black uppercase text-dartMuted">OK</p><p class="mt-2 text-2xl font-black text-green-600">18</p></div>
+          <div class="info-tile"><p class="text-xs font-black uppercase text-dartMuted">Rev.</p><p class="mt-2 text-2xl font-black text-amber-600">6</p></div>
+        </div>
+        <div class="rounded-xl border border-line bg-slate-50/80 p-4">
+          <div class="flex items-center justify-between gap-3">
+            <p class="font-black text-dartText">Validación de trabajador</p>
+            <span class="h-2.5 w-2.5 rounded-full bg-green-500"></span>
+          </div>
+          <div class="mt-4 space-y-3">
+            <span class="block h-2 rounded-full bg-slate-200"><span class="block h-full w-4/5 rounded-full bg-techCyan"></span></span>
+            <span class="block h-2 rounded-full bg-slate-200"><span class="block h-full w-3/5 rounded-full bg-green-500"></span></span>
+            <span class="block h-2 rounded-full bg-slate-200"><span class="block h-full w-2/5 rounded-full bg-slate-400"></span></span>
+          </div>
+        </div>
+        <div class="timeline-steps">
+          <div class="timeline-step"><p class="text-sm font-black">Crear</p></div>
+          <div class="timeline-step"><p class="text-sm font-black">Validar</p></div>
+          <div class="timeline-step"><p class="text-sm font-black">Respaldar</p></div>
+        </div>
+      </div>
+    </aside>
   </section>
 
-  <section>
-    <div class="max-w-3xl">
-      <p class="text-sm font-black uppercase text-techCyan">Qué permite la plataforma</p>
-      <h2 class="mt-3 text-3xl font-black text-dartText">Gestión preventiva clara, trazable y ordenada</h2>
-    </div>
-    <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {% set features = [
-        ("Registro de ART", "Completar antecedentes, riesgos, controles y responsables antes de ejecutar la tarea.", "M5 4h14v16H5z M8 8h8 M8 12h8 M8 16h5"),
-        ("Revisión preventiva", "Supervisores revisan, observan, aprueban o rechazan con comentarios trazables.", "M9 12l2 2 4-5 M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"),
-        ("Evidencia fotográfica", "Adjuntar imágenes de terreno con rutas controladas y miniaturas consistentes.", "M4 7h3l2-2h6l2 2h3v12H4z M8 15l2-2 3 3 3-4 4 5"),
-        ("Control por roles", "Acceso diferenciado para admin, supervisor y trabajador.", "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M22 21v-2a4 4 0 0 0-3-3.87"),
-        ("Trazabilidad operacional", "Estados, fechas, usuarios y evidencias quedan asociados al flujo de trabajo.", "M3 12h4l3 8 4-16 3 8h4"),
-        ("Gestión de observaciones", "Solicitar correcciones y mantener historial de revisión por cada ART.", "M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z")
-      ] %}
-      {% for title, text, icon in features %}
-      <article class="public-feature-card">
-        <span class="public-icon">
-          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ icon }}"></path></svg>
-        </span>
-        <h3 class="mt-4 text-lg font-black text-dartText">{{ title }}</h3>
-        <p class="mt-2 text-sm leading-6 text-dartMuted">{{ text }}</p>
-      </article>
-      {% endfor %}
-    </div>
+  <section class="grid gap-4 md:grid-cols-3">
+    {% set benefits = [
+      ("Registro claro", "Riesgos, controles, EPP y evidencia en una ficha única."),
+      ("Revisión rápida", "Supervisores aprueban, observan o rechazan con contexto."),
+      ("Respaldo seguro", "Historial y documentos listos para auditoría interna.")
+    ] %}
+    {% for title, text in benefits %}
+    <article class="public-feature-card">
+      <span class="quick-action-icon">{{ loop.index }}</span>
+      <h2 class="mt-4 text-lg font-black text-dartText">{{ title }}</h2>
+      <p class="mt-2 text-sm leading-6 text-dartMuted">{{ text }}</p>
+    </article>
+    {% endfor %}
   </section>
 
   <section class="app-card app-card-body">
-    <div class="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-      <div class="max-w-2xl">
-        <p class="text-sm font-black uppercase text-techCyan">Flujo de trabajo</p>
-        <h2 class="mt-3 text-3xl font-black text-dartText">Desde terreno hasta respaldo documental</h2>
-      </div>
-      <div class="grid flex-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {% set steps = [
-          ("01", "Registrar", "El trabajador crea la ART con controles y evidencia."),
-          ("02", "Revisar", "Supervisor valida riesgos y observaciones."),
-          ("03", "Aprobar", "La ART queda autorizada o vuelve a corrección."),
-          ("04", "Respaldar", "Se conserva historial para auditoría interna.")
-        ] %}
-        {% for number, title, text in steps %}
-        <div class="rounded-lg border border-line bg-slate-50 p-4">
-          <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-petroleum text-sm font-black text-white">{{ number }}</span>
-          <h3 class="mt-4 font-black">{{ title }}</h3>
-          <p class="mt-2 text-sm leading-6 text-dartMuted">{{ text }}</p>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-  </section>
-
-  <section class="overflow-hidden rounded-lg bg-[#0B1726] text-white">
-    <div class="grid gap-8 p-8 lg:grid-cols-[1fr_360px] lg:p-10">
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
       <div>
-        <p class="text-sm font-black uppercase text-techCyan">Diseñado para operación minera</p>
-        <h2 class="mt-3 max-w-3xl text-3xl font-black">Documentación preventiva con evidencia clara</h2>
-        <p class="mt-4 max-w-3xl leading-7 text-slate-300">La plataforma centraliza la documentación preventiva y permite mantener evidencia clara antes, durante y después de los trabajos en terreno.</p>
+        <p class="text-sm font-black uppercase text-techCyan">Flujo simple</p>
+        <h2 class="mt-2 text-2xl font-black text-dartText">Crear. Validar. Respaldar.</h2>
       </div>
-      <div class="rounded-lg border border-white/10 bg-white/5 p-5">
-        <p class="text-sm font-black uppercase text-slate-300">Identidad visual</p>
-        <div class="mt-4 flex items-center">
-          {% set brand_logo_size = 'lg' %}
-          {% set brand_logo_theme = 'dark' %}
-          {% set brand_logo_compact = false %}
-          {% include "components/brand_logo.html" with context %}
-        </div>
+      <div class="timeline-steps flex-1">
+        <div class="timeline-step"><p class="font-black">Crear ART</p><p class="mt-1 text-sm text-dartMuted">Antecedentes y controles.</p></div>
+        <div class="timeline-step"><p class="font-black">Validar</p><p class="mt-1 text-sm text-dartMuted">Trabajador y supervisor.</p></div>
+        <div class="timeline-step"><p class="font-black">Respaldar</p><p class="mt-1 text-sm text-dartMuted">PDF y evidencia.</p></div>
       </div>
     </div>
   </section>

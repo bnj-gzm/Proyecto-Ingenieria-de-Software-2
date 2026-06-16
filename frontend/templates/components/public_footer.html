@@ -1,58 +1,33 @@
-<footer class="public-footer mt-12 bg-[#07111F] text-white">
-    <div class="mx-auto grid max-w-7xl gap-8 px-5 py-12 sm:grid-cols-2 lg:grid-cols-5">
-        <div class="sm:col-span-2 lg:col-span-1">
+<footer class="public-footer mt-14 border-t border-line bg-white/70 backdrop-blur">
+    <div class="mx-auto grid max-w-7xl gap-8 px-5 py-10 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
+        <div>
             <a href="/" class="inline-flex items-center gap-3 font-black">
                 {% set brand_logo_size = 'sm' %}
-                {% set brand_logo_theme = 'dark' %}
+                {% set brand_logo_theme = 'light' %}
                 {% set brand_logo_compact = true %}
                 {% include "components/brand_logo.html" with context %}
             </a>
-            <p class="mt-4 text-sm leading-6 text-slate-300">Sistema interno para gestión de ART y trazabilidad preventiva.</p>
-            <p class="mt-3 text-sm font-black text-techCyan">dart-mineria.lat</p>
+            <p class="mt-4 max-w-sm text-sm leading-6 text-dartMuted">Gestión interna de ART, validación preventiva y respaldo operacional.</p>
         </div>
         <div>
-            <h3 class="text-sm font-black uppercase text-white">Plataforma</h3>
-            <div class="mt-4 grid gap-2 text-sm text-slate-300">
+            <h3 class="text-sm font-black uppercase text-dartText">Acceso</h3>
+            <div class="mt-4 grid gap-2 text-sm font-bold text-dartMuted">
                 <a href="/login" class="hover:text-techCyan">Iniciar sesión</a>
                 <a href="/olvide-password" class="hover:text-techCyan">Recuperar contraseña</a>
-                <span>Acceso interno</span>
             </div>
         </div>
         <div>
-            <h3 class="text-sm font-black uppercase text-white">Operación</h3>
-            <div class="mt-4 grid gap-2 text-sm text-slate-300">
-                <span>Registro ART</span>
-                <span>Revisión preventiva</span>
-                <span>Evidencias</span>
-                <span>Reportes</span>
-            </div>
-        </div>
-        <div>
-            <h3 class="text-sm font-black uppercase text-white">Administración</h3>
-            <div class="mt-4 grid gap-2 text-sm text-slate-300">
-                <span>Usuarios</span>
-                <span>Roles</span>
-                <span>Activaciones</span>
-                <span>Carga masiva</span>
-            </div>
-        </div>
-        <div>
-            <h3 class="text-sm font-black uppercase text-white">Contacto</h3>
-            <div class="mt-4 grid gap-2 text-sm text-slate-300">
+            <h3 class="text-sm font-black uppercase text-dartText">Soporte</h3>
+            <div class="mt-4 grid gap-2 text-sm font-bold text-dartMuted">
                 <a href="mailto:admin@dart-mineria.lat" class="hover:text-techCyan">admin@dart-mineria.lat</a>
                 <span>Chile</span>
-                <span>Soporte interno</span>
             </div>
         </div>
     </div>
-    <div class="border-t border-white/10">
-        <div class="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-5 text-xs font-semibold text-slate-400 md:flex-row md:items-center md:justify-between">
-            <p>© 2026. Todos los derechos reservados. Plataforma desarrollada para gestión preventiva.</p>
-            <div class="flex flex-wrap gap-4">
-                <span>Privacidad</span>
-                <span>Términos internos</span>
-                <a href="mailto:admin@dart-mineria.lat" class="hover:text-techCyan">Contacto</a>
-            </div>
+    <div class="border-t border-line">
+        <div class="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-5 text-xs font-semibold text-dartMuted sm:flex-row sm:items-center sm:justify-between">
+            <p>© 2026 D.A.R.T. Plataforma interna.</p>
+            <p>Seguridad operacional · Trazabilidad · Evidencia</p>
         </div>
     </div>
 </footer>

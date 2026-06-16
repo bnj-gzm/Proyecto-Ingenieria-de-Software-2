@@ -50,19 +50,63 @@ def _get_pool() -> pool.ThreadedConnectionPool:
     global _CONNECTION_POOL
     if _CONNECTION_POOL is None:
         max_connections = max(1, int(os.getenv("DB_POOL_MAX", "5")))
-        _CONNECTION_POOL = pool.ThreadedConnectionPool(1, max_connections, DATABASE_URL)
+        _CONNECTION_POOL = pool.ThreadedConnectionPool(
+            1,
+            max_connections,
+            DATABASE_URL,
+            connect_timeout=int(os.getenv("DB_CONNECT_TIMEOUT", "10")),
+            keepalives=1,
+            keepalives_idle=30,
+            keepalives_interval=10,
+            keepalives_count=5,
+            application_name=os.getenv("DB_APPLICATION_NAME", "dart-railway"),
+        )
     return _CONNECTION_POOL
+
+
+def _ensure_connection_alive(conn: psycopg2.extensions.connection) -> None:
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT 1")
+        cur.fetchone()
+        conn.rollback()
+    finally:
+        cur.close()
 
 
 def _connect():
     if os.getenv("DB_POOL_DISABLED", "").lower() in {"1", "true", "yes"}:
-        return psycopg2.connect(DATABASE_URL)
+        return psycopg2.connect(
+            DATABASE_URL,
+            connect_timeout=int(os.getenv("DB_CONNECT_TIMEOUT", "10")),
+            keepalives=1,
+            keepalives_idle=30,
+            keepalives_interval=10,
+            keepalives_count=5,
+            application_name=os.getenv("DB_APPLICATION_NAME", "dart-railway"),
+        )
     db_pool = _get_pool()
-    return _PooledConnection(db_pool.getconn(), db_pool)
+    conn = db_pool.getconn()
+    try:
+        _ensure_connection_alive(conn)
+    except psycopg2.Error:
+        logger.warning("db_pool_connection_stale discarded=true", exc_info=True)
+        db_pool.putconn(conn, close=True)
+        conn = db_pool.getconn()
+        _ensure_connection_alive(conn)
+    return _PooledConnection(conn, db_pool)
 
 
 def _raw_connect() -> psycopg2.extensions.connection:
-    return psycopg2.connect(DATABASE_URL)
+    return psycopg2.connect(
+        DATABASE_URL,
+        connect_timeout=int(os.getenv("DB_CONNECT_TIMEOUT", "10")),
+        keepalives=1,
+        keepalives_idle=30,
+        keepalives_interval=10,
+        keepalives_count=5,
+        application_name=os.getenv("DB_APPLICATION_NAME", "dart-railway"),
+    )
 
 
 def _dump_json(value: Any) -> str:

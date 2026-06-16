@@ -33,7 +33,7 @@ def send_email(to_email: str, subject: str, html_body: str, text_body: str | Non
 def send_email_result(to_email: str, subject: str, html_body: str, text_body: str | None = None) -> EmailSendResult:
     if not settings.email_enabled:
         error = "EMAIL_ENABLED=false"
-        logger.error("email_failed provider=resend to=%s subject=%s error=%s", to_email, subject, error)
+        logger.error("EMAIL_FAILED provider=resend to=%s subject=%s error=%s", to_email, subject, error)
         return EmailSendResult(False, "resend", error=error)
     return _send_resend(to_email, subject, html_body, text_body)
 
@@ -41,7 +41,7 @@ def send_email_result(to_email: str, subject: str, html_body: str, text_body: st
 def _send_resend(to_email: str, subject: str, html_body: str, text_body: str | None = None) -> EmailSendResult:
     if not resend_configured():
         error = "Resend no configurado"
-        logger.error("email_failed provider=resend to=%s subject=%s error=%s", to_email, subject, error)
+        logger.error("EMAIL_FAILED provider=resend to=%s subject=%s error=%s", to_email, subject, error)
         return EmailSendResult(False, "resend", error=error)
 
     payload = {
@@ -71,7 +71,7 @@ def _send_resend(to_email: str, subject: str, html_body: str, text_body: str | N
         if not message_id:
             error = "Resend no retornó id de mensaje"
             logger.error(
-                "email_failed provider=resend to=%s subject=%s error=%s response=%s",
+                "EMAIL_FAILED provider=resend to=%s subject=%s error=%s response=%s",
                 to_email,
                 subject,
                 error,
@@ -79,7 +79,7 @@ def _send_resend(to_email: str, subject: str, html_body: str, text_body: str | N
             )
             return EmailSendResult(False, "resend", error=error)
         logger.info(
-            "email_sent provider=resend to=%s subject=%s message_id=%s response=%s",
+            "EMAIL_SENT_OK provider=resend to=%s subject=%s message_id=%s response=%s",
             to_email,
             subject,
             message_id,
@@ -89,7 +89,7 @@ def _send_resend(to_email: str, subject: str, html_body: str, text_body: str | N
     except Exception as exc:
         response_data = _exception_response(exc)
         logger.exception(
-            "email_failed provider=resend to=%s subject=%s api_key_prefix=%s error=%s response=%s",
+            "EMAIL_FAILED provider=resend to=%s subject=%s api_key_prefix=%s error=%s response=%s",
             to_email,
             subject,
             _api_key_prefix(settings.resend_api_key),

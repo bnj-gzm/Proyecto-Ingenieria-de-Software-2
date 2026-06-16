@@ -7,6 +7,7 @@ from backend.src.middleware.csrf import create_csrf_token, set_csrf_cookie, vali
 from backend.src.services.usuario_service import actualizar_foto_perfil, actualizar_password, actualizar_perfil, obtener_usuario
 from backend.src.services.password_policy import validate_password_strength
 from backend.src.services.validation_service import normalizar_telefono_chile, validar_telefono_chile
+from backend.src.services.content_filter import PROHIBITED_LANGUAGE_MESSAGE, validate_clean_fields
 from backend.src.services.art_service import cargar_registros_por_usuario
 from backend.src.services.notification_service import get_notifications
 from backend.src.services.notification_service import mark_read
@@ -124,6 +125,10 @@ async def perfil_update(
     cargo = cargo.strip()
     if not nombre:
         return _render_profile_edit(request, user, error="El nombre no puede estar vacío.")
+    try:
+        validate_clean_fields({"nombre": nombre, "cargo": cargo}, user.get("username", ""))
+    except HTTPException:
+        return _render_profile_edit(request, user, error=PROHIBITED_LANGUAGE_MESSAGE)
     if telefono and not validar_telefono_chile(telefono):
         return _render_profile_edit(request, user, error="El teléfono debe tener formato chileno válido: +56 9 XXXX XXXX.")
     telefono = normalizar_telefono_chile(telefono)

@@ -10,16 +10,17 @@
 </div>
 {% else %}
 <div class="space-y-6">
-  <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-    <div>
+  <section class="premium-hero p-6 sm:p-8">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div>
       <a href="/dashboard" class="text-sm font-black text-techCyan hover:underline">Volver al dashboard</a>
       <div class="mt-3 flex flex-wrap items-center gap-3">
         <h1 class="text-3xl font-black">ART {{ registro.id }}</h1>
         <span class="status-badge status-{{ registro.estado }}">{{ registro.estado }}</span>
       </div>
       <p class="mt-2 max-w-3xl text-dartMuted">{{ registro.descripcion }}</p>
-    </div>
-    <div class="flex flex-wrap gap-3">
+      </div>
+      <div class="flex flex-wrap gap-3">
       {% if puede_editar or puede_validar %}
       <a href="/art/{{ registro.id }}/editar" class="btn-secondary">{{ "Completar ART" if puede_validar else "Editar" }}</a>
       {% endif %}
@@ -29,14 +30,40 @@
         <button type="submit" class="btn-danger">Eliminar</button>
       </form>
       {% endif %}
+      </div>
     </div>
-  </div>
+  </section>
 
   <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
     <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Empresa</p><p class="mt-2 font-black">{{ registro.empresa }}</p></div>
     <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Asignados</p><p class="mt-2 font-black">{{ registro.progreso_asignaciones.total if registro.progreso_asignaciones else registro.trabajador }}</p></div>
     <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Fecha</p><p class="mt-2 font-black">{{ registro.fecha }}</p></div>
     <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Supervisor</p><p class="mt-2 font-black">{{ registro.supervisor }}</p></div>
+  </section>
+
+  {% set progreso = registro.progreso_asignaciones or {} %}
+  <section class="app-card app-card-body">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p class="text-sm font-black uppercase text-techCyan">Flujo ART</p>
+        <h2 class="mt-1 text-xl font-black">Estado operacional</h2>
+      </div>
+      <span class="status-badge status-{{ registro.estado }}">{{ registro.estado }}</span>
+    </div>
+    <div class="timeline-steps mt-5">
+      <div class="timeline-step">
+        <p class="font-black">Creado</p>
+        <p class="mt-1 text-sm text-dartMuted">{{ registro.creado_en }}</p>
+      </div>
+      <div class="timeline-step {% if not progreso.total %}timeline-step-muted{% endif %}">
+        <p class="font-black">Asignado</p>
+        <p class="mt-1 text-sm text-dartMuted">{{ progreso.total or 0 }} trabajadores · {{ progreso.pendientes or 0 }} pendientes</p>
+      </div>
+      <div class="timeline-step {% if registro.estado == 'pendiente' %}timeline-step-muted{% endif %}">
+        <p class="font-black">Completado</p>
+        <p class="mt-1 text-sm text-dartMuted">{{ progreso.revisados or 0 }} revisados · {{ progreso.respondidos or 0 }} respondidos</p>
+      </div>
+    </div>
   </section>
 
   {% if mensaje %}
@@ -48,9 +75,9 @@
       <section class="app-card">
         <div class="app-card-header"><h2 class="text-xl font-black">Antecedentes</h2></div>
         <div class="app-card-body grid gap-4 md:grid-cols-2">
-          <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Área</p><p class="font-black">{{ registro.area }}</p></div>
-          <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Tipo de tarea</p><p class="font-black">{{ registro.tipo_tarea }}</p></div>
-          <div class="rounded-lg bg-slate-50 p-4">
+          <div class="info-tile"><p class="text-sm text-dartMuted">Área</p><p class="font-black">{{ registro.area }}</p></div>
+          <div class="info-tile"><p class="text-sm text-dartMuted">Tipo de tarea</p><p class="font-black">{{ registro.tipo_tarea }}</p></div>
+          <div class="info-tile">
             <p class="text-sm text-dartMuted">Asignado a</p>
             <p class="font-black">
               {% if trabajadores_art %}
@@ -60,7 +87,7 @@
               {% endif %}
             </p>
           </div>
-          <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Creado</p><p class="font-black">{{ registro.creado_en }}</p></div>
+          <div class="info-tile"><p class="text-sm text-dartMuted">Creado</p><p class="font-black">{{ registro.creado_en }}</p></div>
         </div>
       </section>
 

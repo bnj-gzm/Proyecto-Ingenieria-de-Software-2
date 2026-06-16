@@ -1,4 +1,5 @@
 from datetime import datetime
+import logging
 from typing import List, Optional
 import uuid
 from urllib.parse import quote
@@ -36,6 +37,7 @@ from backend.src.services.art_service import (
     validar_trabajador_art,
     resetear_validaciones_trabajadores,
 )
+from backend.src.services.content_filter import validate_clean_fields
 from backend.src.services.email_service import send_art_assignment_email
 from backend.src.services.pdf_service import generar_art_pdf, generar_respuesta_trabajador_pdf
 from backend.src.services.upload_service import save_art_image
@@ -44,6 +46,7 @@ from backend.src.services.notification_service import add_notification
 
 
 router = APIRouter()
+logger = logging.getLogger("dart.art")
 
 _CHECKLIST = [
     "Me encuentro en condiciones físicas y psicológicas aptas para realizar la actividad.",
@@ -109,6 +112,20 @@ def _base_url(request: Request) -> str:
     return (settings.public_base_url or str(request.base_url).rstrip("/")).rstrip("/")
 
 
+def _render_art_link_error(request: Request, message: str, status_code: int = 404):
+    return templates.TemplateResponse(
+        request,
+        "art_trabajador_error.html",
+        {
+            "request": request,
+            "title": "Enlace de ART no disponible",
+            "message": message,
+            "status_code": status_code,
+        },
+        status_code=status_code,
+    )
+
+
 async def _save_worker_evidence(request: Request, evidencia: list[UploadFile] | None) -> list[dict]:
     archivos = []
     for archivo in evidencia or []:
@@ -149,6 +166,8 @@ async def _build_worker_response_payload(
     declaracion: str | None,
 ) -> dict:
     form = await request.form()
+    content_user = str(asignacion.get("trabajador_id") or asignacion.get("email") or "anonymous")
+    validate_clean_fields({"observaciones": observaciones, "firma": firma_valor}, content_user)
     respuestas: list[dict] = []
     observaciones_por_pregunta: dict[str, str] = {}
     con_observacion = bool(observaciones.strip())
@@ -157,6 +176,7 @@ async def _build_worker_response_payload(
         if respuesta not in {"si", "no"}:
             raise HTTPException(status_code=400, detail="Debes responder todas las preguntas obligatorias.")
         obs = str(form.get(f"observacion_{pregunta['id']}", "")).strip()
+        validate_clean_fields({f"observacion_{pregunta['id']}": obs}, content_user)
         if pregunta["critical"] and respuesta == "no" and not obs and not observaciones.strip():
             raise HTTPException(status_code=400, detail="Debes agregar una observación para cada respuesta crítica marcada como No.")
         if respuesta == "no":
@@ -349,6 +369,19 @@ async def guardar_art(
             riesgos.append({"secuencia": seq.strip(), "riesgo": risk.strip(), "control": ctrl.strip()})
     if not riesgos or any(not item["secuencia"] or not item["riesgo"] or not item["control"] for item in riesgos):
         raise HTTPException(status_code=400, detail="Debes completar secuencia, riesgo y control")
+    validate_clean_fields(
+        {
+            "empresa": empresa,
+            "area": area,
+            "tipo_tarea": tipo_tarea,
+            "descripcion": descripcion,
+            "observaciones": observaciones,
+            "secuencia": [item["secuencia"] for item in riesgos],
+            "riesgo": [item["riesgo"] for item in riesgos],
+            "control": [item["control"] for item in riesgos],
+        },
+        user.get("username", ""),
+    )
     archivos = []
     for archivo in evidencia or []:
         if not archivo.filename:
@@ -384,6 +417,13 @@ async def guardar_art(
             f"{user.get('nombre') or user.get('username')} te asignó una ART para completar y validar.",
             f"/art/{id_art}",
         )
+    logger.info(
+        "ART_CREATED_OK art_id=%s created_by=%s supervisor=%s assigned_workers=%s",
+        id_art,
+        user.get("username"),
+        supervisor_asignado,
+        len(trabajadores_asignados_lista),
+    )
     return RedirectResponse(f"/art/{id_art}", status_code=303)
 
 
@@ -419,9 +459,23 @@ def enviar_art_trabajadores(
         if result.ok:
             enviados += 1
             marcar_envio_asignacion(preparada["id"], "enviado")
+            logger.info(
+                "EMAIL_SENT_OK context=art_assignment art_id=%s assignment_id=%s to=%s message_id=%s",
+                id_art,
+                preparada["id"],
+                preparada.get("email", ""),
+                result.message_id,
+            )
         else:
             fallidos += 1
             marcar_envio_asignacion(preparada["id"], "envio_fallido")
+            logger.error(
+                "EMAIL_FAILED context=art_assignment art_id=%s assignment_id=%s to=%s error=%s",
+                id_art,
+                preparada["id"],
+                preparada.get("email", ""),
+                result.error,
+            )
 
     message = f"Correos enviados: {enviados}. Correos no enviados: {fallidos}. Total asignados: {len(asignaciones)}."
     return RedirectResponse(f"/art/{id_art}?mensaje={quote(message)}", status_code=303)
@@ -453,18 +507,52 @@ def enviar_art_trabajador(
     link = f"{_base_url(request)}/art/trabajador/{preparada['token_acceso']}"
     result = send_art_assignment_email(preparada.get("email", ""), link, registro, preparada.get("nombre", ""))
     marcar_envio_asignacion(preparada["id"], "enviado" if result.ok else "envio_fallido")
+    if result.ok:
+        logger.info(
+            "EMAIL_SENT_OK context=art_assignment art_id=%s assignment_id=%s to=%s message_id=%s",
+            id_art,
+            preparada["id"],
+            preparada.get("email", ""),
+            result.message_id,
+        )
+    else:
+        logger.error(
+            "EMAIL_FAILED context=art_assignment art_id=%s assignment_id=%s to=%s error=%s",
+            id_art,
+            preparada["id"],
+            preparada.get("email", ""),
+            result.error,
+        )
     message = "Correo enviado correctamente." if result.ok else "No se pudo enviar el correo. Revisa la configuración de email."
     return RedirectResponse(f"/art/{id_art}?mensaje={quote(message)}", status_code=303)
 
 
 @router.get("/art/trabajador/{token}", response_class=HTMLResponse)
 def formulario_trabajador_token(request: Request, token: str):
-    asignacion = obtener_asignacion_por_token(token)
+    try:
+        asignacion = obtener_asignacion_por_token(token)
+    except Exception:
+        logger.exception("ART_TOKEN_LOOKUP_FAILED token_prefix=%s", token[:8])
+        return _render_art_link_error(
+            request,
+            "No pudimos validar este enlace de ART en este momento. Intenta nuevamente en unos segundos.",
+            status_code=503,
+        )
     if not asignacion:
-        raise HTTPException(status_code=404, detail="El enlace de ART no existe.")
-    registro = obtener_registro(asignacion["art_id"])
+        logger.warning("ART_TOKEN_NOT_FOUND token_prefix=%s", token[:8])
+        return _render_art_link_error(request, "El enlace de ART no existe o ya no está disponible.", status_code=404)
+    try:
+        registro = obtener_registro(asignacion["art_id"])
+    except Exception:
+        logger.exception("ART_LOOKUP_FAILED token_prefix=%s art_id=%s", token[:8], asignacion.get("art_id"))
+        return _render_art_link_error(
+            request,
+            "No pudimos cargar la ART asociada. Intenta nuevamente en unos segundos.",
+            status_code=503,
+        )
     if not registro:
-        raise HTTPException(status_code=404, detail="La ART asociada no existe.")
+        logger.warning("ART_TOKEN_NOT_FOUND token_prefix=%s art_id=%s cause=art_missing", token[:8], asignacion.get("art_id"))
+        return _render_art_link_error(request, "La ART asociada a este enlace no existe.", status_code=404)
     if asignacion.get("estado_respuesta") in ANSWERED_ASSIGNMENT_STATES:
         return templates.TemplateResponse(
             request,
@@ -473,7 +561,12 @@ def formulario_trabajador_token(request: Request, token: str):
         )
     expires_at = asignacion.get("token_expires_at")
     if expires_at and expires_at < datetime.now():
-        raise HTTPException(status_code=403, detail="El enlace de ART expiró. Solicita un reenvío al supervisor.")
+        logger.warning("ART_TOKEN_NOT_FOUND token_prefix=%s art_id=%s cause=expired", token[:8], asignacion.get("art_id"))
+        return _render_art_link_error(
+            request,
+            "El enlace de ART expiró. Solicita un reenvío al supervisor.",
+            status_code=403,
+        )
     return _render_worker_form(request, registro, asignacion)
 
 
@@ -493,14 +586,28 @@ async def guardar_formulario_trabajador_token(
     csrf_token: str = Form(...),
 ):
     validate_csrf_token(request, csrf_token)
-    asignacion = obtener_asignacion_por_token(token)
+    try:
+        asignacion = obtener_asignacion_por_token(token)
+    except Exception:
+        logger.exception("ART_TOKEN_LOOKUP_FAILED token_prefix=%s method=POST", token[:8])
+        return _render_art_link_error(
+            request,
+            "No pudimos validar este enlace de ART en este momento. Intenta nuevamente en unos segundos.",
+            status_code=503,
+        )
     if not asignacion:
-        raise HTTPException(status_code=404, detail="El enlace de ART no existe.")
+        logger.warning("ART_TOKEN_NOT_FOUND token_prefix=%s method=POST", token[:8])
+        return _render_art_link_error(request, "El enlace de ART no existe o ya no está disponible.", status_code=404)
     if asignacion.get("estado_respuesta") in ANSWERED_ASSIGNMENT_STATES:
         return RedirectResponse(f"/art/trabajador/{token}", status_code=303)
     expires_at = asignacion.get("token_expires_at")
     if expires_at and expires_at < datetime.now():
-        raise HTTPException(status_code=403, detail="El enlace de ART expiró. Solicita un reenvío al supervisor.")
+        logger.warning("ART_TOKEN_NOT_FOUND token_prefix=%s art_id=%s method=POST cause=expired", token[:8], asignacion.get("art_id"))
+        return _render_art_link_error(
+            request,
+            "El enlace de ART expiró. Solicita un reenvío al supervisor.",
+            status_code=403,
+        )
     payload = await _build_worker_response_payload(
         request,
         asignacion,
@@ -724,6 +831,7 @@ def revisar_respuesta_trabajador(
         raise HTTPException(status_code=400, detail="Resultado de revisión inválido")
     if resultado == "rechazado" and not comentario_revision.strip():
         raise HTTPException(status_code=400, detail="El comentario es obligatorio al rechazar.")
+    validate_clean_fields({"comentario_revision": comentario_revision}, user.get("username", ""))
     actualizar_revision_asignacion(id_asignacion, resultado, comentario_revision.strip(), user["id"])
     message = "Revisión individual aprobada." if resultado == "aprobado" else "Revisión individual rechazada."
     return RedirectResponse(f"/art/{id_art}?mensaje={quote(message)}", status_code=303)
@@ -835,6 +943,19 @@ async def editar_art_post(
             riesgos.append({"secuencia": seq.strip(), "riesgo": risk.strip(), "control": ctrl.strip()})
     if not riesgos or any(not item["secuencia"] or not item["riesgo"] or not item["control"] for item in riesgos):
         raise HTTPException(status_code=400, detail="Debes completar secuencia, riesgo y control")
+    validate_clean_fields(
+        {
+            "empresa": empresa,
+            "area": area,
+            "tipo_tarea": tipo_tarea,
+            "descripcion": descripcion,
+            "observaciones": observaciones,
+            "secuencia": [item["secuencia"] for item in riesgos],
+            "riesgo": [item["riesgo"] for item in riesgos],
+            "control": [item["control"] for item in riesgos],
+        },
+        user.get("username", ""),
+    )
         
     archivos = registro_existente.get("evidencia", []).copy()
     for archivo in evidencia or []:
@@ -883,6 +1004,7 @@ def validar_art_trabajador(
         raise HTTPException(status_code=403, detail="No tienes permiso para validar esta ART")
     if condicion_ok not in {"si", "no"}:
         raise HTTPException(status_code=400, detail="Debes validar tus condiciones físicas y psicológicas")
+    validate_clean_fields({"observacion_validacion": observacion_validacion}, user.get("username", ""))
     condicion_es_ok = condicion_ok == "si"
     validado_en = datetime.now().strftime("%Y-%m-%d %H:%M")
     validar_trabajador_art(

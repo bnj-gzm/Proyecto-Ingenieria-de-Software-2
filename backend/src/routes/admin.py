@@ -21,6 +21,11 @@ from backend.src.services.art_service import (
     cargar_resumenes_asignaciones,
     obtener_registro,
 )
+from backend.src.services.content_filter import (
+    PROHIBITED_LANGUAGE_MESSAGE,
+    find_prohibited_terms,
+    validate_clean_fields,
+)
 from backend.src.services.usuario_service import (
     actualizar_estado_cuenta,
     actualizar_rol,
@@ -173,6 +178,8 @@ def _validar_datos_usuario(
     email: str,
     rol: str,
     telefono: str,
+    cargo: str = "",
+    area: str = "",
     validar_duplicados: bool = True,
 ) -> tuple[dict[str, str], dict[str, str]]:
     errors: dict[str, str] = {}
@@ -201,6 +208,9 @@ def _validar_datos_usuario(
         errors["rol"] = "Rol inválido. Usa admin, supervisor o trabajador."
     if telefono.strip() and not validar_telefono_chile(telefono):
         errors["telefono"] = "El teléfono debe tener formato chileno válido: +56 9 XXXX XXXX."
+    for field_name, value in {"nombre": nombre, "cargo": cargo, "area": area}.items():
+        if find_prohibited_terms(value):
+            errors[field_name] = PROHIBITED_LANGUAGE_MESSAGE
     return errors, normalized
 
 
@@ -274,6 +284,7 @@ def admin_change_estado(
         raise HTTPException(status_code=400, detail="Estado de ART inválido")
     if estado in {"aprobada", "rechazada"} and not comentario_supervisor.strip():
         raise HTTPException(status_code=400, detail="Debes ingresar un comentario de revisión")
+    validate_clean_fields({"comentario_supervisor": comentario_supervisor}, user.get("username", ""))
         
     actualizar_revision_art(
         id_art,
@@ -401,7 +412,16 @@ def admin_crear_usuario(
         "cargo": cargo,
         "area": area,
     }
-    form_errors, normalized = _validar_datos_usuario(nombre, rut, email, rol, telefono)
+    try:
+        validate_clean_fields({"nombre": nombre, "cargo": cargo, "area": area}, user.get("username", ""))
+    except HTTPException:
+        return _render_admin_usuarios(
+            request,
+            user,
+            form_errors={"contenido": PROHIBITED_LANGUAGE_MESSAGE},
+            form_data=form_data,
+        )
+    form_errors, normalized = _validar_datos_usuario(nombre, rut, email, rol, telefono, cargo, area)
     if form_errors:
         return _render_admin_usuarios(request, user, form_errors=form_errors, form_data=form_data)
     username = _username_desde_email(normalized["email"])
@@ -543,8 +563,17 @@ async def admin_importar_usuarios(
             email,
             rol,
             telefono_input,
+            cargo,
+            area,
             validar_duplicados=False,
         )
+        try:
+            validate_clean_fields(
+                {"nombre": nombre, "cargo": cargo, "area": area},
+                user.get("username", ""),
+            )
+        except HTTPException:
+            row_errors["contenido"] = PROHIBITED_LANGUAGE_MESSAGE
         rut_normalizado = normalized["rut"]
         email_normalizado = normalized["email"]
         telefono_normalizado = normalized["telefono"]

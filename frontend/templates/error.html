@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block page_title %}{{ title or "Error controlado" }}{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-4xl px-4 py-12">
+  <section class="premium-hero overflow-hidden">
+    <div class="grid gap-0 lg:grid-cols-[1fr_300px]">
+      <div class="p-8 sm:p-10">
+        <p class="text-sm font-black uppercase text-critical">Error {{ status_code }}</p>
+        <h1 class="mt-3 text-3xl font-black text-dartText sm:text-4xl">{{ title or "No pudimos abrir esta página" }}</h1>
+        <p class="mt-4 max-w-xl leading-7 text-dartMuted">{{ message or "La solicitud no pudo completarse." }}</p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a href="/login" class="btn-primary">Ir al inicio</a>
+          <a href="javascript:history.back()" class="btn-secondary">Volver</a>
+        </div>
+      </div>
+      <aside class="border-t border-line bg-white/70 p-8 lg:border-l lg:border-t-0">
+        <div class="rounded-lg border border-line bg-slate-50 p-5">
+          <p class="text-sm font-black uppercase text-dartMuted">Estado</p>
+          <p class="mt-3 text-5xl font-black text-dartText">{{ status_code }}</p>
+          <p class="mt-3 text-sm leading-6 text-dartMuted">La plataforma controló el error y mantuvo una respuesta segura para el usuario.</p>
+        </div>
+      </aside>
+    </div>
+  </section>
+</div>
+{% endblock %}

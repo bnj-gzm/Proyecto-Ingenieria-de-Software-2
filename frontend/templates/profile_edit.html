@@ -7,8 +7,8 @@
   <div class="mb-6 flex items-center justify-between">
     <div>
       <p class="text-sm font-black uppercase text-techCyan">Cuenta</p>
-      <h1 class="mt-2 text-3xl font-black">Editar perfil</h1>
-      <p class="mt-2 text-dartMuted">Actualiza tus datos personales básicos y foto de perfil.</p>
+      <h1 class="mt-2 text-3xl font-black">Configuración de cuenta</h1>
+      <p class="mt-2 text-dartMuted">Gestiona datos personales, foto y credenciales de acceso.</p>
     </div>
     <a href="/perfil" class="btn-secondary">Cancelar</a>
   </div>
@@ -20,19 +20,19 @@
   <div class="mb-5 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">{{ message }}</div>
   {% endif %}
 
-  <form method="post" action="/perfil/editar" enctype="multipart/form-data" class="app-card overflow-hidden">
+  <form id="profile-edit-form" method="post" action="/perfil/editar" enctype="multipart/form-data" class="app-card overflow-hidden">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="grid gap-6 p-6 md:grid-cols-[240px_1fr]">
-      <aside class="rounded-lg bg-dartSidebar p-5 text-white">
+      <aside class="rounded-xl border border-line bg-slate-50 p-5 text-dartText">
         {% if user.foto_perfil %}
         <img src="{{ user.foto_perfil if user.foto_perfil[:5] == 'data:' else '/static/' + user.foto_perfil }}" alt="" class="h-32 w-32 rounded-full object-cover ring-4 ring-cyan-300/40" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
         <div class="avatar h-32 w-32 text-4xl ring-4 ring-cyan-300/40" hidden>{{ initials }}</div>
         {% else %}
         <div class="avatar h-32 w-32 text-4xl ring-4 ring-cyan-300/40">{{ initials }}</div>
         {% endif %}
-        <label class="mt-5 block text-sm font-bold text-cyan-200">Cambiar foto</label>
-        <input type="file" name="foto_perfil" accept=".jpg,.jpeg,.png,.webp" class="mt-2 w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm">
-        <p class="mt-3 text-xs leading-5 text-slate-300">JPG, PNG o WEBP. Máximo 2 MB.</p>
+        <label class="mt-5 block text-sm font-bold text-dartMuted">Cambiar foto</label>
+        <input type="file" name="foto_perfil" accept=".jpg,.jpeg,.png,.webp" class="mt-2 w-full rounded-lg border border-line bg-white px-3 py-2 text-sm">
+        <p class="mt-3 text-xs leading-5 text-dartMuted">JPG, PNG o WEBP. Máximo 2 MB.</p>
       </aside>
 
       <section class="space-y-5">
@@ -57,17 +57,15 @@
             <label class="mb-2 block text-sm font-bold text-slate-700">Cargo</label>
             <input name="cargo" value="{{ user.cargo or '' }}" class="form-input">
           </div>
-          <div>
-            <label class="mb-2 block text-sm font-bold text-slate-700">Nueva contraseña</label>
-            <input id="profile-password" type="password" name="password" autocomplete="new-password" class="form-input">
-            <div class="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
-              <div id="profile-strength-fill" class="h-full w-0 bg-red-600 transition-all"></div>
+          <div id="seguridad" class="sm:col-span-2">
+            <div class="info-tile flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p class="text-sm font-black uppercase text-techCyan">Seguridad</p>
+                <h2 class="mt-1 text-lg font-black">Cambio de contraseña</h2>
+                <p class="mt-1 text-sm text-dartMuted">Actualiza tus credenciales desde un panel lateral con validación visual.</p>
+              </div>
+              <button id="open-password-drawer" type="button" class="btn-dark">Cambiar contraseña</button>
             </div>
-            <p id="profile-strength-label" class="mt-2 text-xs font-bold text-slate-500">Opcional. Mínimo 8 caracteres, mayúscula, minúscula y número.</p>
-          </div>
-          <div>
-            <label class="mb-2 block text-sm font-bold text-slate-700">Confirmar contraseña</label>
-            <input type="password" name="password_confirm" autocomplete="new-password" class="form-input">
           </div>
         </div>
         <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
@@ -76,6 +74,40 @@
         </div>
       </section>
     </div>
+
+    <div id="password-drawer-backdrop" class="drawer-backdrop" aria-hidden="true"></div>
+    <aside id="password-drawer" class="drawer-panel flex flex-col" aria-label="Cambio de contraseña">
+      <div class="flex items-center justify-between border-b border-line p-5">
+        <div>
+          <p class="text-sm font-black uppercase text-techCyan">Seguridad</p>
+          <h2 class="mt-1 text-xl font-black">Cambiar contraseña</h2>
+        </div>
+        <button id="close-password-drawer" type="button" class="btn-secondary px-3 py-2" aria-label="Cerrar">×</button>
+      </div>
+      <div class="flex-1 space-y-5 overflow-y-auto p-5">
+        <div class="rounded-lg border border-line bg-slate-50 p-4 text-sm leading-6 text-dartMuted">
+          Usa una contraseña con al menos 8 caracteres, mayúscula, minúscula y número. Los cambios se guardan junto con tu perfil.
+        </div>
+        <div>
+          <label class="form-label">Nueva contraseña</label>
+          <input id="profile-password" type="password" name="password" autocomplete="new-password" class="form-input">
+          <div class="mt-3 grid grid-cols-3 gap-2">
+            <span id="strength-seg-1" class="h-2 rounded-full bg-slate-200 transition"></span>
+            <span id="strength-seg-2" class="h-2 rounded-full bg-slate-200 transition"></span>
+            <span id="strength-seg-3" class="h-2 rounded-full bg-slate-200 transition"></span>
+          </div>
+          <p id="profile-strength-label" class="mt-2 text-xs font-bold text-slate-500">Sin contraseña nueva.</p>
+        </div>
+        <div>
+          <label class="form-label">Confirmar contraseña</label>
+          <input id="profile-password-confirm" type="password" name="password_confirm" autocomplete="new-password" class="form-input">
+          <p id="profile-match-label" class="mt-2 text-xs font-bold text-slate-500">Ambos campos deben coincidir.</p>
+        </div>
+      </div>
+      <div class="border-t border-line p-5">
+        <button type="submit" class="btn-primary w-full">Guardar nueva contraseña</button>
+      </div>
+    </aside>
   </form>
 
   {% if user.foto_perfil %}
@@ -115,30 +147,70 @@
     });
   });
 
+  const body = document.body;
+  const openPasswordDrawer = document.getElementById("open-password-drawer");
+  const closePasswordDrawer = document.getElementById("close-password-drawer");
+  const passwordBackdrop = document.getElementById("password-drawer-backdrop");
   const profilePassword = document.getElementById("profile-password");
-  const profileStrengthFill = document.getElementById("profile-strength-fill");
+  const profilePasswordConfirm = document.getElementById("profile-password-confirm");
   const profileStrengthLabel = document.getElementById("profile-strength-label");
+  const profileMatchLabel = document.getElementById("profile-match-label");
+  const strengthSegments = [
+    document.getElementById("strength-seg-1"),
+    document.getElementById("strength-seg-2"),
+    document.getElementById("strength-seg-3"),
+  ];
+
+  function openDrawer() {
+    body.classList.add("drawer-open");
+    window.setTimeout(() => profilePassword?.focus(), 120);
+  }
+  function closeDrawer() {
+    body.classList.remove("drawer-open");
+  }
+  openPasswordDrawer?.addEventListener("click", openDrawer);
+  closePasswordDrawer?.addEventListener("click", closeDrawer);
+  passwordBackdrop?.addEventListener("click", closeDrawer);
+  if (window.location.hash === "#seguridad") openDrawer();
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeDrawer();
+  });
+
   function updateProfileStrength() {
-    const value = profilePassword.value;
+    const value = profilePassword?.value || "";
     let score = 0;
     if (value.length >= 8) score += 1;
     if (/[A-Z]/.test(value)) score += 1;
     if (/[a-z]/.test(value)) score += 1;
     if (/\d/.test(value)) score += 1;
     if (/[^A-Za-z0-9]/.test(value)) score += 1;
-    const states = [
-      { text: "Seguridad: débil", width: "25%", color: "#DC2626", cls: "text-red-600" },
-      { text: "Seguridad: débil", width: "35%", color: "#DC2626", cls: "text-red-600" },
-      { text: "Seguridad: media", width: "65%", color: "#D97706", cls: "text-amber-600" },
-      { text: "Seguridad: fuerte", width: "85%", color: "#16A34A", cls: "text-green-700" },
-      { text: "Seguridad: fuerte", width: "100%", color: "#16A34A", cls: "text-green-700" },
-    ];
-    const state = value ? states[Math.min(score, 4)] : { text: "Opcional. Mínimo 8 caracteres, mayúscula, minúscula y número.", width: "0", color: "#E2E8F0", cls: "text-slate-500" };
-    profileStrengthFill.style.width = state.width;
-    profileStrengthFill.style.backgroundColor = state.color;
-    profileStrengthLabel.textContent = state.text;
-    profileStrengthLabel.className = `mt-2 text-xs font-bold ${state.cls}`;
+    const level = !value ? 0 : score <= 2 ? 1 : score <= 4 ? 2 : 3;
+    const colors = ["#E2E8F0", "#DC2626", "#D97706", "#16A34A"];
+    const labels = ["Sin contraseña nueva.", "Seguridad: débil", "Seguridad: media", "Seguridad: fuerte"];
+    const classes = ["text-slate-500", "text-red-600", "text-amber-600", "text-green-700"];
+    strengthSegments.forEach((segment, index) => {
+      if (!segment) return;
+      segment.style.backgroundColor = index < level ? colors[level] : "#E2E8F0";
+    });
+    profileStrengthLabel.textContent = labels[level];
+    profileStrengthLabel.className = `mt-2 text-xs font-bold ${classes[level]}`;
+    updatePasswordMatch();
   }
-  profilePassword.addEventListener("input", updateProfileStrength);
+
+  function updatePasswordMatch() {
+    const password = profilePassword?.value || "";
+    const confirm = profilePasswordConfirm?.value || "";
+    if (!password && !confirm) {
+      profileMatchLabel.textContent = "Ambos campos deben coincidir.";
+      profileMatchLabel.className = "mt-2 text-xs font-bold text-slate-500";
+      return;
+    }
+    const match = password === confirm;
+    profileMatchLabel.textContent = match ? "Las contraseñas coinciden." : "Las contraseñas no coinciden.";
+    profileMatchLabel.className = `mt-2 text-xs font-bold ${match ? "text-green-700" : "text-red-600"}`;
+  }
+
+  profilePassword?.addEventListener("input", updateProfileStrength);
+  profilePasswordConfirm?.addEventListener("input", updatePasswordMatch);
 </script>
 {% endblock %}

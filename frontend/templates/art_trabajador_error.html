@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block page_title %}Enlace de ART no disponible{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-4xl px-4 py-12">
+  <section class="premium-hero overflow-hidden">
+    <div class="grid gap-0 lg:grid-cols-[1fr_300px]">
+      <div class="p-8 sm:p-10">
+        <p class="text-sm font-black uppercase text-critical">ART no disponible</p>
+        <h1 class="mt-3 text-3xl font-black text-dartText sm:text-4xl">No pudimos abrir este enlace de ART</h1>
+        <p class="mt-4 max-w-xl leading-7 text-dartMuted">{{ message }}</p>
+        <p class="mt-3 max-w-xl text-sm text-dartMuted">Si necesitas responder esta ART, solicita al supervisor que reenvie el enlace.</p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a href="/login" class="btn-primary">Ir al inicio</a>
+          <a href="javascript:history.back()" class="btn-secondary">Volver</a>
+        </div>
+      </div>
+      <aside class="border-t border-line bg-white/70 p-8 lg:border-l lg:border-t-0">
+        <div class="rounded-lg border border-line bg-slate-50 p-5">
+          <p class="text-sm font-black uppercase text-dartMuted">Enlace seguro</p>
+          <div class="mt-4 space-y-3">
+            <div class="h-2 rounded-full bg-slate-200"><div class="h-full w-2/3 rounded-full bg-techCyan"></div></div>
+            <div class="h-2 rounded-full bg-slate-200"><div class="h-full w-1/2 rounded-full bg-green-500"></div></div>
+            <div class="h-2 rounded-full bg-slate-200"><div class="h-full w-5/6 rounded-full bg-slate-400"></div></div>
+          </div>
+          <p class="mt-5 text-sm leading-6 text-dartMuted">Los tokens inválidos o vencidos se bloquean con una pantalla controlada.</p>
+        </div>
+      </aside>
+    </div>
+  </section>
+</div>
+{% endblock %}

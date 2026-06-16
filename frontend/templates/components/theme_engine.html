@@ -1,0 +1,18 @@
+<script>
+    (function () {
+        const storageKey = "dart.theme";
+        function getPreferredTheme() {
+            const saved = localStorage.getItem(storageKey);
+            if (saved === "light" || saved === "dark") return saved;
+            return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+        function applyTheme(theme) {
+            const nextTheme = theme === "dark" ? "dark" : "light";
+            document.documentElement.dataset.theme = nextTheme;
+            document.documentElement.style.colorScheme = nextTheme;
+            localStorage.setItem(storageKey, nextTheme);
+        }
+        window.dartTheme = { applyTheme, initTheme: () => applyTheme(getPreferredTheme()) };
+        window.dartTheme.initTheme();
+    })();
+</script>

@@ -4,22 +4,35 @@
 
 {% block content %}
 <div class="mx-auto max-w-6xl space-y-6">
+  <section class="premium-hero p-6 sm:p-8">
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <p class="text-sm font-black uppercase text-techCyan">Validación individual</p>
+        <h1 class="mt-2 text-3xl font-black sm:text-4xl">Responder ART asignada</h1>
+        <p class="mt-2 max-w-2xl text-dartMuted">Completa tu revisión personal previa al trabajo y firma digitalmente.</p>
+      </div>
+      <span class="status-badge bg-cyan-100 text-cyan-800">Link seguro</span>
+    </div>
+  </section>
+
   <section class="app-card app-card-body">
-    <p class="text-sm font-black uppercase text-techCyan">Validación individual</p>
-    <h1 class="mt-2 text-3xl font-black">Responder ART asignada</h1>
-    <p class="mt-2 text-dartMuted">Completa tu revisión personal previa al trabajo y firma digitalmente.</p>
+    <div class="timeline-steps">
+      <div class="timeline-step"><p class="font-black">Revisar ART</p><p class="mt-1 text-sm text-dartMuted">Lee tarea, riesgos y controles.</p></div>
+      <div class="timeline-step"><p class="font-black">Validar condición</p><p class="mt-1 text-sm text-dartMuted">Confirma EPP y respuestas.</p></div>
+      <div class="timeline-step"><p class="font-black">Firmar</p><p class="mt-1 text-sm text-dartMuted">Envía respaldo digital.</p></div>
+    </div>
   </section>
 
   <section class="app-card">
     <div class="app-card-header"><h2 class="text-xl font-black">Datos de la ART</h2></div>
     <div class="app-card-body space-y-5">
       <div class="grid gap-4 md:grid-cols-3">
-        <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Empresa / Contratista</p><p class="font-black">{{ registro.empresa }}</p></div>
-        <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Área de trabajo</p><p class="font-black">{{ registro.area }}</p></div>
-        <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Tipo de tarea</p><p class="font-black">{{ registro.tipo_tarea }}</p></div>
-        <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Supervisor responsable</p><p class="font-black">{{ registro.supervisor }}</p></div>
-        <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Fecha</p><p class="font-black">{{ registro.fecha }}</p></div>
-        <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">ART</p><p class="font-mono font-black">{{ registro.id }}</p></div>
+        <div class="info-tile"><p class="text-sm text-dartMuted">Empresa / Contratista</p><p class="font-black">{{ registro.empresa }}</p></div>
+        <div class="info-tile"><p class="text-sm text-dartMuted">Área de trabajo</p><p class="font-black">{{ registro.area }}</p></div>
+        <div class="info-tile"><p class="text-sm text-dartMuted">Tipo de tarea</p><p class="font-black">{{ registro.tipo_tarea }}</p></div>
+        <div class="info-tile"><p class="text-sm text-dartMuted">Supervisor responsable</p><p class="font-black">{{ registro.supervisor }}</p></div>
+        <div class="info-tile"><p class="text-sm text-dartMuted">Fecha</p><p class="font-black">{{ registro.fecha }}</p></div>
+        <div class="info-tile"><p class="text-sm text-dartMuted">ART</p><p class="font-mono font-black">{{ registro.id }}</p></div>
       </div>
       <div>
         <p class="form-label">Descripción de la tarea</p>
@@ -59,11 +72,11 @@
       <div class="app-card-header"><h2 class="text-xl font-black">Datos del trabajador</h2></div>
       <div class="app-card-body space-y-4">
         <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Nombre completo</p><p class="font-black">{{ asignacion.nombre }}</p></div>
-          <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">RUT</p><p class="font-black">{{ asignacion.rut or "Sin RUT registrado" }}</p></div>
-          <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Cargo</p><p class="font-black">{{ asignacion.cargo or "Sin cargo registrado" }}</p></div>
-          <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Área</p><p class="font-black">{{ asignacion.area or "Sin área registrada" }}</p></div>
-          <div class="rounded-lg bg-slate-50 p-4"><p class="text-sm text-dartMuted">Correo</p><p class="break-all font-black">{{ asignacion.email or "Sin correo registrado" }}</p></div>
+          <div class="info-tile"><p class="text-sm text-dartMuted">Nombre completo</p><p class="font-black">{{ asignacion.nombre }}</p></div>
+          <div class="info-tile"><p class="text-sm text-dartMuted">RUT</p><p class="font-black">{{ asignacion.rut or "Sin RUT registrado" }}</p></div>
+          <div class="info-tile"><p class="text-sm text-dartMuted">Cargo</p><p class="font-black">{{ asignacion.cargo or "Sin cargo registrado" }}</p></div>
+          <div class="info-tile"><p class="text-sm text-dartMuted">Área</p><p class="font-black">{{ asignacion.area or "Sin área registrada" }}</p></div>
+          <div class="info-tile"><p class="text-sm text-dartMuted">Correo</p><p class="break-all font-black">{{ asignacion.email or "Sin correo registrado" }}</p></div>
           <div>
             <label class="form-label">Teléfono</label>
             <input name="telefono_confirmado" class="form-input" value="{{ asignacion.telefono or '' }}" placeholder="Sin teléfono registrado">
@@ -88,7 +101,7 @@
           </div>
           <div class="app-card-body space-y-4">
       {% endif %}
-            <article class="question-row rounded-lg border border-line bg-white p-4 shadow-sm" data-critical="{{ 'true' if pregunta.critical else 'false' }}" data-question="{{ pregunta.id }}">
+            <article class="question-row rounded-lg border border-line bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-lg" data-critical="{{ 'true' if pregunta.critical else 'false' }}" data-question="{{ pregunta.id }}">
               <div class="grid gap-4 lg:grid-cols-[1fr_180px] lg:items-start">
                 <div>
                   <p class="font-bold leading-6 text-dartText">
@@ -215,13 +228,17 @@
     const eppChecked = responseForm.querySelectorAll("input[name='epp']:checked").length;
     if (!hidden.value || !signed) {
       event.preventDefault();
-      alert("Debes firmar digitalmente antes de enviar.");
+      if (window.dartToast) {
+        window.dartToast("Debes firmar digitalmente antes de enviar.", "error");
+      }
       canvas.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
     if (eppChecked === 0) {
       event.preventDefault();
-      alert("Debes seleccionar los EPP que usarás en la tarea.");
+      if (window.dartToast) {
+        window.dartToast("Debes seleccionar los EPP que usarás en la tarea.", "warning");
+      }
     }
   });
   canvas.addEventListener("mousedown", start);
