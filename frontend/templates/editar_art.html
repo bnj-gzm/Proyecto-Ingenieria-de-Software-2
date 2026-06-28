@@ -35,6 +35,22 @@
           <input name="area" required value="{{ registro.area }}" class="form-input">
         </div>
         <div>
+          <label class="form-label">Gerencia</label>
+          <input name="gerencia" value="{{ registro.gerencia or '' }}" class="form-input" placeholder="Ej: Gerencia de Operaciones">
+        </div>
+        <div>
+          <label class="form-label">Lugar</label>
+          <input name="lugar" value="{{ registro.lugar or '' }}" class="form-input" placeholder="Ej: Nivel 3, sector norte">
+        </div>
+        <div>
+          <label class="form-label">Horario inicio</label>
+          <input type="time" name="hora_inicio" value="{{ registro.hora_inicio or '' }}" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Horario término</label>
+          <input type="time" name="hora_termino" value="{{ registro.hora_termino or '' }}" class="form-input">
+        </div>
+        <div>
           <label class="form-label">Fecha</label>
           <div class="rounded-lg border border-line bg-slate-50 px-4 py-3 font-black">{{ registro.fecha }}</div>
         </div>
@@ -54,6 +70,29 @@
           <label class="form-label">Descripción de la tarea</label>
           <textarea name="descripcion" required rows="4" class="form-textarea">{{ registro.descripcion }}</textarea>
         </div>
+      </div>
+    </section>
+
+    <section class="app-card">
+      <div class="app-card-header">
+        <h2 class="text-xl font-black">Condiciones físicas y psicológicas del supervisor</h2>
+        <p class="mt-1 text-sm text-dartMuted">Confirma tu condición para realizar/supervisar la tarea. Debes responder "Sí" en todas para registrar la ART.</p>
+      </div>
+      <div class="app-card-body space-y-3">
+        {% for cond in condiciones_supervisor %}
+        <div class="flex flex-col gap-2 rounded-lg border border-line bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+          <span class="text-sm font-semibold text-dartText">{{ loop.index }}. {{ cond.text }}</span>
+          <div class="flex gap-4">
+            <label class="flex items-center gap-2 text-sm font-bold">
+              <input type="radio" name="supervisor_cond_{{ cond.id }}" value="si" class="h-4 w-4 cond-supervisor" {% if condiciones_seleccionadas.get(cond.id) == 'si' %}checked{% endif %} required> Sí
+            </label>
+            <label class="flex items-center gap-2 text-sm font-bold">
+              <input type="radio" name="supervisor_cond_{{ cond.id }}" value="no" class="h-4 w-4 cond-supervisor" {% if condiciones_seleccionadas.get(cond.id) == 'no' %}checked{% endif %}> No
+            </label>
+          </div>
+        </div>
+        {% endfor %}
+        <div id="cond-supervisor-error" class="alert-error hidden">Debes confirmar todas las condiciones en "Sí" para registrar la ART.</div>
       </div>
     </section>
 
@@ -90,6 +129,23 @@
     </section>
 
     <section class="app-card">
+      <div class="app-card-header">
+        <h2 class="text-xl font-black">Reglas que Salvan la Vida</h2>
+        <p class="mt-1 text-sm text-dartMuted">Marca las reglas que aplican a esta tarea (Paso 3).</p>
+      </div>
+      <div class="app-card-body grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {% for regla in reglas_disponibles %}
+        <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-line bg-white p-3 transition hover:border-cyan-300 hover:bg-cyan-50/40">
+          <input type="checkbox" name="reglas_vida" value="{{ regla.id }}" class="mt-0.5 h-5 w-5"
+                 {% if regla.id in reglas_seleccionadas %}checked{% endif %}>
+          {% if regla.icon_class %}<i class="fa-solid {{ regla.icon_class }} mt-0.5 text-petroleum" aria-hidden="true"></i>{% endif %}
+          <span class="text-sm font-semibold text-dartText">{{ regla.nombre }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="app-card">
       <div class="app-card-header"><h2 class="text-xl font-black">Evidencia general y observaciones</h2></div>
       <div class="app-card-body grid gap-5 md:grid-cols-2">
         <div>
@@ -119,4 +175,24 @@
     </div>
   </form>
 </div>
+<script>
+  (function () {
+    const radios = Array.from(document.querySelectorAll(".cond-supervisor"));
+    if (!radios.length) return;
+    const form = radios[0].closest("form");
+    const error = document.getElementById("cond-supervisor-error");
+    const names = [...new Set(radios.map((r) => r.name))];
+    form?.addEventListener("submit", (event) => {
+      const allYes = names.every((name) => {
+        const checked = form.querySelector(`input[name="${name}"]:checked`);
+        return checked && checked.value === "si";
+      });
+      if (!allYes) {
+        event.preventDefault();
+        error?.classList.remove("hidden");
+        error?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    });
+  })();
+</script>
 {% endblock %}

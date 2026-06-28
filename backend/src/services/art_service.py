@@ -13,7 +13,9 @@ _SELECT = """
     SELECT id, empresa, trabajador, area, fecha, tipo_tarea, descripcion,
            supervisor, checklist_json, epp_json, riesgos_json,
            observaciones, evidencia_json, creado_en, estado, creado_por,
-           asignado_a, supervisor_asignado, comentario_supervisor, revisado_por, revisado_en
+           asignado_a, supervisor_asignado, comentario_supervisor, revisado_por, revisado_en,
+           gerencia, hora_inicio, hora_termino, lugar, reglas_vida_json,
+           supervisor_condiciones_json
     FROM art_records
 """
 
@@ -98,6 +100,8 @@ def _deserialize(row: dict) -> dict:
     row["epp"] = _load_json_list(row.pop("epp_json"))
     row["riesgos"] = _load_json_list(row.pop("riesgos_json"))
     row["evidencia"] = _normalize_evidence_list(_load_json_list(row.pop("evidencia_json")))
+    row["reglas_vida"] = _load_json_list(row.pop("reglas_vida_json", "[]"))
+    row["supervisor_condiciones"] = _load_json_list(row.pop("supervisor_condiciones_json", "[]"))
     return row
 
 
@@ -106,6 +110,8 @@ def _deserialize_list(row: dict) -> dict:
     row["epp"] = []
     row["riesgos"] = []
     row["evidencia"] = []
+    row["reglas_vida"] = []
+    row["supervisor_condiciones"] = []
     row["observaciones"] = ""
     return row
 
@@ -674,8 +680,10 @@ def guardar_registro(registro: dict[str, Any]) -> None:
                 id, empresa, trabajador, area, fecha, tipo_tarea, descripcion,
                 supervisor, checklist_json, epp_json, riesgos_json,
                 observaciones, evidencia_json, creado_en, estado, creado_por,
-                asignado_a, supervisor_asignado, comentario_supervisor, revisado_por, revisado_en
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                asignado_a, supervisor_asignado, comentario_supervisor, revisado_por, revisado_en,
+                gerencia, hora_inicio, hora_termino, lugar, reglas_vida_json,
+                supervisor_condiciones_json
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 registro["id"],
@@ -699,6 +707,12 @@ def guardar_registro(registro: dict[str, Any]) -> None:
                 registro.get("comentario_supervisor", ""),
                 registro.get("revisado_por", ""),
                 registro.get("revisado_en", ""),
+                registro.get("gerencia", ""),
+                registro.get("hora_inicio", ""),
+                registro.get("hora_termino", ""),
+                registro.get("lugar", ""),
+                _dump_json(registro.get("reglas_vida", [])),
+                _dump_json(registro.get("supervisor_condiciones", [])),
             ),
         )
         conn.commit()
@@ -727,7 +741,13 @@ def actualizar_registro(id_art: str, registro: dict[str, Any]) -> None:
                 observaciones = %s,
                 evidencia_json = %s,
                 asignado_a = %s,
-                supervisor_asignado = %s
+                supervisor_asignado = %s,
+                gerencia = %s,
+                hora_inicio = %s,
+                hora_termino = %s,
+                lugar = %s,
+                reglas_vida_json = %s,
+                supervisor_condiciones_json = %s
             WHERE id = %s
             """,
             (
@@ -745,6 +765,12 @@ def actualizar_registro(id_art: str, registro: dict[str, Any]) -> None:
                 _dump_json(registro.get("evidencia", [])),
                 registro.get("asignado_a", ""),
                 registro.get("supervisor_asignado", ""),
+                registro.get("gerencia", ""),
+                registro.get("hora_inicio", ""),
+                registro.get("hora_termino", ""),
+                registro.get("lugar", ""),
+                _dump_json(registro.get("reglas_vida", [])),
+                _dump_json(registro.get("supervisor_condiciones", [])),
                 id_art,
             ),
         )

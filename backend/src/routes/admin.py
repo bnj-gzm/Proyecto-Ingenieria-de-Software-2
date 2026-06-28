@@ -297,7 +297,7 @@ def admin_change_estado(
     if estado in {"aprobada", "rechazada"}:
         try:
             registro_actual = obtener_registro(id_art)
-            pdf_bytes = generar_art_pdf(registro_actual)
+            pdf_bytes = generar_art_pdf(registro_actual)  # registro ya trae sus asignaciones
             upload_dir = request.app.state.upload_dir
             (upload_dir / f"art-{id_art}.pdf").write_bytes(pdf_bytes)
             # notify the creator about the resolution

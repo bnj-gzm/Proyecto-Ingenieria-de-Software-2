@@ -66,7 +66,12 @@
           <p><span class="font-black text-dartText">Supervisor:</span> {{ r.supervisor }}</p>
           <p class="mt-1"><span class="font-black text-dartText">Fecha:</span> {{ r.fecha }}</p>
         </div>
-        <a href="/art/{{ r.id }}" class="btn-secondary">Ver detalle</a>
+        <div class="flex flex-col gap-2 sm:flex-row">
+          {% if r.estado in ['aprobada', 'rechazada'] %}
+          <a href="/art/{{ r.id }}/pdf" class="btn-dark">Descargar PDF</a>
+          {% endif %}
+          <a href="/art/{{ r.id }}" class="btn-secondary">Ver detalle</a>
+        </div>
       </div>
     </article>
     {% else %}
