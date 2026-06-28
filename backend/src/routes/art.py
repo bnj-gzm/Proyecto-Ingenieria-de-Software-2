@@ -9,6 +9,11 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from backend.src.config.settings import settings
 from backend.src.config.frontend import templates
+from backend.src.constants import (
+    CONDICIONES_SUPERVISOR,
+    REGLAS_QUE_SALVAN_LA_VIDA,
+    REGLAS_VIDA_IDS,
+)
 from backend.src.middleware.auth import get_current_user
 from backend.src.middleware.csrf import create_csrf_token, set_csrf_cookie, validate_csrf_token
 from backend.src.roles import SUPERVISOR, USER, can_create_art
@@ -98,6 +103,26 @@ _WORKER_QUESTIONS = [
 
 def _puede_crear_art(user: dict) -> bool:
     return user.get("rol") in {"admin", SUPERVISOR}
+
+
+async def _leer_condiciones_supervisor(request: Request) -> list[dict]:
+    """Lee y valida la declaración física/psicológica del supervisor desde el form.
+
+    Todas las preguntas deben responderse "Sí" para poder crear/editar la ART;
+    de lo contrario se bloquea con un 400. Devuelve la lista persistible
+    [{id, pregunta, respuesta}].
+    """
+    form = await request.form()
+    condiciones = []
+    for pregunta in CONDICIONES_SUPERVISOR:
+        respuesta = str(form.get(f"supervisor_cond_{pregunta['id']}", "")).strip().lower()
+        if respuesta != "si":
+            raise HTTPException(
+                status_code=400,
+                detail="Debes confirmar todas las condiciones físicas y psicológicas en 'Sí' para registrar la ART.",
+            )
+        condiciones.append({"id": pregunta["id"], "pregunta": pregunta["text"], "respuesta": "si"})
+    return condiciones
 
 
 def _trabajadores_activos() -> list[dict]:
@@ -314,6 +339,10 @@ def nueva_art(request: Request, user=Depends(get_current_user)):
             "trabajadores": trabajadores,
             "min_trabajadores": MIN_TRABAJADORES_ART,
             "fecha_actual": datetime.now().strftime("%Y-%m-%d"),
+            "reglas_disponibles": REGLAS_QUE_SALVAN_LA_VIDA,
+            "reglas_seleccionadas": [],
+            "condiciones_supervisor": CONDICIONES_SUPERVISOR,
+            "condiciones_seleccionadas": {},
             "csrf_token": csrf_token,
         },
     )
@@ -331,6 +360,11 @@ async def guardar_art(
     trabajador_asignado: Optional[List[str]] = Form(None),
     trabajadores_asignados: Optional[List[str]] = Form(None),
     supervisor_asignado: str = Form(...),
+    gerencia: str = Form(""),
+    hora_inicio: str = Form(""),
+    hora_termino: str = Form(""),
+    lugar: str = Form(""),
+    reglas_vida: Optional[List[str]] = Form(None),
     checklist: Optional[List[str]] = Form(None),
     epp: Optional[List[str]] = Form(None),
     secuencia: Optional[List[str]] = Form(None),
@@ -376,12 +410,16 @@ async def guardar_art(
             "tipo_tarea": tipo_tarea,
             "descripcion": descripcion,
             "observaciones": observaciones,
+            "gerencia": gerencia,
+            "lugar": lugar,
             "secuencia": [item["secuencia"] for item in riesgos],
             "riesgo": [item["riesgo"] for item in riesgos],
             "control": [item["control"] for item in riesgos],
         },
         user.get("username", ""),
     )
+    reglas_seleccionadas = [item for item in (reglas_vida or []) if item in REGLAS_VIDA_IDS]
+    condiciones_supervisor = await _leer_condiciones_supervisor(request)
     archivos = []
     for archivo in evidencia or []:
         if not archivo.filename:
@@ -406,6 +444,12 @@ async def guardar_art(
         "creado_por": user["username"],
         "asignado_a": trabajadores_asignados_lista[0]["username"],
         "supervisor_asignado": supervisor_asignado,
+        "gerencia": gerencia.strip(),
+        "hora_inicio": hora_inicio.strip(),
+        "hora_termino": hora_termino.strip(),
+        "lugar": lugar.strip(),
+        "reglas_vida": reglas_seleccionadas,
+        "supervisor_condiciones": condiciones_supervisor,
     }
     guardar_registro(registro)
     guardar_trabajadores_art(id_art, trabajadores_asignados_lista)
@@ -900,6 +944,13 @@ def editar_art_view(request: Request, id_art: str, user=Depends(get_current_user
             "csrf_token": csrf_token,
             "registro": registro,
             "validacion_actual": None,
+            "reglas_disponibles": REGLAS_QUE_SALVAN_LA_VIDA,
+            "reglas_seleccionadas": registro.get("reglas_vida", []),
+            "condiciones_supervisor": CONDICIONES_SUPERVISOR,
+            "condiciones_seleccionadas": {
+                item.get("id"): item.get("respuesta")
+                for item in registro.get("supervisor_condiciones", [])
+            },
         },
     )
     set_csrf_cookie(response, csrf_token)
@@ -915,6 +966,11 @@ async def editar_art_post(
     tipo_tarea: str = Form(...),
     descripcion: str = Form(...),
     supervisor_asignado: str = Form(...),
+    gerencia: str = Form(""),
+    hora_inicio: str = Form(""),
+    hora_termino: str = Form(""),
+    lugar: str = Form(""),
+    reglas_vida: Optional[List[str]] = Form(None),
     secuencia: Optional[List[str]] = Form(None),
     riesgo: Optional[List[str]] = Form(None),
     control: Optional[List[str]] = Form(None),
@@ -926,7 +982,7 @@ async def editar_art_post(
     if not user:
         return RedirectResponse("/login", status_code=303)
     validate_csrf_token(request, csrf_token)
-    
+
     registro_existente = obtener_registro(id_art)
     if not registro_existente:
         raise HTTPException(status_code=404, detail="Registro no encontrado")
@@ -950,13 +1006,17 @@ async def editar_art_post(
             "tipo_tarea": tipo_tarea,
             "descripcion": descripcion,
             "observaciones": observaciones,
+            "gerencia": gerencia,
+            "lugar": lugar,
             "secuencia": [item["secuencia"] for item in riesgos],
             "riesgo": [item["riesgo"] for item in riesgos],
             "control": [item["control"] for item in riesgos],
         },
         user.get("username", ""),
     )
-        
+    reglas_seleccionadas = [item for item in (reglas_vida or []) if item in REGLAS_VIDA_IDS]
+    condiciones_supervisor = await _leer_condiciones_supervisor(request)
+
     archivos = registro_existente.get("evidencia", []).copy()
     for archivo in evidencia or []:
         if not archivo.filename:
@@ -978,8 +1038,14 @@ async def editar_art_post(
         "evidencia": archivos,
         "asignado_a": registro_existente.get("asignado_a") or user["username"],
         "supervisor_asignado": supervisor_asignado,
+        "gerencia": gerencia.strip(),
+        "hora_inicio": hora_inicio.strip(),
+        "hora_termino": hora_termino.strip(),
+        "lugar": lugar.strip(),
+        "reglas_vida": reglas_seleccionadas,
+        "supervisor_condiciones": condiciones_supervisor,
     }
-    
+
     actualizar_registro(id_art, registro_actualizado)
     resetear_validaciones_trabajadores(id_art)
     return RedirectResponse(f"/art/{id_art}", status_code=303)
@@ -1038,7 +1104,7 @@ def descargar_art_pdf(id_art: str, user=Depends(get_current_user)):
         return RedirectResponse("/dashboard", status_code=303)
     if registro.get("estado") not in {"aprobada", "rechazada"}:
         raise HTTPException(status_code=400, detail="El PDF estará disponible cuando la ART sea aprobada o rechazada")
-    pdf = generar_art_pdf(registro)
+    pdf = generar_art_pdf(registro)  # registro ya trae sus asignaciones
     return Response(
         content=pdf,
         media_type="application/pdf",

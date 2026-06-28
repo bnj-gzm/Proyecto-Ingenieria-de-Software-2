@@ -10,7 +10,7 @@ from typing import Any
 from backend.src.config.settings import settings
 
 DATABASE_URL = settings.database_url
-SCHEMA_VERSION = "2026_06_art_supervisor_flow_v2"
+SCHEMA_VERSION = "2026_06_art_formato_oficial_v2"
 logger = logging.getLogger("dart")
 
 _CONNECTION_POOL: pool.ThreadedConnectionPool | None = None
@@ -248,6 +248,12 @@ def init_db() -> None:
         cur.execute("ALTER TABLE art_records ADD COLUMN IF NOT EXISTS comentario_supervisor TEXT DEFAULT ''")
         cur.execute("ALTER TABLE art_records ADD COLUMN IF NOT EXISTS revisado_por TEXT DEFAULT ''")
         cur.execute("ALTER TABLE art_records ADD COLUMN IF NOT EXISTS revisado_en TEXT DEFAULT ''")
+        cur.execute("ALTER TABLE art_records ADD COLUMN IF NOT EXISTS gerencia TEXT DEFAULT ''")
+        cur.execute("ALTER TABLE art_records ADD COLUMN IF NOT EXISTS hora_inicio TEXT DEFAULT ''")
+        cur.execute("ALTER TABLE art_records ADD COLUMN IF NOT EXISTS hora_termino TEXT DEFAULT ''")
+        cur.execute("ALTER TABLE art_records ADD COLUMN IF NOT EXISTS lugar TEXT DEFAULT ''")
+        cur.execute("ALTER TABLE art_records ADD COLUMN IF NOT EXISTS reglas_vida_json TEXT DEFAULT '[]'")
+        cur.execute("ALTER TABLE art_records ADD COLUMN IF NOT EXISTS supervisor_condiciones_json TEXT DEFAULT '[]'")
         cur.execute("""
             CREATE TABLE IF NOT EXISTS art_trabajadores_asignados (
                 id SERIAL PRIMARY KEY,
