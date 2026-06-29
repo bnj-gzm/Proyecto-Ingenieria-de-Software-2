@@ -90,10 +90,10 @@
       {% if asignacion.evidencia_trabajador %}
       <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {% for imagen in asignacion.evidencia_trabajador %}
-        <a href="{{ imagen.src }}" target="_blank" rel="noopener">
-          <img src="{{ imagen.src }}" alt="Evidencia de {{ asignacion.nombre }}" class="h-40 w-full rounded-lg border border-line object-cover" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+        <button type="button" class="art-lightbox-trigger block w-full" aria-label="Ampliar evidencia de {{ asignacion.nombre }}">
+          <img src="{{ imagen.src }}" alt="Evidencia de {{ asignacion.nombre }}" loading="lazy" decoding="async" class="art-visual h-40 w-full rounded-lg border border-line object-cover" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
           <div class="rounded-lg border border-dashed border-line p-4 text-center text-sm text-dartMuted" hidden>Imagen no disponible</div>
-        </a>
+        </button>
         {% endfor %}
       </div>
       {% else %}
@@ -107,7 +107,9 @@
     <div class="app-card-body">
       <p class="mb-3 text-sm font-bold text-dartMuted">Documento / confirmación: {{ asignacion.firma_valor or "-" }}</p>
       {% if asignacion.firma_imagen_base64 %}
-      <img src="{{ asignacion.firma_imagen_base64 }}" alt="Firma digital de {{ asignacion.nombre }}" class="max-h-64 rounded-lg border border-line bg-white p-4">
+      <div class="signature-surface inline-flex p-4">
+        <img src="{{ asignacion.firma_imagen_base64 }}" alt="Firma digital de {{ asignacion.nombre }}" class="signature-visual max-h-64">
+      </div>
       {% else %}
       <div class="rounded-lg border border-dashed border-line p-6 text-center text-dartMuted">Firma no disponible.</div>
       {% endif %}
@@ -134,6 +136,9 @@
       </div>
       {% if asignacion.estado_respuesta == 'aprobado' %}
       <a href="/art/{{ registro.id }}/trabajador/{{ asignacion.id }}/pdf" class="btn-dark">Descargar PDF del trabajador</a>
+      {% endif %}
+      {% if user and user.rol == 'trabajador' %}
+      <a href="/art/{{ registro.id }}/pdf" class="btn-secondary">Descargar PDF ART General</a>
       {% endif %}
     </div>
     {% else %}

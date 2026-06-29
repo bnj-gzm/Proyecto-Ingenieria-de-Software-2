@@ -36,6 +36,7 @@ from backend.src.services.usuario_service import (
     obtener_usuario,
     rut_existe,
     username_existe,
+    obtener_usernames_por_ids,
 )
 from backend.src.services.validation_service import (
     normalizar_rut,
@@ -45,7 +46,9 @@ from backend.src.services.validation_service import (
 )
 from backend.src.services.pdf_service import generar_art_pdf
 from backend.src.services.notification_service import add_notification
+from backend.src.services.realtime_service import realtime_manager
 from backend.src.services.email_service import render_email_template, render_text_email, send_activation_email, send_email
+from backend.src.config.database import _connect
 
 router = APIRouter()
 logger = logging.getLogger("dart.admin")
@@ -62,6 +65,12 @@ IMPORT_RESULT_COLUMNS = [
     "detalle",
     "email_status",
 ]
+
+
+def _cuenta_activa(user: dict | None) -> bool:
+    if not user:
+        return False
+    return user.get("estado_cuenta") == "activo" or user.get("estado") == "activo" or user.get("is_active") is True
 
 
 def _email_corporativo_valido(email: str) -> bool:
@@ -85,8 +94,14 @@ def _absolute_url(request: Request, path: str) -> str:
 
 
 def _crear_activation_link(request: Request, username: str) -> str:
+    target = obtener_usuario(username)
+    if _cuenta_activa(target):
+        logger.warning("ACTIVATION_LINK_BLOCKED_ALREADY_ACTIVE username=%s", username)
+        raise HTTPException(status_code=400, detail="Cuenta ya está activada")
     token = secrets.token_urlsafe(32)
-    guardar_activation_token(username, token, datetime.now() + timedelta(hours=48))
+    if not guardar_activation_token(username, token, datetime.now() + timedelta(hours=48)):
+        logger.warning("USER_ALREADY_ACTIVE username=%s", username)
+        raise HTTPException(status_code=400, detail="Cuenta ya está activada")
     link = _absolute_url(request, f"/activar-cuenta/{token}")
     logger.info("activation_token_created username=%s", username)
     return link
@@ -259,7 +274,7 @@ def admin_list_art(request: Request, user=Depends(get_current_user)):
 
 @router.post("/admin/art/{id_art}/estado")
 @router.post("/supervisor/art/{id_art}/estado")
-def admin_change_estado(
+async def admin_change_estado(
     request: Request,
     id_art: str,
     estado: str = Form(...),
@@ -293,6 +308,21 @@ def admin_change_estado(
         user["username"],
         datetime.now().strftime("%Y-%m-%d %H:%M"),
     )
+    try:
+        target_usernames = {registro.get("creado_por", "")}
+        worker_ids = [item.get("trabajador_id") for item in registro.get("asignaciones", [])]
+        target_usernames.update(obtener_usernames_por_ids(worker_ids))
+        for target_username in target_usernames - {""}:
+            notification = add_notification(
+                target_username,
+                f"ART {id_art} {estado}",
+                comentario_supervisor.strip() or "Se actualizó el estado de la ART",
+                f"/art/{id_art}",
+                "ART_STATUS_CHANGE",
+            )
+            await realtime_manager.send_notification(notification)
+    except Exception:
+        logger.exception("art_status_notification_failed art_id=%s estado=%s", id_art, estado)
     # If resolved (approved/rejected), generate PDF backup into uploads
     if estado in {"aprobada", "rechazada"}:
         try:
@@ -300,17 +330,6 @@ def admin_change_estado(
             pdf_bytes = generar_art_pdf(registro_actual)  # registro ya trae sus asignaciones
             upload_dir = request.app.state.upload_dir
             (upload_dir / f"art-{id_art}.pdf").write_bytes(pdf_bytes)
-            # notify the creator about the resolution
-            try:
-                creador = registro_actual.get("creado_por")
-                if creador:
-                    add_notification(
-                        creador,
-                        f"ART {id_art} {estado}",
-                        comentario_supervisor.strip() or "Se actualizó el estado de la ART",
-                    )
-            except Exception:
-                pass
         except Exception:
             # don't block the flow if PDF generation fails
             pass
@@ -382,6 +401,11 @@ def admin_update_rol(
     if username == user["username"] and rol != "admin":
         raise HTTPException(status_code=400, detail="No puedes quitarte tu propio rol admin")
     actualizar_rol(username, rol)
+    try:
+        from backend.src.services import logging_service as _log_svc
+        _log_svc.log_event(_log_svc.USER_ROLE_CHANGED, username=user.get("username", ""), details={"target": username, "new_rol": rol})
+    except Exception:
+        pass
     return RedirectResponse("/admin/usuarios", status_code=303)
 
 
@@ -442,7 +466,7 @@ def admin_crear_usuario(
     result = _enviar_activacion_usuario(normalized["email"], link)
     if result.ok:
         return _redirect_admin_usuarios(message="Usuario creado. Se envió el enlace de activación al correo.", type="success")
-    logger.error("email_failed flow=activation username=%s email=%s error=%s", username, normalized["email"], result.error)
+    logger.error("EMAIL_SENT_FAIL context=activation username=%s email=%s error=%s", username, normalized["email"], result.error)
     return _redirect_admin_usuarios(
         message="Usuario creado, pero falló el envío del correo. Revisa configuración Resend/EMAIL_ENABLED y reenvía la activación.",
         type="warning",
@@ -485,11 +509,14 @@ def admin_reenviar_activacion(
     target = obtener_usuario(username)
     if not target:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    if _cuenta_activa(target):
+        logger.warning("USER_ALREADY_ACTIVE username=%s", username)
+        return _redirect_admin_usuarios(message="Cuenta ya está activada", type="info")
     link = _crear_activation_link(request, username)
     result = _enviar_activacion_usuario(target.get("email", ""), link)
     if result.ok:
         return _redirect_admin_usuarios(message="Se envió un nuevo enlace de activación.", type="success")
-    logger.error("email_failed flow=activation_resend username=%s email=%s error=%s", username, target.get("email", ""), result.error)
+    logger.error("EMAIL_SENT_FAIL context=activation_resend username=%s email=%s error=%s", username, target.get("email", ""), result.error)
     return _redirect_admin_usuarios(message="No se pudo enviar el correo de activación. Revisa Resend/EMAIL_ENABLED.", type="warning")
 
 
@@ -622,7 +649,7 @@ async def admin_importar_usuarios(
                 correos_fallidos += 1
                 email_status = "email_failed"
                 detalle = "Usuario creado, pero falló el envío del correo."
-                logger.error("email_failed flow=activation_import username=%s email=%s error=%s", username, email_normalizado, result.error)
+                logger.error("EMAIL_SENT_FAIL context=activation_import username=%s email=%s error=%s", username, email_normalizado, result.error)
         if not row_errors and rut_normalizado:
             ruts_en_archivo.add(rut_normalizado)
         if not row_errors and email_normalizado:
@@ -678,4 +705,115 @@ def admin_descargar_import_resultados(
         content=results_csv,
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": 'attachment; filename="resultado-importacion-usuarios.csv"'},
+    )
+
+
+# ──────────────────────────────────────────────────────────────
+# ANALYTICS
+# ──────────────────────────────────────────────────────────────
+
+@router.get("/admin/analytics")
+def admin_analytics(request: Request, user=Depends(get_current_user)):
+    if not user or user.get("rol") not in ("admin", "supervisor"):
+        return RedirectResponse("/login", status_code=303)
+
+    metrics = {
+        "total_usuarios": 0,
+        "usuarios_activos": 0,
+        "total_art": 0,
+        "art_aprobadas": 0,
+        "art_rechazadas": 0,
+        "art_pendientes": 0,
+        "tickets_abiertos": 0,
+        "tickets_en_progreso": 0,
+        "tickets_resueltos": 0,
+        "login_bloqueados": 0,
+        "login_fallidos": 0,
+        "art_por_mes": [],
+        "eventos_recientes": [],
+    }
+
+    try:
+        conn = _connect()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM users")
+                metrics["total_usuarios"] = cur.fetchone()[0]
+                cur.execute("SELECT COUNT(*) FROM users WHERE estado_cuenta = 'activo'")
+                metrics["usuarios_activos"] = cur.fetchone()[0]
+                cur.execute("SELECT COUNT(*) FROM art_records")
+                metrics["total_art"] = cur.fetchone()[0]
+                cur.execute("SELECT COUNT(*) FROM art_records WHERE estado = 'aprobada'")
+                metrics["art_aprobadas"] = cur.fetchone()[0]
+                cur.execute("SELECT COUNT(*) FROM art_records WHERE estado = 'rechazada'")
+                metrics["art_rechazadas"] = cur.fetchone()[0]
+                cur.execute("SELECT COUNT(*) FROM art_records WHERE estado = 'pendiente'")
+                metrics["art_pendientes"] = cur.fetchone()[0]
+                try:
+                    cur.execute("SELECT COUNT(*) FROM support_tickets WHERE status = 'open'")
+                    metrics["tickets_abiertos"] = cur.fetchone()[0]
+                    cur.execute("SELECT COUNT(*) FROM support_tickets WHERE status = 'in_progress'")
+                    metrics["tickets_en_progreso"] = cur.fetchone()[0]
+                    cur.execute("SELECT COUNT(*) FROM support_tickets WHERE status = 'resolved'")
+                    metrics["tickets_resueltos"] = cur.fetchone()[0]
+                except Exception:
+                    pass
+                try:
+                    cur.execute("SELECT COUNT(*) FROM system_logs WHERE event_type = 'AUTH_LOGIN_BLOCKED'")
+                    metrics["login_bloqueados"] = cur.fetchone()[0]
+                    cur.execute("SELECT COUNT(*) FROM system_logs WHERE event_type = 'AUTH_LOGIN_FAIL'")
+                    metrics["login_fallidos"] = cur.fetchone()[0]
+                    cur.execute(
+                        """
+                        SELECT TO_CHAR(DATE_TRUNC('month', creado_en::timestamp), 'Mon YYYY') AS mes,
+                               COUNT(*) AS total
+                        FROM art_records
+                        WHERE creado_en::timestamp >= NOW() - INTERVAL '6 months'
+                        GROUP BY DATE_TRUNC('month', creado_en::timestamp)
+                        ORDER BY DATE_TRUNC('month', creado_en::timestamp)
+                        """
+                    )
+                    metrics["art_por_mes"] = [{"mes": r[0], "total": r[1]} for r in cur.fetchall()]
+                    cur.execute(
+                        "SELECT event_type, username, created_at FROM system_logs"
+                        " ORDER BY created_at DESC LIMIT 20"
+                    )
+                    metrics["eventos_recientes"] = [
+                        {"event_type": r[0], "username": r[1], "created_at": r[2]}
+                        for r in cur.fetchall()
+                    ]
+                except Exception:
+                    pass
+        finally:
+            conn.close()
+    except Exception as exc:
+        logger.error("analytics_query_error: %s", exc)
+
+    return templates.TemplateResponse(
+        request,
+        "admin_analytics.html",
+        {"request": request, "user": user, **metrics},
+    )
+
+
+# ──────────────────────────────────────────────────────────────
+# ERROR LOG VIEWER
+# ──────────────────────────────────────────────────────────────
+
+@router.get("/admin/errors")
+def admin_errors(request: Request, user=Depends(get_current_user)):
+    if not user or user.get("rol") != "admin":
+        return RedirectResponse("/login", status_code=303)
+
+    error_list = []
+    try:
+        from backend.src.services.logging_service import get_error_logs
+        error_list = get_error_logs(limit=100)
+    except Exception as exc:
+        logger.error("fetch_error_logs_failed: %s", exc)
+
+    return templates.TemplateResponse(
+        request,
+        "admin_errors.html",
+        {"request": request, "user": user, "errors": error_list, "total": len(error_list)},
     )

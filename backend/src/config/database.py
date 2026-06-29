@@ -147,6 +147,28 @@ def init_db() -> None:
                 applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL,
+                rol TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS support_tickets (
+                id UUID PRIMARY KEY,
+                user_id INTEGER NULL REFERENCES users(id) ON DELETE SET NULL,
+                email TEXT NOT NULL,
+                type TEXT NOT NULL CHECK (type IN ('bug', 'error', 'mejora', 'otro')),
+                message TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved')),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_support_tickets_status_created ON support_tickets (status, created_at DESC)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_support_tickets_user_type_created ON support_tickets (user_id, type, created_at DESC)")
         cur.execute("SELECT 1 FROM schema_migrations WHERE version = %s", (SCHEMA_VERSION,))
         if cur.fetchone():
             conn.commit()
@@ -310,6 +332,18 @@ def init_db() -> None:
         cur.execute("CREATE INDEX IF NOT EXISTS idx_art_asignados_estado_respuesta ON art_trabajadores_asignados (estado_respuesta)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_art_asignados_trabajador_created ON art_trabajadores_asignados (trabajador_id, created_at DESC)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_art_asignados_trabajador_art ON art_trabajadores_asignados (trabajador_id, art_id)")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS system_logs (
+                id SERIAL PRIMARY KEY,
+                event_type TEXT NOT NULL,
+                username TEXT DEFAULT '',
+                ip_address TEXT DEFAULT '',
+                details TEXT DEFAULT '{}',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_system_logs_event_type ON system_logs (event_type)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_system_logs_created_at ON system_logs (created_at DESC)")
         cur.execute(
             """
             INSERT INTO schema_migrations (version)

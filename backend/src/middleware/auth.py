@@ -39,8 +39,7 @@ def delete_auth_cookie(response) -> None:
     response.delete_cookie(settings.auth_cookie_name)
 
 
-def get_current_user(request: Request):
-    token = request.cookies.get(settings.auth_cookie_name)
+def get_user_from_token(token: str | None):
     if not token:
         return None
     try:
@@ -54,6 +53,13 @@ def get_current_user(request: Request):
     if not user:
         return None
     if user.get("estado_cuenta") != "activo":
+        return None
+    return user
+
+
+def get_current_user(request: Request):
+    user = get_user_from_token(request.cookies.get(settings.auth_cookie_name))
+    if not user:
         return None
     if can_review_art(user.get("rol", "")):
         try:

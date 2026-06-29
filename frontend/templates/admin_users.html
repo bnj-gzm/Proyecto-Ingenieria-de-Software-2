@@ -227,10 +227,14 @@
                   <input type="hidden" name="estado" value="{{ 'inactivo' if u.estado_cuenta == 'activo' else 'activo' }}">
                   <button class="rounded-xl border border-slate-300 px-3 py-2 font-bold hover:bg-slate-50">{{ "Desactivar" if u.estado_cuenta == "activo" else "Activar" }}</button>
                 </form>
-                <form method="post" action="/admin/usuarios/{{ u.username }}/reenviar-activacion">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                  <button class="rounded-xl border border-cyan-200 px-3 py-2 font-bold text-cyan-700 hover:bg-cyan-50">Reenviar link</button>
-                </form>
+                {% if u.estado_cuenta != 'activo' %}
+                  <form method="post" action="/admin/usuarios/{{ u.username }}/reenviar-activacion">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button class="rounded-xl border border-cyan-200 px-3 py-2 font-bold text-cyan-700 hover:bg-cyan-50">Reenviar link</button>
+                  </form>
+                {% else %}
+                  <span class="text-xs font-bold text-dartMuted">Cuenta ya está activada</span>
+                {% endif %}
               </div>
             </td>
           </tr>

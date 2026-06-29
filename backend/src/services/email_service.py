@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from backend.src.config.settings import settings
 
 logger = logging.getLogger("dart.email")
+EMAIL_FROM = "D.A.R.T <notificaciones@dart-mineria.lat>"
 
 
 @dataclass(frozen=True)
@@ -23,7 +24,7 @@ def is_email_enabled() -> bool:
 
 
 def resend_configured() -> bool:
-    return bool(settings.resend_api_key and settings.email_from)
+    return bool(settings.resend_api_key)
 
 
 def send_email(to_email: str, subject: str, html_body: str, text_body: str | None = None) -> bool:
@@ -33,7 +34,7 @@ def send_email(to_email: str, subject: str, html_body: str, text_body: str | Non
 def send_email_result(to_email: str, subject: str, html_body: str, text_body: str | None = None) -> EmailSendResult:
     if not settings.email_enabled:
         error = "EMAIL_ENABLED=false"
-        logger.error("EMAIL_FAILED provider=resend to=%s subject=%s error=%s", to_email, subject, error)
+        logger.error("EMAIL_SENT_FAIL provider=resend to=%s subject=%s error=%s", to_email, subject, error)
         return EmailSendResult(False, "resend", error=error)
     return _send_resend(to_email, subject, html_body, text_body)
 
@@ -41,62 +42,65 @@ def send_email_result(to_email: str, subject: str, html_body: str, text_body: st
 def _send_resend(to_email: str, subject: str, html_body: str, text_body: str | None = None) -> EmailSendResult:
     if not resend_configured():
         error = "Resend no configurado"
-        logger.error("EMAIL_FAILED provider=resend to=%s subject=%s error=%s", to_email, subject, error)
+        logger.error("EMAIL_SENT_FAIL provider=resend to=%s subject=%s error=%s", to_email, subject, error)
         return EmailSendResult(False, "resend", error=error)
 
     payload = {
-        "from": settings.email_from,
+        "from": EMAIL_FROM,
         "to": [to_email],
         "subject": subject,
         "html": html_body,
         "text": text_body or _html_to_text_fallback(html_body),
     }
-    logger.info(
-        "email_send_attempt provider=resend api_key_prefix=%s payload=%s",
-        _api_key_prefix(settings.resend_api_key),
-        _safe_json(
-            {
-                "from": payload["from"],
-                "to": payload["to"],
-                "subject": payload["subject"],
-                "html_length": len(payload["html"]),
-                "text_length": len(payload["text"]),
-            }
-        ),
-    )
-    try:
-        response = _send_with_resend_sdk(payload)
-        response_data = _response_to_dict(response)
-        message_id = str(response_data.get("id", "") or "")
-        if not message_id:
-            error = "Resend no retornó id de mensaje"
-            logger.error(
-                "EMAIL_FAILED provider=resend to=%s subject=%s error=%s response=%s",
+    last_error = ""
+    for attempt in (1, 2):
+        logger.info(
+            "email_send_attempt provider=resend attempt=%s to=%s subject=%s payload=%s",
+            attempt,
+            to_email,
+            subject,
+            _safe_json(
+                {
+                    "from": payload["from"],
+                    "html_length": len(payload["html"]),
+                    "text_length": len(payload["text"]),
+                }
+            ),
+        )
+        try:
+            response = _send_with_resend_sdk(payload)
+            response_data = _response_to_dict(response)
+            message_id = str(response_data.get("id", "") or "")
+            if not message_id:
+                raise RuntimeError("Resend no retornó id de mensaje")
+            logger.info(
+                "EMAIL_SENT_OK provider=resend to=%s subject=%s message_id=%s attempt=%s",
                 to_email,
                 subject,
-                error,
-                _safe_json(response_data),
+                message_id,
+                attempt,
             )
-            return EmailSendResult(False, "resend", error=error)
-        logger.info(
-            "EMAIL_SENT_OK provider=resend to=%s subject=%s message_id=%s response=%s",
-            to_email,
-            subject,
-            message_id,
-            _safe_json(response_data),
-        )
-        return EmailSendResult(True, "resend", message_id=message_id)
-    except Exception as exc:
-        response_data = _exception_response(exc)
-        logger.exception(
-            "EMAIL_FAILED provider=resend to=%s subject=%s api_key_prefix=%s error=%s response=%s",
-            to_email,
-            subject,
-            _api_key_prefix(settings.resend_api_key),
-            exc,
-            _safe_json(response_data),
-        )
-        return EmailSendResult(False, "resend", error=str(exc))
+            return EmailSendResult(True, "resend", message_id=message_id)
+        except Exception as exc:
+            last_error = str(exc)
+            if attempt == 1:
+                logger.warning(
+                    "EMAIL_RETRY provider=resend to=%s subject=%s error=%s response=%s",
+                    to_email,
+                    subject,
+                    exc,
+                    _safe_json(_exception_response(exc)),
+                )
+                continue
+            logger.exception(
+                "EMAIL_SENT_FAIL provider=resend to=%s subject=%s attempts=%s error=%s response=%s",
+                to_email,
+                subject,
+                attempt,
+                exc,
+                _safe_json(_exception_response(exc)),
+            )
+    return EmailSendResult(False, "resend", error=last_error)
 
 
 def _send_with_resend_sdk(payload: dict):
@@ -112,10 +116,6 @@ def _send_with_resend_sdk(payload: dict):
         logger.info("email_sdk_method provider=resend method=resend.Emails.send")
         return resend.Emails.send(payload)
     raise RuntimeError("SDK oficial de Resend no expone un método de envío compatible.")
-
-
-def _api_key_prefix(api_key: str) -> str:
-    return f"{api_key[:5]}..." if api_key else "<empty>"
 
 
 def _response_to_dict(response) -> dict:
@@ -302,6 +302,26 @@ def build_art_assignment_email(action_url: str, art: dict, trabajador_nombre: st
 def send_art_assignment_email(to_email: str, action_url: str, art: dict, trabajador_nombre: str) -> EmailSendResult:
     subject, html_body, text_body = build_art_assignment_email(action_url, art, trabajador_nombre)
     return send_email_result(to_email, subject, html_body, text_body)
+
+
+def send_support_ticket_email(user_name: str, user_email: str, ticket_type: str, message: str) -> EmailSendResult:
+    subject = "Nuevo ticket de soporte D.A.R.T"
+    safe_name = html.escape(user_name or "Usuario")
+    safe_email = html.escape(user_email)
+    safe_type = html.escape(ticket_type)
+    safe_message = html.escape(message).replace("\n", "<br>")
+    html_body = f"""<!doctype html>
+<html lang="es"><body style="font-family:Arial,Helvetica,sans-serif;color:#111827;background:#F4F7FA;padding:24px;">
+  <div style="max-width:620px;margin:auto;background:#fff;border:1px solid #E2E8F0;border-radius:14px;padding:28px;">
+    <h1 style="margin:0 0 20px;color:#0B1726;">Nuevo ticket de soporte D.A.R.T</h1>
+    <p><strong>Usuario:</strong> {safe_name}</p>
+    <p><strong>Email:</strong> {safe_email}</p>
+    <p><strong>Tipo:</strong> {safe_type}</p>
+    <div style="margin-top:20px;padding:16px;border-radius:10px;background:#F8FAFC;border:1px solid #E2E8F0;line-height:1.6;">{safe_message}</div>
+  </div>
+</body></html>"""
+    text_body = f"Usuario: {user_name}\nEmail: {user_email}\nTipo: {ticket_type}\n\nMensaje:\n{message}"
+    return send_email_result("admin@dart-mineria.lat", subject, html_body, text_body)
 
 
 def _html_to_text_fallback(html_body: str) -> str:

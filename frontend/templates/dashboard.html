@@ -256,7 +256,7 @@
               <td data-label="ART">
                 <div class="flex items-center gap-3">
                   {% if r.evidencia %}
-                  <img src="{{ r.evidencia[0].src }}" alt="Evidencia ART {{ r.id }}" class="art-thumb" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+                  <img src="{{ r.evidencia[0].src }}" alt="Evidencia ART {{ r.id }}" loading="lazy" decoding="async" class="art-visual art-thumb" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
                   <div class="art-thumb flex items-center justify-center text-xs font-bold text-dartMuted" hidden>ART</div>
                   {% else %}
                   <div class="art-thumb flex items-center justify-center text-xs font-bold text-dartMuted">ART</div>

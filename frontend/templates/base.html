@@ -56,6 +56,7 @@
             --radius-sm: 8px;
             --radius-md: 12px;
             --radius-lg: 16px;
+            --radius-xl: 24px;
             --shadow-sm: 0 1px 2px rgba(15,23,42,.05);
             --shadow-md: 0 10px 24px rgba(15,23,42,.08);
             --shadow-lg: 0 22px 54px rgba(15,23,42,.12);
@@ -133,6 +134,15 @@
         .bg-slate-100,
         .bg-gray-50,
         .bg-gray-100 { background-color: color-mix(in srgb, var(--bg-secondary) 82%, transparent) !important; }
+        .bg-red-50, .bg-green-50, .bg-cyan-50, .bg-amber-50 { background-color: color-mix(in srgb, var(--bg-secondary) 84%, transparent) !important; }
+        .bg-cyan-100 { background-color: color-mix(in srgb, var(--accent) 16%, var(--card)) !important; }
+        .bg-green-100 { background-color: color-mix(in srgb, var(--success) 16%, var(--card)) !important; }
+        .bg-red-100 { background-color: color-mix(in srgb, var(--danger) 16%, var(--card)) !important; }
+        .bg-amber-100, .bg-yellow-100 { background-color: color-mix(in srgb, var(--warning) 16%, var(--card)) !important; }
+        .text-cyan-700, .text-cyan-800 { color: color-mix(in srgb, var(--accent) 78%, var(--text-primary)) !important; }
+        .text-green-700, .text-green-800 { color: color-mix(in srgb, var(--success) 74%, var(--text-primary)) !important; }
+        .text-red-600, .text-red-700, .text-red-800 { color: color-mix(in srgb, var(--danger) 78%, var(--text-primary)) !important; }
+        .text-amber-600, .text-amber-700, .text-yellow-700 { color: color-mix(in srgb, var(--warning) 76%, var(--text-primary)) !important; }
         .hover\:bg-slate-50:hover,
         .hover\:bg-white\/70:hover,
         .hover\:bg-cyan-50\/40:hover,
@@ -155,6 +165,7 @@
         .border-slate-300,
         .border-gray-200,
         .border-gray-300 { border-color: var(--border) !important; }
+        .border-red-200, .border-green-200, .border-cyan-200, .border-amber-200, .divide-slate-200 > :not([hidden]) ~ :not([hidden]) { border-color: var(--border) !important; }
         :root[data-theme="dark"] .text-dartText,
         :root[data-theme="dark"] .text-slate-700,
         :root[data-theme="dark"] .text-slate-900 { color: var(--text) !important; }
@@ -253,6 +264,53 @@
         .toast-close { margin-left: auto; color: var(--text-secondary); font-weight: 900; }
         @keyframes toastIn { from { opacity: 0; transform: translateY(-8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
         .ui-modal { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-strong); box-shadow: var(--shadow-lg); }
+        .modal-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 1rem; background: rgba(2,6,23,.58); backdrop-filter: blur(8px); opacity: 0; visibility: hidden; transition: opacity .22s var(--ease-premium), visibility .22s; }
+        .modal-backdrop.is-open { opacity: 1; visibility: visible; }
+        .modal-panel { width: min(620px, 100%); max-height: min(760px, calc(100vh - 2rem)); overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface-strong); box-shadow: var(--shadow-lg); transform: translateY(16px) scale(.97); opacity: 0; transition: transform .26s var(--ease-premium), opacity .22s var(--ease-premium); }
+        .modal-backdrop.is-open .modal-panel { transform: translateY(0) scale(1); opacity: 1; }
+        .support-launcher { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 80; width: 3.25rem; height: 3.25rem; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; background: var(--accent); color: #fff; border: 1px solid color-mix(in srgb, #fff 24%, transparent); box-shadow: 0 18px 40px color-mix(in srgb, var(--accent) 34%, transparent); font-size: 1.25rem; font-weight: 900; transition: transform .2s var(--ease-premium), box-shadow .2s var(--ease-premium); }
+        .support-launcher:hover { transform: translateY(-3px) scale(1.04); box-shadow: 0 22px 48px color-mix(in srgb, var(--accent) 42%, transparent); }
+        .notification-badge { position: absolute; right: -.5rem; top: -.5rem; min-width: 1.25rem; height: 1.25rem; align-items: center; justify-content: center; border-radius: 999px; background: var(--danger); color: #fff; padding: 0 .35rem; font-size: .68rem; font-weight: 900; box-shadow: 0 0 0 3px var(--surface-strong); }
+        .notification-badge.has-updates { animation: badgePulse 1.8s ease-in-out infinite; }
+        @keyframes badgePulse { 50% { transform: scale(1.12); box-shadow: 0 0 0 5px color-mix(in srgb, var(--danger) 18%, transparent); } }
+        .image-preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: .75rem; margin-top: .9rem; }
+        .image-preview-item { position: relative; aspect-ratio: 4 / 3; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-secondary); box-shadow: var(--shadow-sm); animation: previewIn .22s var(--ease-premium) both; }
+        .image-preview-item img { width: 100%; height: 100%; object-fit: cover; }
+        .image-preview-item span { position: absolute; inset: auto .4rem .4rem; overflow: hidden; border-radius: 6px; background: rgba(2,6,23,.7); color: #fff; padding: .25rem .4rem; font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
+        .image-confirm-bar { margin-top: .75rem; display: flex; align-items: center; gap: .75rem; border: 1px solid color-mix(in srgb, var(--warning) 35%, var(--border)); border-radius: var(--radius-md); background: color-mix(in srgb, var(--warning) 10%, var(--card)); padding: .75rem; }
+        .image-confirm-bar.hidden { display: none; }
+        .image-confirm-label { min-width: 0; flex: 1; color: var(--text-primary); font-size: .82rem; font-weight: 750; }
+        @keyframes previewIn { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: scale(1); } }
+        .signature-surface { overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-md); background: #fff; transition: background .22s var(--ease-premium); }
+        :root[data-theme="dark"] .signature-surface { background: #0b1220; }
+        .signature-visual { background: transparent !important; transition: filter .22s var(--ease-premium); }
+        :root[data-theme="dark"] .signature-visual { filter: brightness(0) invert(1) contrast(1.15); }
+        .image-fallback { display: flex; min-height: 7rem; align-items: center; justify-content: center; border: 1px dashed var(--border); border-radius: var(--radius-md); background: var(--bg-secondary); color: var(--text-secondary); padding: 1rem; text-align: center; font-size: .8rem; font-weight: 800; }
+        .art-visual { cursor: zoom-in; }
+        .art-visual:focus-visible, .art-lightbox-trigger:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 65%, transparent); outline-offset: 3px; }
+        .image-lightbox { z-index: 120; background: rgba(2,6,23,.88); }
+        .image-lightbox-panel { position: relative; display: flex; width: min(1120px, 100%); height: min(84vh, 820px); align-items: center; justify-content: center; border-radius: var(--radius-lg); background: rgba(2,6,23,.72); box-shadow: var(--shadow-lg); overflow: hidden; opacity: 0; transform: scale(.96); transition: opacity .22s var(--ease-premium), transform .26s var(--ease-premium); }
+        .image-lightbox.is-open .image-lightbox-panel { opacity: 1; transform: scale(1); }
+        .image-lightbox-panel img { display: block; width: 100%; height: 100%; object-fit: contain; cursor: zoom-out; }
+        .image-lightbox-close { position: absolute; right: .85rem; top: .85rem; z-index: 2; display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border-radius: 999px; background: rgba(255,255,255,.94); color: #0f172a; font-size: 1.35rem; font-weight: 900; box-shadow: var(--shadow-md); transition: transform .2s var(--ease-premium), background .2s var(--ease-premium); }
+        .image-lightbox-close:hover { transform: scale(1.06); background: #fff; }
+        [data-risk-row] { transition: opacity .22s var(--ease-premium), transform .24s var(--ease-premium); }
+        .risk-row-enter { opacity: 0; transform: translateY(-8px) scale(.99); }
+        .risk-row-enter.is-visible { opacity: 1; transform: translateY(0) scale(1); }
+        [data-risk-row].risk-row-removing { opacity: 0; transform: translateX(12px) scale(.98); }
+        .risk-table-scroll { overscroll-behavior-inline: contain; scrollbar-gutter: stable; -webkit-overflow-scrolling: touch; }
+        [data-risk-row] > td { vertical-align: top; padding-block: 1rem; }
+        [data-risk-field] { min-height: 7.25rem; resize: vertical; }
+        .risk-row-invalid > td { background: color-mix(in srgb, var(--danger) 7%, transparent); }
+        .risk-row-invalid [data-risk-field]:invalid, .risk-field-invalid { border-color: var(--danger) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 14%, transparent); }
+        .risk-row-number { display: inline-flex; min-width: 1.45rem; height: 1.45rem; align-items: center; justify-content: center; border-radius: 999px; background: var(--bg-secondary); color: var(--text-primary); }
+        .risk-remove-button { display: inline-flex; flex-direction: column; align-items: center; gap: .2rem; border-radius: var(--radius-md); color: var(--danger); padding: .55rem .65rem; font-size: .72rem; font-weight: 900; transition: background .2s var(--ease-premium), transform .2s var(--ease-premium); }
+        .risk-remove-button:hover { background: color-mix(in srgb, var(--danger) 10%, transparent); transform: translateY(-1px); }
+        .risk-remove-button:disabled { cursor: not-allowed; opacity: .38; transform: none; }
+        body.modal-open { overflow: hidden; }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+        }
         .ui-sidebar-item { display: flex; align-items: center; gap: var(--space-3); border-radius: var(--radius-md); padding: .75rem .9rem; color: inherit; transition: background .18s var(--ease-out), color .18s var(--ease-out), transform .18s var(--ease-out); }
         .ui-sidebar-item:hover { transform: translateY(-1px); }
         .ui-navbar-item { border-radius: var(--radius-sm); padding: .5rem .75rem; color: var(--muted); font-weight: 800; transition: background .18s var(--ease-out), color .18s var(--ease-out); }
@@ -442,6 +500,16 @@
                     <span class="sidebar-label whitespace-nowrap">Revisar ART</span>
                 </a>
                 {% endif %}
+                {% if user.rol == 'supervisor' %}
+                <a href="/admin/analytics" title="Analíticas" data-tooltip="Analíticas" class="sidebar-link {% if request.url.path == '/admin/analytics' %}sidebar-link-active{% endif %}">
+                    <span class="sidebar-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                    </span>
+                    <span class="sidebar-label whitespace-nowrap">Analíticas</span>
+                </a>
+                {% endif %}
                 {% if user.rol == 'admin' %}
                 <p class="sidebar-section-title px-3 pb-2 pt-5 text-xs font-black uppercase">Administración</p>
                 <a href="/admin/usuarios" title="Usuarios" data-tooltip="Usuarios" class="sidebar-link {% if request.url.path == '/admin/usuarios' %}sidebar-link-active{% endif %}">
@@ -451,6 +519,26 @@
                         </svg>
                     </span>
                     <span class="sidebar-label whitespace-nowrap">Usuarios</span>
+                </a>
+                <a href="/admin/support" title="Soporte" data-tooltip="Soporte" class="sidebar-link {% if request.url.path == '/admin/support' %}sidebar-link-active{% endif %}">
+                    <span class="sidebar-icon"><i class="fa-regular fa-life-ring" aria-hidden="true"></i></span>
+                    <span class="sidebar-label whitespace-nowrap">Soporte</span>
+                </a>
+                <a href="/admin/analytics" title="Analíticas" data-tooltip="Analíticas" class="sidebar-link {% if request.url.path == '/admin/analytics' %}sidebar-link-active{% endif %}">
+                    <span class="sidebar-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                    </span>
+                    <span class="sidebar-label whitespace-nowrap">Analíticas</span>
+                </a>
+                <a href="/admin/errors" title="Errores" data-tooltip="Errores" class="sidebar-link {% if request.url.path == '/admin/errors' %}sidebar-link-active{% endif %}">
+                    <span class="sidebar-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </span>
+                    <span class="sidebar-label whitespace-nowrap">Errores</span>
                 </a>
                 {% endif %}
             </nav>
@@ -475,9 +563,7 @@
                             <path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"></path><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path>
                         </svg>
                         <span class="hidden sm:inline">Alertas</span>
-                        {% if user.notificaciones_no_leidas and user.notificaciones_no_leidas > 0 %}
-                        <span class="absolute -right-2 -top-2 inline-flex min-w-5 items-center justify-center rounded-full bg-critical px-1.5 text-[11px] font-black text-white">{{ user.notificaciones_no_leidas }}</span>
-                        {% endif %}
+                        <span id="notification-badge" data-notification-user="{{ user.username }}" class="notification-badge {% if user.notificaciones_no_leidas and user.notificaciones_no_leidas > 0 %}inline-flex has-updates{% else %}hidden{% endif %}">{{ user.notificaciones_no_leidas or 0 }}</span>
                     </a>
                     <div id="top-user-menu-wrap" class="relative">
                         <button id="top-user-button" type="button" class="flex items-center gap-2 rounded-lg border border-line bg-white px-2 py-1.5 hover:bg-slate-50">
@@ -494,7 +580,7 @@
                                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="10" r="3"></circle><path d="M7 20.7a6 6 0 0 1 10 0"></path></svg>
                                 Mi perfil
                             </a>
-                            <a href="/perfil/editar" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-slate-50">
+                            <a href="/perfil#editar" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-slate-50">
                                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.72l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                                 Configuración
                             </a>
@@ -522,6 +608,51 @@
     {% endif %}
 
     <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+    <div id="art-image-lightbox" class="modal-backdrop image-lightbox" aria-hidden="true">
+        <figure id="art-image-lightbox-panel" class="image-lightbox-panel" role="dialog" aria-modal="true" aria-label="Vista ampliada de evidencia ART" tabindex="-1">
+            <button id="art-image-lightbox-close" type="button" class="image-lightbox-close" aria-label="Cerrar imagen ampliada">×</button>
+            <img id="art-image-lightbox-image" alt="Evidencia ART ampliada">
+        </figure>
+    </div>
+
+    {% if user %}
+    <button id="support-launcher" class="support-launcher" type="button" aria-label="Abrir soporte" title="¿Necesitas ayuda?">?</button>
+    <div id="support-modal" class="modal-backdrop" aria-hidden="true">
+        <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="support-title">
+            <div class="flex items-start justify-between gap-4 border-b border-line p-6">
+                <div>
+                    <p class="text-sm font-black uppercase text-techCyan">Centro de ayuda</p>
+                    <h2 id="support-title" class="mt-1 text-2xl font-black text-dartText">Crear ticket de soporte</h2>
+                    <p class="mt-2 text-sm text-dartMuted">Cuéntanos qué ocurrió. El equipo recibirá el contexto por correo.</p>
+                </div>
+                <button id="support-close" type="button" class="btn-secondary px-3 py-2" aria-label="Cerrar soporte">×</button>
+            </div>
+            <form id="support-form" action="/support/ticket" method="post" class="space-y-5 p-6">
+                <input id="support-csrf" type="hidden" name="csrf_token" value="{{ csrf_token|default('') }}">
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div><label class="form-label">Nombre</label><input class="form-input" value="{{ user.nombre or user.username }}" readonly></div>
+                    <div><label class="form-label">Email</label><input class="form-input" value="{{ user.email }}" readonly></div>
+                </div>
+                <div>
+                    <label for="support-type" class="form-label">Tipo de solicitud</label>
+                    <select id="support-type" name="type" class="form-select" required>
+                        <option value="bug">Bug</option><option value="error">Error</option><option value="mejora">Mejora</option><option value="otro">Otro</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="support-message" class="form-label">Mensaje</label>
+                    <textarea id="support-message" name="message" rows="6" maxlength="4000" minlength="10" class="form-textarea" placeholder="Describe qué estabas haciendo, qué esperabas y qué ocurrió..." required></textarea>
+                    <p class="mt-2 text-xs font-bold text-dartMuted">Mínimo 10 caracteres. No incluyas contraseñas ni datos sensibles.</p>
+                </div>
+                <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <button id="support-cancel" type="button" class="btn-secondary">Cancelar</button>
+                    <button id="support-submit" type="submit" class="btn-primary">Enviar ticket</button>
+                </div>
+            </form>
+        </section>
+    </div>
+    {% endif %}
 
     {% if user %}
         </div>
@@ -617,6 +748,8 @@
         })();
     </script>
     <script src="/static/js/content-filter.js"></script>
+    <script src="/static/js/app-ui.js?v=20260629.4"></script>
+    <script src="/static/js/risk-table.js?v=20260629.2"></script>
     <script>
         (function () {
             const root = document.documentElement;

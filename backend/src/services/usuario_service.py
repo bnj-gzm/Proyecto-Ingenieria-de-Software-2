@@ -185,6 +185,20 @@ def cargar_usuarios_por_rol(rol: str) -> list[dict[str, Any]]:
         conn.close()
 
 
+def obtener_usernames_por_ids(user_ids: list[int]) -> list[str]:
+    ids = sorted({int(user_id) for user_id in user_ids if user_id})
+    if not ids:
+        return []
+    conn = _connect()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT username FROM users WHERE id = ANY(%s) AND estado_cuenta = 'activo'", (ids,))
+        return [row[0] for row in cur.fetchall()]
+    finally:
+        cur.close()
+        conn.close()
+
+
 def guardar_usuario(
     username: str,
     password_hash: str,
@@ -298,7 +312,7 @@ def actualizar_foto_perfil(username: str, foto_perfil: str) -> None:
         conn.close()
 
 
-def guardar_activation_token(username: str, token: str, expires_at: datetime) -> None:
+def guardar_activation_token(username: str, token: str, expires_at: datetime) -> bool:
     conn = _connect()
     cur = conn.cursor()
     try:
@@ -307,11 +321,13 @@ def guardar_activation_token(username: str, token: str, expires_at: datetime) ->
             UPDATE users
             SET activation_token = %s, activation_token_expires_at = %s,
                 estado_cuenta = 'pendiente', debe_cambiar_password = TRUE
-            WHERE username = %s
+            WHERE username = %s AND estado_cuenta <> 'activo'
             """,
             (token, expires_at, username),
         )
+        changed = cur.rowcount == 1
         conn.commit()
+        return changed
     finally:
         cur.close()
         conn.close()
@@ -329,7 +345,7 @@ def obtener_usuario_por_activation_token(token: str) -> dict[str, Any] | None:
         conn.close()
 
 
-def activar_usuario(username: str, password_hash: str) -> None:
+def activar_usuario(username: str, password_hash: str) -> bool:
     conn = _connect()
     cur = conn.cursor()
     try:
@@ -338,11 +354,13 @@ def activar_usuario(username: str, password_hash: str) -> None:
             UPDATE users
             SET password_hash = %s, estado_cuenta = 'activo', debe_cambiar_password = FALSE,
                 activation_token = '', activation_token_expires_at = NULL
-            WHERE username = %s
+            WHERE username = %s AND estado_cuenta <> 'activo'
             """,
             (password_hash, username),
         )
+        changed = cur.rowcount == 1
         conn.commit()
+        return changed
     finally:
         cur.close()
         conn.close()

@@ -8,9 +8,9 @@
     <div class="grid gap-0 lg:grid-cols-[1fr_360px]">
       <div class="p-6 sm:p-8">
         <div class="flex flex-col gap-6 md:flex-row md:items-center">
-          <div class="relative">
+          <div id="profile-avatar-wrap" class="relative">
             {% if user.foto_perfil %}
-            <img src="{{ user.foto_perfil if user.foto_perfil[:5] == 'data:' else url_for('static', path=user.foto_perfil) }}" alt="" class="h-32 w-32 rounded-full border-4 border-white object-cover shadow-2xl ring-1 ring-slate-200" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+            <img id="profile-avatar-image" src="{{ user.foto_perfil if user.foto_perfil[:5] == 'data:' else url_for('static', path=user.foto_perfil) }}" alt="Foto de perfil" class="h-32 w-32 rounded-full border-4 border-white object-cover shadow-2xl ring-1 ring-slate-200" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
             <div class="avatar h-32 w-32 border-4 border-white text-4xl shadow-2xl ring-1 ring-slate-200" hidden>{{ initials }}</div>
             {% else %}
             <div class="avatar h-32 w-32 border-4 border-white text-4xl shadow-2xl ring-1 ring-slate-200">{{ initials }}</div>
@@ -19,7 +19,7 @@
           </div>
           <div class="min-w-0">
             <p class="text-sm font-black uppercase text-techCyan">Perfil operativo</p>
-            <h1 class="mt-2 text-3xl font-black leading-tight text-dartText">{{ user.nombre or user.username or "Sin nombre registrado" }}</h1>
+            <h1 id="profile-display-name" class="mt-2 text-3xl font-black leading-tight text-dartText">{{ user.nombre or user.username or "Sin nombre registrado" }}</h1>
             <p class="mt-2 break-all text-sm font-semibold text-dartMuted sm:text-base">{{ user.email or "Sin email registrado" }}</p>
             <div class="mt-4 flex flex-wrap gap-2">
               <span class="status-badge status-{{ user.estado_cuenta or 'activo' }}">{{ user.estado_cuenta or "activo" }}</span>
@@ -31,12 +31,12 @@
       <aside class="border-t border-line bg-slate-50/70 p-6 lg:border-l lg:border-t-0">
         <p class="text-sm font-black uppercase text-dartMuted">Acciones de cuenta</p>
         <div class="mt-4 grid gap-3">
-          <a href="/perfil/editar" class="quick-action">
+          <button id="open-profile-modal" type="button" class="quick-action w-full text-left">
             <span class="quick-action-icon">
               <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
             </span>
             <span>Editar perfil</span>
-          </a>
+          </button>
           <a href="/perfil/editar#seguridad" class="quick-action">
             <span class="quick-action-icon">
               <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
@@ -75,8 +75,8 @@
       </div>
       <div class="app-card-body grid gap-4 sm:grid-cols-2">
         <div class="info-tile"><p class="text-sm font-bold text-dartMuted">Usuario</p><p class="mt-1 font-black">{{ user.username }}</p></div>
-        <div class="info-tile"><p class="text-sm font-bold text-dartMuted">Teléfono</p><p class="mt-1 font-black">{{ user.telefono or "-" }}</p></div>
-        <div class="info-tile"><p class="text-sm font-bold text-dartMuted">Cargo</p><p class="mt-1 font-black">{{ user.cargo or "-" }}</p></div>
+        <div class="info-tile"><p class="text-sm font-bold text-dartMuted">Teléfono</p><p id="profile-display-phone" class="mt-1 font-black">{{ user.telefono or "-" }}</p></div>
+        <div class="info-tile"><p class="text-sm font-bold text-dartMuted">Cargo</p><p id="profile-display-role" class="mt-1 font-black">{{ user.cargo or "-" }}</p></div>
         <div class="info-tile"><p class="text-sm font-bold text-dartMuted">Área</p><p class="mt-1 font-black">{{ user.area or "-" }}</p></div>
         <div class="info-tile"><p class="text-sm font-bold text-dartMuted">Empresa</p><p class="mt-1 font-black">{{ user.empresa or "-" }}</p></div>
         <div class="info-tile"><p class="text-sm font-bold text-dartMuted">Creación</p><p class="mt-1 font-black">{{ user.created_at.strftime("%Y-%m-%d") if user.created_at else "-" }}</p></div>
@@ -112,4 +112,94 @@
     </section>
   </div>
 </div>
+
+<div id="profile-modal" class="modal-backdrop" aria-hidden="true">
+  <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
+    <div class="flex items-start justify-between gap-4 border-b border-line p-6">
+      <div>
+        <p class="text-sm font-black uppercase text-techCyan">Apple-style account</p>
+        <h2 id="profile-modal-title" class="mt-1 text-2xl font-black text-dartText">Editar perfil</h2>
+        <p class="mt-2 text-sm text-dartMuted">Actualiza tu identidad operativa sin salir de esta página.</p>
+      </div>
+      <button id="close-profile-modal" type="button" class="btn-secondary px-3 py-2" aria-label="Cerrar">×</button>
+    </div>
+    <form id="profile-modal-form" action="/perfil/editar" method="post" enctype="multipart/form-data" class="space-y-5 p-6">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="password" value="">
+      <input type="hidden" name="password_confirm" value="">
+      <div class="grid gap-5 sm:grid-cols-[150px_1fr]">
+        <div>
+          <div id="profile-photo-preview" class="image-preview-grid !mt-0">
+            <div class="image-preview-item !aspect-square rounded-full">
+              {% if user.foto_perfil %}<img src="{{ user.foto_perfil if user.foto_perfil[:5] == 'data:' else url_for('static', path=user.foto_perfil) }}" alt="Vista previa actual">{% else %}<div class="avatar h-full w-full text-3xl">{{ initials }}</div>{% endif %}
+            </div>
+          </div>
+          <label for="profile-photo-input" class="btn-secondary mt-3 w-full cursor-pointer px-3 py-2 text-xs">Elegir foto</label>
+          <input id="profile-photo-input" data-image-input data-image-max-width="768" data-preview-target="profile-photo-preview" type="file" name="foto_perfil" accept=".jpg,.jpeg,.png,.webp" class="sr-only">
+          <p class="mt-2 text-center text-xs text-dartMuted">Máximo 2 MB</p>
+        </div>
+        <div class="space-y-4">
+          <div><label for="profile-modal-name" class="form-label">Nombre</label><input id="profile-modal-name" name="nombre" value="{{ user.nombre or '' }}" class="form-input" required></div>
+          <div><label for="profile-modal-phone" class="form-label">Teléfono</label><input id="profile-modal-phone" name="telefono" value="{{ user.telefono or '+56 9 ' }}" class="form-input" placeholder="+56 9 1234 5678"></div>
+          <div><label for="profile-modal-role" class="form-label">Cargo</label><input id="profile-modal-role" name="cargo" value="{{ user.cargo or '' }}" class="form-input"></div>
+        </div>
+      </div>
+      <div class="flex flex-col-reverse gap-3 border-t border-line pt-5 sm:flex-row sm:justify-end">
+        <button id="cancel-profile-modal" type="button" class="btn-secondary">Cancelar</button>
+        <button id="confirm-profile-modal" type="submit" class="btn-primary">Confirmar</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<script>
+  (function () {
+    const modal = document.getElementById("profile-modal");
+    const form = document.getElementById("profile-modal-form");
+    const openButton = document.getElementById("open-profile-modal");
+    const closeButtons = [document.getElementById("close-profile-modal"), document.getElementById("cancel-profile-modal")];
+    const submitButton = document.getElementById("confirm-profile-modal");
+    function openModal() { modal.classList.add("is-open"); modal.setAttribute("aria-hidden", "false"); document.body.classList.add("modal-open"); window.setTimeout(() => document.getElementById("profile-modal-name")?.focus(), 160); }
+    function closeModal(resetForm = true) { if (resetForm) form?.reset(); modal.classList.remove("is-open"); modal.setAttribute("aria-hidden", "true"); document.body.classList.remove("modal-open"); if (location.hash === "#editar") history.replaceState(null, "", location.pathname); }
+    openButton?.addEventListener("click", openModal);
+    closeButtons.forEach((button) => button?.addEventListener("click", () => closeModal(true)));
+    modal?.addEventListener("click", (event) => { if (event.target === modal) closeModal(true); });
+    window.addEventListener("keydown", (event) => { if (event.key === "Escape" && modal.classList.contains("is-open")) closeModal(true); });
+    if (location.hash === "#editar") openModal();
+    form?.addEventListener("submit", async (event) => {
+      if (event.defaultPrevented) return;
+      event.preventDefault();
+      submitButton.disabled = true;
+      submitButton.textContent = "Guardando…";
+      try {
+        const response = await fetch(form.action, { method: "POST", body: new FormData(form), headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" } });
+        const data = await response.json();
+        if (!response.ok || !data.ok) throw new Error(data.message || "No pudimos actualizar el perfil.");
+        document.getElementById("profile-display-name").textContent = data.profile.nombre;
+        document.getElementById("profile-display-phone").textContent = data.profile.telefono || "-";
+        document.getElementById("profile-display-role").textContent = data.profile.cargo || "-";
+        let avatar = document.getElementById("profile-avatar-image");
+        if (data.profile.foto_perfil) {
+          if (!avatar) {
+            avatar = document.createElement("img");
+            avatar.id = "profile-avatar-image";
+            avatar.alt = "Foto de perfil";
+            avatar.className = "h-32 w-32 rounded-full border-4 border-white object-cover shadow-2xl ring-1 ring-slate-200";
+            document.getElementById("profile-avatar-wrap")?.prepend(avatar);
+          }
+          avatar.src = data.profile.foto_perfil;
+          avatar.hidden = false;
+          document.querySelector("#profile-avatar-wrap .avatar")?.setAttribute("hidden", "");
+        }
+        window.dartToast?.(data.message, "success");
+        closeModal(false);
+      } catch (error) {
+        window.dartToast?.(error.message, "error");
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = "Confirmar";
+      }
+    });
+  })();
+</script>
 {% endblock %}

@@ -1,19 +1,30 @@
-<tr>
+<tr data-risk-row>
     <td>
-        <textarea name="secuencia" rows="3"
+        <div class="mb-2 flex items-center gap-2 text-xs font-black uppercase text-dartMuted">
+            <span class="risk-row-number" data-risk-number>1</span>
+            <span>Actividad</span>
+        </div>
+        <textarea name="secuencia" rows="3" required data-risk-field="secuencia"
                   class="form-textarea"
-                  placeholder="Ej: Preparación del área"></textarea>
+                  placeholder="Ej: Preparación del área">{{ riesgo_item.secuencia if riesgo_item else '' }}</textarea>
     </td>
 
     <td>
-        <textarea name="riesgo" rows="3"
+        <textarea name="riesgo" rows="3" required data-risk-field="riesgo"
                   class="form-textarea"
-                  placeholder="Ej: Golpes, caída de material, exposición a ruido"></textarea>
+                  placeholder="Ej: Golpes, caída de material, exposición a ruido">{{ riesgo_item.riesgo if riesgo_item else '' }}</textarea>
     </td>
 
     <td>
-        <textarea name="control" rows="3"
+        <textarea name="control" rows="3" required data-risk-field="control"
                   class="form-textarea"
-                  placeholder="Ej: Inspección, bloqueo, señalización"></textarea>
+                  placeholder="Ej: Inspección, bloqueo, señalización">{{ riesgo_item.control if riesgo_item else '' }}</textarea>
+    </td>
+
+    <td class="w-28 text-right align-top">
+        <button type="button" data-risk-remove class="risk-remove-button" aria-label="Eliminar riesgo">
+            <span aria-hidden="true">🗑️</span>
+            <span>Eliminar</span>
+        </button>
     </td>
 </tr>

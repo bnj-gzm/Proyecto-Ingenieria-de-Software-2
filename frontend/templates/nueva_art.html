@@ -14,7 +14,7 @@
     <a href="/dashboard" class="btn-secondary">Cancelar</a>
   </div>
 
-  <form action="/art/guardar" method="post" enctype="multipart/form-data" class="space-y-6">
+  <form action="/art/guardar" method="post" enctype="multipart/form-data" class="space-y-6" data-risk-form>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
     <section class="app-card">
@@ -139,26 +139,24 @@
           <h2 class="text-xl font-black">Riesgos y controles</h2>
           <p class="mt-1 text-sm text-dartMuted">Define secuencia, riesgo y medida de control.</p>
         </div>
-        <button type="button" hx-get="/partials/riesgo-row" hx-target="#riesgos-body" hx-swap="beforeend" class="btn-dark px-3 py-2 text-sm">Agregar fila</button>
+        <button type="button" data-risk-add class="btn-dark px-3 py-2 text-sm"><span aria-hidden="true">+</span> Agregar Riesgo</button>
       </div>
-      <div class="overflow-x-auto">
-        <table class="app-table min-w-[820px]">
+      <div class="risk-table-scroll overflow-x-auto" tabindex="0" aria-label="Tabla editable de riesgos y controles">
+        <table class="app-table min-w-[880px]">
           <thead>
             <tr>
               <th>Secuencia del trabajo</th>
               <th>¿Qué me puede suceder?</th>
               <th>¿Qué debo hacer?</th>
+              <th class="text-right">Acciones</th>
             </tr>
           </thead>
-          <tbody id="riesgos-body">
-            <tr>
-              <td><textarea name="secuencia" rows="3" required class="form-textarea" placeholder="Ej: Traslado al área"></textarea></td>
-              <td><textarea name="riesgo" rows="3" required class="form-textarea" placeholder="Ej: Caídas, golpes, atrapamiento"></textarea></td>
-              <td><textarea name="control" rows="3" required class="form-textarea" placeholder="Ej: Señalización, bloqueo, permiso de trabajo"></textarea></td>
-            </tr>
+          <tbody id="riesgos-body" data-risk-rows>
+            {% include "partials/riesgo_row.html" %}
           </tbody>
         </table>
       </div>
+      <p data-risk-error class="alert-error mx-5 mb-5 mt-3 hidden" role="alert">Completa actividad, riesgo y control en cada fila antes de continuar.</p>
     </section>
 
     <section class="app-card">
@@ -185,8 +183,9 @@
       <div class="app-card-body grid gap-5 md:grid-cols-2">
         <div>
           <label class="form-label">Adjuntar imágenes de evidencia general</label>
-          <input type="file" name="evidencia" multiple accept=".jpg,.jpeg,.png,.webp" class="form-input bg-white">
+          <input data-image-input data-preview-target="art-evidence-preview" type="file" name="evidencia" multiple accept=".jpg,.jpeg,.png,.webp" class="form-input">
           <p class="mt-2 text-sm text-dartMuted">Opcional. JPG, PNG o WEBP. Máximo 5 MB por imagen.</p>
+          <div id="art-evidence-preview" class="image-preview-grid" hidden></div>
         </div>
         <div>
           <label class="form-label">Observaciones generales</label>

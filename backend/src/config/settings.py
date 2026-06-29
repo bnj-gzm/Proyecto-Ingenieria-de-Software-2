@@ -30,6 +30,7 @@ class Settings:
         self.public_base_url = self.public_base_url.rstrip("/")
         self.email_from = os.getenv("EMAIL_FROM", "").strip()
         self.resend_api_key = os.getenv("RESEND_API_KEY", "")
+        self.trust_proxy_headers = self._as_bool(os.getenv("TRUST_PROXY_HEADERS", "true"))
 
     @staticmethod
     def _required(name: str) -> str:

@@ -73,20 +73,20 @@ def generar_art_pdf(registro: dict, asignaciones: list[dict] | None = None) -> b
     # Paso 1 — Antecedentes del trabajo realizado
     story.append(_section_title("Paso 1 — Antecedentes del trabajo realizado"))
     antecedentes = [
-        ["Empresa", registro.get("empresa", "")],
-        ["Fecha", registro.get("fecha", "")],
-        ["Gerencia", registro.get("gerencia", "")],
-        ["Área", registro.get("area", "")],
-        ["Horario inicio", registro.get("hora_inicio", "")],
-        ["Horario término", registro.get("hora_termino", "")],
-        ["Lugar", registro.get("lugar", "")],
-        ["Tipo de tarea", registro.get("tipo_tarea", "")],
-        ["Supervisor", registro.get("supervisor", "")],
+        ["Empresa", registro.get("empresa") or "PENDIENTE"],
+        ["Fecha", registro.get("fecha") or "PENDIENTE"],
+        ["Gerencia", registro.get("gerencia") or "PENDIENTE"],
+        ["Área", registro.get("area") or "PENDIENTE"],
+        ["Horario inicio", registro.get("hora_inicio") or "PENDIENTE"],
+        ["Horario término", registro.get("hora_termino") or "PENDIENTE"],
+        ["Lugar", registro.get("lugar") or "PENDIENTE"],
+        ["Tipo de tarea", registro.get("tipo_tarea") or "PENDIENTE"],
+        ["Supervisor", registro.get("supervisor") or "PENDIENTE"],
     ]
     story.append(_key_value_table(antecedentes))
     story.append(Spacer(1, 6))
     story.append(_subsection_title("Actividad a realizar"))
-    story.append(_note(registro.get("descripcion") or "-"))
+    story.append(_note(registro.get("descripcion") or "PENDIENTE"))
     story.append(Spacer(1, 14))
 
     # Declaración del supervisor — Condiciones físicas y psicológicas
@@ -112,7 +112,7 @@ def generar_art_pdf(registro: dict, asignaciones: list[dict] | None = None) -> b
         for asignacion in respondieron:
             story.extend(_worker_analysis_block(asignacion))
     else:
-        story.append(_empty("Aún no hay respuestas de trabajadores registradas."))
+        story.append(_empty("SIN RESPONDER"))
     story.append(Spacer(1, 12))
 
     # Verificación — Controles de Supervisión (derivado de las respuestas "No")
@@ -150,16 +150,16 @@ def generar_art_pdf(registro: dict, asignaciones: list[dict] | None = None) -> b
 
     # Aprobación — Firmas
     story.append(_section_title("Aprobación — Firmas"))
-    story.extend(_firmas_block(respondieron, registro))
+    story.extend(_firmas_block(asignaciones, registro))
     story.append(Spacer(1, 14))
 
     # Resolución del supervisor
     story.append(_section_title("Resolución del supervisor"))
     revision = [
-        ["Estado", str(registro.get("estado", "") or "-").upper()],
-        ["Comentario", registro.get("comentario_supervisor") or "Sin comentario."],
-        ["Revisado por", registro.get("revisado_por") or "-"],
-        ["Fecha revisión", registro.get("revisado_en") or "-"],
+        ["Estado", str(registro.get("estado") or "PENDIENTE").upper()],
+        ["Comentario", registro.get("comentario_supervisor") or "PENDIENTE"],
+        ["Revisado por", registro.get("revisado_por") or "PENDIENTE"],
+        ["Fecha revisión", registro.get("revisado_en") or "PENDIENTE"],
     ]
     story.append(_key_value_table(revision))
 
@@ -441,7 +441,7 @@ def _firma_cell(nombre: str, firma_b64: str | None, firma_valor: str | None) -> 
     elif firma_valor:
         contenido.append(_p(f"Firma: {firma_valor}"))
     else:
-        contenido.append(_p("Firma: ______________________", "body_muted"))
+        contenido.append(_p("Firma: SIN RESPONDER", "body_muted"))
     return contenido
 
 

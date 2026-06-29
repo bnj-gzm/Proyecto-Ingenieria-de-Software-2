@@ -250,5 +250,85 @@
     "action_url": "/art/2f1a9704",
     "read": false,
     "created_at": "2026-06-12T21:18:31.052232"
+  },
+  {
+    "id": "849d17e6-40d1-43a0-8841-58fbcb49d71b",
+    "user": "prueba1",
+    "title": "ART f168a3cf asignada",
+    "message": "ADMIN te asignó una ART para completar y validar.",
+    "action_url": "/art/f168a3cf",
+    "event_type": "ART_CREATED",
+    "read": false,
+    "created_at": "2026-06-28T22:18:08.479762"
+  },
+  {
+    "id": "245d0a85-f699-4f6c-ae54-eec14f2af406",
+    "user": "benjamin.guzman",
+    "title": "ART f168a3cf asignada",
+    "message": "ADMIN te asignó una ART para completar y validar.",
+    "action_url": "/art/f168a3cf",
+    "event_type": "ART_CREATED",
+    "read": false,
+    "created_at": "2026-06-28T22:18:08.483827"
+  },
+  {
+    "id": "6d2c114f-5e7e-4b3b-b21d-891275486052",
+    "user": "prueba2",
+    "title": "ART f168a3cf asignada",
+    "message": "ADMIN te asignó una ART para completar y validar.",
+    "action_url": "/art/f168a3cf",
+    "event_type": "ART_CREATED",
+    "read": false,
+    "created_at": "2026-06-28T22:18:08.487578"
+  },
+  {
+    "id": "47b91a45-2f96-4941-a217-18fd68e313f9",
+    "user": "prueba3",
+    "title": "ART f168a3cf asignada",
+    "message": "ADMIN te asignó una ART para completar y validar.",
+    "action_url": "/art/f168a3cf",
+    "event_type": "ART_CREATED",
+    "read": false,
+    "created_at": "2026-06-28T22:18:08.493174"
+  },
+  {
+    "id": "5c125d28-2c78-4514-a993-2e0ff875fe82",
+    "user": "prueba4",
+    "title": "ART f168a3cf asignada",
+    "message": "ADMIN te asignó una ART para completar y validar.",
+    "action_url": "/art/f168a3cf",
+    "event_type": "ART_CREATED",
+    "read": false,
+    "created_at": "2026-06-28T22:18:08.507284"
+  },
+  {
+    "id": "510fe4e3-581a-45d3-8a3d-001936395bdc",
+    "user": "prueba5",
+    "title": "ART f168a3cf asignada",
+    "message": "ADMIN te asignó una ART para completar y validar.",
+    "action_url": "/art/f168a3cf",
+    "event_type": "ART_CREATED",
+    "read": false,
+    "created_at": "2026-06-28T22:18:08.517214"
+  },
+  {
+    "id": "aea2ff16-e5f3-4c40-bf1a-5fed7a707b33",
+    "user": "admin",
+    "title": "Nueva respuesta en ART f168a3cf",
+    "message": "Prueba 1 respondió la ART y requiere revisión.",
+    "action_url": "/art/f168a3cf",
+    "event_type": "ART_RESPONSE",
+    "read": true,
+    "created_at": "2026-06-28T22:21:41.268408"
+  },
+  {
+    "id": "4f49eb70-d9c8-4331-90ee-952d880c7461",
+    "user": "admin",
+    "title": "Nueva respuesta en ART f168a3cf",
+    "message": "prueba 2 respondió la ART y requiere revisión.",
+    "action_url": "/art/f168a3cf",
+    "event_type": "ART_RESPONSE",
+    "read": false,
+    "created_at": "2026-06-29T00:34:32.719314"
   }
 ]

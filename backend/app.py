@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.src.config.database import init_db, _connect
 from backend.src.config.frontend import templates
-from backend.src.routes import auth, perfil, art, admin
+from backend.src.routes import auth, perfil, art, admin, support, realtime
 
 logging.basicConfig(
     level=logging.INFO,
@@ -56,6 +56,14 @@ async def controlled_http_error(request: Request, exc: HTTPException):
 @app.exception_handler(Exception)
 async def controlled_unhandled_error(request: Request, exc: Exception):
     logger.exception("UNHANDLED_ERROR path=%s", request.url.path)
+    try:
+        from backend.src.services import logging_service as _log_svc
+        _log_svc.log_event(
+            _log_svc.SYSTEM_ERROR_CAPTURED,
+            details={"error": str(exc)[:500], "path": str(request.url.path), "type": type(exc).__name__},
+        )
+    except Exception:
+        pass
     if not _prefers_html(request):
         return JSONResponse({"detail": "Error interno controlado."}, status_code=500)
     return templates.TemplateResponse(
@@ -87,12 +95,39 @@ async def log_errors(request: Request, call_next):
         raise
 
 
+@app.middleware("http")
+async def security_and_cache_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    response.headers.setdefault(
+        "Content-Security-Policy",
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://unpkg.com https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+        "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
+        "img-src 'self' data: blob:; connect-src 'self' ws: wss:; "
+        "object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+    )
+    if request.url.scheme == "https":
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    if request.url.path.startswith("/static/"):
+        response.headers.setdefault("Cache-Control", "public, max-age=604800, immutable")
+    else:
+        response.headers.setdefault("Cache-Control", "no-store")
+    return response
+
+
 app.mount("/static", StaticFiles(directory=str(_FRONTEND_DIR / "static")), name="static")
 
 app.include_router(auth.router)
 app.include_router(perfil.router)
 app.include_router(art.router)
 app.include_router(admin.router)
+app.include_router(support.router)
+app.include_router(realtime.router)
 
 start_time = time.time()
 logger.info("Iniciando inicialización de la base de datos...")

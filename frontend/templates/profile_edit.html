@@ -24,14 +24,18 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="grid gap-6 p-6 md:grid-cols-[240px_1fr]">
       <aside class="rounded-xl border border-line bg-slate-50 p-5 text-dartText">
+        <div id="profile-edit-photo-preview" class="image-preview-grid !mt-0">
+        <div class="image-preview-item !aspect-square">
         {% if user.foto_perfil %}
-        <img src="{{ user.foto_perfil if user.foto_perfil[:5] == 'data:' else '/static/' + user.foto_perfil }}" alt="" class="h-32 w-32 rounded-full object-cover ring-4 ring-cyan-300/40" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
-        <div class="avatar h-32 w-32 text-4xl ring-4 ring-cyan-300/40" hidden>{{ initials }}</div>
+        <img src="{{ user.foto_perfil if user.foto_perfil[:5] == 'data:' else '/static/' + user.foto_perfil }}" alt="Foto actual" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+        <div class="avatar h-full w-full text-4xl" hidden>{{ initials }}</div>
         {% else %}
-        <div class="avatar h-32 w-32 text-4xl ring-4 ring-cyan-300/40">{{ initials }}</div>
+        <div class="avatar h-full w-full text-4xl">{{ initials }}</div>
         {% endif %}
+        </div>
+        </div>
         <label class="mt-5 block text-sm font-bold text-dartMuted">Cambiar foto</label>
-        <input type="file" name="foto_perfil" accept=".jpg,.jpeg,.png,.webp" class="mt-2 w-full rounded-lg border border-line bg-white px-3 py-2 text-sm">
+        <input data-image-input data-image-max-width="768" data-preview-target="profile-edit-photo-preview" type="file" name="foto_perfil" accept=".jpg,.jpeg,.png,.webp" class="form-input mt-2 text-sm">
         <p class="mt-3 text-xs leading-5 text-dartMuted">JPG, PNG o WEBP. Máximo 2 MB.</p>
       </aside>
 

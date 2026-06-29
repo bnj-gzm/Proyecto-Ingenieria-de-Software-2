@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from backend.src.config.frontend import templates
 from backend.src.middleware.auth import get_current_user, pwd_context
 from backend.src.middleware.csrf import create_csrf_token, set_csrf_cookie, validate_csrf_token
-from backend.src.services.usuario_service import actualizar_foto_perfil, actualizar_password, actualizar_perfil, obtener_usuario
+from backend.src.services.usuario_service import actualizar_foto_perfil, actualizar_password, actualizar_perfil
 from backend.src.services.password_policy import validate_password_strength
 from backend.src.services.validation_service import normalizar_telefono_chile, validar_telefono_chile
 from backend.src.services.content_filter import PROHIBITED_LANGUAGE_MESSAGE, validate_clean_fields
@@ -47,7 +47,12 @@ def _render_profile_edit(request: Request, user: dict, error: str | None = None,
 async def _guardar_foto_perfil(request: Request, archivo: UploadFile, user: dict) -> str:
     if not archivo.filename:
         return user.get("foto_perfil") or ""
-    imagen = await save_art_image(request.app.state.profile_upload_dir, archivo, max_bytes=MAX_PROFILE_IMAGE_BYTES)
+    imagen = await save_art_image(
+        request.app.state.profile_upload_dir,
+        archivo,
+        max_bytes=MAX_PROFILE_IMAGE_BYTES,
+        max_dimensions=(768, 768),
+    )
     return imagen["src"]
 
 
@@ -83,22 +88,45 @@ def perfil_editar_form(request: Request, user=Depends(get_current_user)):
 
 
 @router.get("/notificaciones", response_class=HTMLResponse)
+@router.get("/notifications", response_class=HTMLResponse)
 def ver_notificaciones(request: Request, user=Depends(get_current_user)):
     if not user:
         return RedirectResponse("/login", status_code=303)
     notificaciones = get_notifications(user["username"])
-    return templates.TemplateResponse(
+    csrf_token = create_csrf_token()
+    response = templates.TemplateResponse(
         request,
         "notificaciones.html",
-        {"request": request, "user": user, "notificaciones": notificaciones, "title": "Notificaciones"},
+        {"request": request, "user": user, "notificaciones": notificaciones, "title": "Notificaciones", "csrf_token": csrf_token},
     )
+    set_csrf_cookie(response, csrf_token)
+    return response
+
+
+def _profile_error(request: Request, user: dict, message: str, status_code: int = 400):
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JSONResponse({"ok": False, "message": message}, status_code=status_code)
+    return _render_profile_edit(request, user, error=message)
+
+
+@router.get("/api/notificaciones")
+@router.get("/api/notifications")
+def api_notificaciones(user=Depends(get_current_user)):
+    if not user:
+        return JSONResponse({"notifications": [], "unread_count": 0}, status_code=401)
+    notifications = get_notifications(user["username"], limit=20)
+    return {
+        "notifications": notifications,
+        "unread_count": sum(1 for notification in notifications if not notification.get("read")),
+    }
 
 
 @router.post("/notificaciones/{id}/leer")
-def marcar_notificacion_leida(request: Request, id: str, user=Depends(get_current_user)):
+def marcar_notificacion_leida(request: Request, id: str, csrf_token: str = Form(...), user=Depends(get_current_user)):
     if not user:
         return RedirectResponse("/login", status_code=303)
     try:
+        validate_csrf_token(request, csrf_token)
         mark_read(id, user["username"])
     except Exception:
         pass
@@ -124,32 +152,39 @@ async def perfil_update(
     telefono = telefono.strip()
     cargo = cargo.strip()
     if not nombre:
-        return _render_profile_edit(request, user, error="El nombre no puede estar vacío.")
+        return _profile_error(request, user, "El nombre no puede estar vacío.")
     try:
         validate_clean_fields({"nombre": nombre, "cargo": cargo}, user.get("username", ""))
     except HTTPException:
-        return _render_profile_edit(request, user, error=PROHIBITED_LANGUAGE_MESSAGE)
+        return _profile_error(request, user, PROHIBITED_LANGUAGE_MESSAGE)
     if telefono and not validar_telefono_chile(telefono):
-        return _render_profile_edit(request, user, error="El teléfono debe tener formato chileno válido: +56 9 XXXX XXXX.")
+        return _profile_error(request, user, "El teléfono debe tener formato chileno válido: +56 9 XXXX XXXX.")
     telefono = normalizar_telefono_chile(telefono)
+    if password:
+        if password != password_confirm:
+            return _profile_error(request, user, "Las contraseñas no coinciden.")
+        password_ok, password_error = validate_password_strength(password)
+        if not password_ok:
+            return _profile_error(request, user, password_error)
     nueva_foto = user.get("foto_perfil") or ""
     try:
         if foto_perfil and foto_perfil.filename:
             nueva_foto = await _guardar_foto_perfil(request, foto_perfil, user)
     except HTTPException as exc:
-        return _render_profile_edit(request, user, error=str(exc.detail))
+        return _profile_error(request, user, str(exc.detail))
     actualizar_perfil(user["username"], nombre, telefono, cargo)
     if nueva_foto != (user.get("foto_perfil") or ""):
         actualizar_foto_perfil(user["username"], nueva_foto)
     if password:
-        if password != password_confirm:
-            fresh_user = obtener_usuario(user["username"]) or user
-            return _render_profile_edit(request, fresh_user, error="Las contraseñas no coinciden.")
-        password_ok, password_error = validate_password_strength(password)
-        if not password_ok:
-            fresh_user = obtener_usuario(user["username"]) or user
-            return _render_profile_edit(request, fresh_user, error=password_error)
         actualizar_password(user["username"], pwd_context.hash(password))
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JSONResponse(
+            {
+                "ok": True,
+                "message": "Perfil actualizado correctamente.",
+                "profile": {"nombre": nombre, "telefono": telefono, "cargo": cargo, "foto_perfil": nueva_foto},
+            }
+        )
     return RedirectResponse("/perfil", status_code=303)
 
 

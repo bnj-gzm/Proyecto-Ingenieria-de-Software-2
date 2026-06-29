@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block page_title %}Soporte{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+  <section class="premium-hero p-6 sm:p-8">
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <p class="text-sm font-black uppercase text-techCyan">Operación de soporte</p>
+        <h1 class="mt-2 text-3xl font-black text-dartText sm:text-4xl">Tickets de usuarios</h1>
+        <p class="mt-2 max-w-2xl text-dartMuted">Revisa incidencias, prioriza mejoras y mantén trazabilidad hasta su resolución.</p>
+      </div>
+      <div class="status-badge status-{{ 'pendiente' if counts.open else 'activo' }}">{{ counts.open }} abiertos</div>
+    </div>
+  </section>
+
+  <section class="grid gap-4 sm:grid-cols-3">
+    <article class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Abiertos</p><p class="mt-3 text-3xl font-black text-dartText">{{ counts.open }}</p></article>
+    <article class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">En progreso</p><p class="mt-3 text-3xl font-black text-dartText">{{ counts.in_progress }}</p></article>
+    <article class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Resueltos</p><p class="mt-3 text-3xl font-black text-dartText">{{ counts.resolved }}</p></article>
+  </section>
+
+  <section class="app-card overflow-hidden">
+    <div class="app-card-header">
+      <h2 class="text-xl font-black text-dartText">Bandeja de soporte</h2>
+      <p class="mt-1 text-sm text-dartMuted">Los tickets abiertos aparecen primero.</p>
+    </div>
+    <div class="divide-y divide-slate-200">
+      {% for ticket in tickets %}
+      <article class="grid gap-5 p-5 transition hover:bg-slate-50/70 lg:grid-cols-[180px_1fr_220px] lg:p-6">
+        <div>
+          <span class="status-badge status-{{ 'pendiente' if ticket.status == 'open' else 'respondido' if ticket.status == 'in_progress' else 'activo' }}">
+            {{ 'abierto' if ticket.status == 'open' else 'en progreso' if ticket.status == 'in_progress' else 'resuelto' }}
+          </span>
+          <p class="mt-3 text-xs font-black uppercase text-techCyan">{{ ticket.type }}</p>
+          <p class="mt-1 text-xs text-dartMuted">{{ ticket.created_at.strftime('%d-%m-%Y %H:%M') if ticket.created_at else '' }}</p>
+        </div>
+        <div class="min-w-0">
+          <p class="font-black text-dartText">{{ ticket.user_name }}</p>
+          <p class="mt-1 break-all text-sm font-semibold text-dartMuted">{{ ticket.email }}</p>
+          <p class="mt-4 whitespace-pre-wrap rounded-xl border border-line bg-slate-50 p-4 text-sm leading-6 text-dartText">{{ ticket.message }}</p>
+          <p class="mt-2 truncate text-xs text-dartMuted">ID {{ ticket.id }}</p>
+        </div>
+        <form method="post" action="/admin/support/{{ ticket.id }}/status" class="self-start rounded-xl border border-line bg-white p-4">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <label class="form-label" for="status-{{ ticket.id }}">Estado</label>
+          <select id="status-{{ ticket.id }}" name="status" class="form-select">
+            <option value="open" {% if ticket.status == 'open' %}selected{% endif %}>Abierto</option>
+            <option value="in_progress" {% if ticket.status == 'in_progress' %}selected{% endif %}>En progreso</option>
+            <option value="resolved" {% if ticket.status == 'resolved' %}selected{% endif %}>Resuelto</option>
+          </select>
+          <button type="submit" class="btn-primary mt-3 w-full">Actualizar</button>
+        </form>
+      </article>
+      {% else %}
+      <div class="p-12 text-center">
+        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-xl text-dartMuted"><i class="fa-regular fa-life-ring"></i></div>
+        <h3 class="mt-4 font-black text-dartText">Sin tickets todavía</h3>
+        <p class="mt-1 text-sm text-dartMuted">Las solicitudes enviadas desde el botón de ayuda aparecerán aquí.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

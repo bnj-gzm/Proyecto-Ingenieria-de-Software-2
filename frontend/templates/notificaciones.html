@@ -1,34 +1,50 @@
 {% extends "base.html" %}
 
+{% block page_title %}Notificaciones{% endblock %}
+
 {% block content %}
-<div class="max-w-3xl mx-auto bg-white p-6 rounded shadow">
-  <h2 class="text-2xl font-bold mb-4">Notificaciones</h2>
-  {% if notificaciones %}
-  <div class="space-y-3">
-    {% for n in notificaciones %}
-    <div class="border rounded p-3 flex justify-between items-center">
-      <div>
-        <div class="font-medium">{{ n.title }}</div>
-        <div class="text-gray-600">{{ n.message }}</div>
-        <div class="text-xs text-slate-400 mt-1">{{ n.created_at }}</div>
-        {% if n.action_url %}
-        <a href="{{ n.action_url }}" class="mt-2 inline-flex rounded px-3 py-2 bg-slate-900 text-white text-sm font-bold">Abrir ART</a>
-        {% endif %}
-      </div>
-      <div class="text-right">
+<div class="mx-auto max-w-4xl space-y-6">
+  <section class="premium-hero p-6 sm:p-8">
+    <p class="text-sm font-black uppercase text-techCyan">Centro de actividad</p>
+    <h1 class="mt-2 text-3xl font-black text-dartText">Notificaciones</h1>
+    <p class="mt-2 text-dartMuted">Asignaciones, respuestas y acciones que requieren tu atención.</p>
+  </section>
+
+  <section class="app-card overflow-hidden">
+    {% if notificaciones %}
+    <div class="divide-y divide-slate-200">
+      {% for n in notificaciones %}
+      <article class="flex flex-col gap-4 p-5 transition hover:bg-slate-50/70 sm:flex-row sm:items-start sm:justify-between {% if not n.read %}border-l-4 border-l-cyan-500{% endif %}">
+        <div class="flex min-w-0 gap-4">
+          <span class="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cyan-100 text-techCyan"><i class="fa-regular fa-bell"></i></span>
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <h2 class="font-black text-dartText">{{ n.title }}</h2>
+              {% if not n.read %}<span class="status-badge status-respondido">Nueva</span>{% endif %}
+            </div>
+            <p class="mt-1 text-sm leading-6 text-dartMuted">{{ n.message }}</p>
+            <p class="mt-2 text-xs font-bold text-dartMuted">{{ n.created_at[:16].replace('T', ' ') }}</p>
+            {% if n.action_url %}<a href="{{ n.action_url }}" class="btn-secondary mt-3 px-3 py-2 text-sm">Abrir detalle</a>{% endif %}
+          </div>
+        </div>
         {% if not n.read %}
-        <form method="post" action="/notificaciones/{{ n.id }}/leer">
-          <button type="submit" class="rounded px-3 py-2 bg-cyan-600 text-white">Marcar como leído</button>
+        <form method="post" action="/notificaciones/{{ n.id }}/leer" class="shrink-0">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="btn-primary px-3 py-2 text-sm">Marcar como leída</button>
         </form>
         {% else %}
-        <span class="text-sm text-slate-500">Leído</span>
+        <span class="text-sm font-bold text-dartMuted">Leída</span>
         {% endif %}
-      </div>
+      </article>
+      {% endfor %}
     </div>
-    {% endfor %}
-  </div>
-  {% else %}
-  <div class="text-slate-600">No tienes notificaciones.</div>
-  {% endif %}
+    {% else %}
+    <div class="p-12 text-center">
+      <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-xl text-dartMuted"><i class="fa-regular fa-bell-slash"></i></div>
+      <h2 class="mt-4 font-black text-dartText">Todo al día</h2>
+      <p class="mt-1 text-sm text-dartMuted">No tienes notificaciones pendientes.</p>
+    </div>
+    {% endif %}
+  </section>
 </div>
 {% endblock %}

@@ -209,10 +209,10 @@
           {% if registro.evidencia %}
           <div class="grid gap-3">
             {% for imagen in registro.evidencia %}
-            <a href="{{ imagen.src }}" target="_blank" rel="noopener">
-              <img src="{{ imagen.src }}" alt="Evidencia ART {{ registro.id }}" class="h-48 w-full rounded-lg border object-cover" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+            <button type="button" class="art-lightbox-trigger block w-full" aria-label="Ampliar evidencia ART {{ registro.id }}">
+              <img src="{{ imagen.src }}" alt="Evidencia ART {{ registro.id }}" loading="lazy" decoding="async" class="art-visual h-48 w-full rounded-lg border object-cover" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
               <div class="flex h-48 w-full items-center justify-center rounded-lg border border-dashed border-line bg-slate-50 text-sm font-bold text-dartMuted" hidden>Imagen no disponible</div>
-            </a>
+            </button>
             {% endfor %}
           </div>
           {% else %}
@@ -223,9 +223,9 @@
 
       {% if puede_descargar_pdf %}
       <section class="app-card app-card-body border-l-4 border-l-green-500">
-        <h2 class="text-xl font-black">Documento listo</h2>
-        <p class="mt-2 text-sm text-dartMuted">La ART ya tiene resolución y puede descargarse.</p>
-        <a href="/art/{{ registro.id }}/pdf" class="btn-dark mt-4">Descargar PDF</a>
+        <h2 class="text-xl font-black">PDF general de la ART</h2>
+        <p class="mt-2 text-sm text-dartMuted">Disponible durante todo el flujo; los datos aún incompletos aparecerán como pendientes.</p>
+        <a href="/art/{{ registro.id }}/pdf" class="btn-dark mt-4">Descargar PDF ART General</a>
       </section>
       {% endif %}
     </aside>

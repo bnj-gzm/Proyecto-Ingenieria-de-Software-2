@@ -10,7 +10,7 @@ from fastapi import HTTPException
 logger = logging.getLogger("dart.content_filter")
 
 PROHIBITED_LANGUAGE_MESSAGE = (
-    "El campo contiene lenguaje no permitido. Por favor corrige el texto antes de continuar."
+    "El contenido ingresado no es válido."
 )
 
 
@@ -38,6 +38,8 @@ PROHIBITED_TERMS: tuple[ProhibitedTerm, ...] = (
     ProhibitedTerm("chuchatumadre"),
     ProhibitedTerm("weon"),
     ProhibitedTerm("weona"),
+    ProhibitedTerm("hueon"),
+    ProhibitedTerm("hueona"),
     ProhibitedTerm("huevon"),
     ProhibitedTerm("huevona"),
     ProhibitedTerm("wn"),
@@ -48,8 +50,14 @@ PROHIBITED_TERMS: tuple[ProhibitedTerm, ...] = (
     ProhibitedTerm("saco de weas"),
     ProhibitedTerm("sdw"),
     ProhibitedTerm("sacowea"),
+    ProhibitedTerm("saco wea"),
     ProhibitedTerm("pico", allow_phrases=("pico truncado", "pico y pala", "pico de loro")),
+    ProhibitedTerm("pene"),
     ProhibitedTerm("tula"),
+    ProhibitedTerm("porno"),
+    ProhibitedTerm("hentai"),
+    ProhibitedTerm("pornografia"),
+    ProhibitedTerm("masturbacion"),
     ProhibitedTerm("zorra"),
     ProhibitedTerm("poto"),
     ProhibitedTerm("raja"),
@@ -65,6 +73,7 @@ PROHIBITED_TERMS: tuple[ProhibitedTerm, ...] = (
     ProhibitedTerm("perkin"),
     ProhibitedTerm("sapo"),
     ProhibitedTerm("bastardo"),
+    ProhibitedTerm("idiota"),
     ProhibitedTerm("idiot"),
     ProhibitedTerm("stupid"),
     ProhibitedTerm("asshole"),
@@ -76,6 +85,73 @@ PROHIBITED_TERMS: tuple[ProhibitedTerm, ...] = (
     ProhibitedTerm("moron"),
     ProhibitedTerm("whore"),
     ProhibitedTerm("slut"),
+    # Insultos adicionales chilenos/latinoamericanos
+    ProhibitedTerm("conchetumadre"),
+    ProhibitedTerm("chupapico"),
+    ProhibitedTerm("culiaa"),
+    ProhibitedTerm("hdp"),
+    ProhibitedTerm("hijodeputa"),
+    ProhibitedTerm("hijodeperra"),
+    ProhibitedTerm("concha"),
+    ProhibitedTerm("aweonada"),
+    ProhibitedTerm("recula"),
+    ProhibitedTerm("qliao"),
+    ProhibitedTerm("poto"),
+    ProhibitedTerm("mierda"),
+    ProhibitedTerm("mierdas"),
+    ProhibitedTerm("chupame"),
+    ProhibitedTerm("marica"),
+    ProhibitedTerm("maricas"),
+    ProhibitedTerm("puta"),
+    ProhibitedTerm("putas"),
+    ProhibitedTerm("putita"),
+    ProhibitedTerm("pendejo"),
+    ProhibitedTerm("pendeja"),
+    ProhibitedTerm("puto"),
+    ProhibitedTerm("putos"),
+    ProhibitedTerm("cabron"),
+    ProhibitedTerm("cabrona"),
+    ProhibitedTerm("imbecil"),
+    ProhibitedTerm("imbeciles"),
+    ProhibitedTerm("huevada"),
+    ProhibitedTerm("wea"),
+    ProhibitedTerm("weada"),
+    # Términos sexuales explícitos
+    ProhibitedTerm("porno"),
+    ProhibitedTerm("sexo"),
+    ProhibitedTerm("follar"),
+    ProhibitedTerm("coger"),
+    ProhibitedTerm("cogeme"),
+    ProhibitedTerm("mamame"),
+    ProhibitedTerm("culear"),
+    ProhibitedTerm("culiar"),
+    ProhibitedTerm("coño"),
+    ProhibitedTerm("cono"),
+    ProhibitedTerm("pija"),
+    ProhibitedTerm("verga"),
+    ProhibitedTerm("vergon"),
+    ProhibitedTerm("orgasmo"),
+    ProhibitedTerm("eyacula"),
+    ProhibitedTerm("desnuda"),
+    ProhibitedTerm("nudes"),
+    ProhibitedTerm("nude"),
+    ProhibitedTerm("xxx"),
+    # Variantes inglesas adicionales
+    ProhibitedTerm("fucker"),
+    ProhibitedTerm("motherfucker"),
+    ProhibitedTerm("cock"),
+    ProhibitedTerm("dick"),
+    ProhibitedTerm("pussy"),
+    ProhibitedTerm("cunt"),
+    ProhibitedTerm("nigger"),
+    ProhibitedTerm("faggot"),
+    ProhibitedTerm("retard"),
+    ProhibitedTerm("retarded"),
+    ProhibitedTerm("jackass"),
+    ProhibitedTerm("dumbass"),
+    ProhibitedTerm("bullshit"),
+    ProhibitedTerm("dipshit"),
+    ProhibitedTerm("jerk"),
 )
 
 _LEET_TRANSLATION = str.maketrans(
@@ -88,7 +164,6 @@ _LEET_TRANSLATION = str.maketrans(
     }
 )
 
-_COMPACT_SEPARATORS_RE = re.compile(r"[^a-z0-9]+")
 _SPACES_RE = re.compile(r"\s+")
 
 
@@ -108,42 +183,32 @@ def _normalize_text_with_one(text: str, one_replacement: str) -> str:
     value = value.translate(_LEET_TRANSLATION)
     value = value.replace("1", one_replacement)
     value = re.sub(r"[!|]", "i", value)
+    value = re.sub(r"([a-z])\1+", r"\1", value)
     value = re.sub(r"[^a-z0-9]+", " ", value)
     return _SPACES_RE.sub(" ", value).strip()
-
-
-def _compact_text(text: str) -> str:
-    return _COMPACT_SEPARATORS_RE.sub("", normalize_text(text))
 
 
 def _normalized_variants(text: str) -> set[str]:
     return {_normalize_text_with_one(text, "i"), _normalize_text_with_one(text, "l")}
 
 
-def _matches_term(normalized: str, compact: str, term: ProhibitedTerm) -> bool:
+def _matches_term(normalized: str, term: ProhibitedTerm) -> bool:
     normalized_term = normalize_text(term.term)
-    compact_term = _compact_text(term.term)
-    if term.allow_phrases and any(normalize_text(phrase) in normalized for phrase in term.allow_phrases):
-        return False
-    if " " in normalized_term:
-        return normalized_term in normalized or compact_term in compact
-    if re.search(rf"(?<![a-z0-9]){re.escape(normalized_term)}(?![a-z0-9])", normalized):
-        return True
-    return compact_term in compact
+    candidate = normalized
+    for phrase in term.allow_phrases:
+        candidate = candidate.replace(normalize_text(phrase), " ")
+    compact_term = normalized_term.replace(" ", "")
+    obfuscated_pattern = r"\s*".join(re.escape(char) for char in compact_term)
+    return bool(re.search(rf"(?<![a-z0-9]){obfuscated_pattern}(?![a-z0-9])", candidate))
 
 
 def find_prohibited_terms(text: str) -> list[str]:
     if not text:
         return []
     normalized_variants = _normalized_variants(text)
-    compact_variants = {_COMPACT_SEPARATORS_RE.sub("", item) for item in normalized_variants}
     found: list[str] = []
     for term in PROHIBITED_TERMS:
-        if any(
-            _matches_term(normalized, compact, term)
-            for normalized in normalized_variants
-            for compact in compact_variants
-        ):
+        if any(_matches_term(normalized, term) for normalized in normalized_variants):
             found.append(term.term)
     return found
 

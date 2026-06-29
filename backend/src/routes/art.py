@@ -48,10 +48,40 @@ from backend.src.services.pdf_service import generar_art_pdf, generar_respuesta_
 from backend.src.services.upload_service import save_art_image
 from backend.src.services.usuario_service import cargar_usuarios_asignables, cargar_usuarios_por_rol
 from backend.src.services.notification_service import add_notification
+from backend.src.services.realtime_service import realtime_manager
 
 
 router = APIRouter()
 logger = logging.getLogger("dart.art")
+
+
+async def _notify_supervisor_art_response(registro: dict, asignacion: dict) -> None:
+    supervisor = (registro.get("supervisor_asignado") or "").strip()
+    if not supervisor:
+        return
+    try:
+        notification = add_notification(
+            supervisor,
+            f"Nueva respuesta en ART {registro['id']}",
+            f"{asignacion.get('nombre') or asignacion.get('email') or 'Un trabajador'} respondió la ART y requiere revisión.",
+            f"/art/{registro['id']}",
+            "ART_RESPONSE",
+        )
+        await realtime_manager.send_notification(notification)
+        logger.info(
+            "NOTIFICATION_ART_RESPONSE art_id=%s assignment_id=%s supervisor=%s notification_id=%s",
+            registro["id"],
+            asignacion.get("id", ""),
+            supervisor,
+            notification["id"],
+        )
+    except Exception:
+        logger.exception(
+            "notification_art_response_failed art_id=%s assignment_id=%s supervisor=%s",
+            registro.get("id", ""),
+            asignacion.get("id", ""),
+            supervisor,
+        )
 
 _CHECKLIST = [
     "Me encuentro en condiciones físicas y psicológicas aptas para realizar la actividad.",
@@ -269,6 +299,28 @@ def _es_asignado(registro: dict, user: dict) -> bool:
     )
 
 
+def _es_trabajador_asignado_pdf(registro: dict, user: dict) -> bool:
+    """Valida la pertenencia usando las asignaciones actuales y el respaldo legacy."""
+    if user.get("rol") != USER:
+        return False
+    trabajador_id = str(user.get("id") or "")
+    asignaciones = registro.get("asignaciones") or []
+    if asignaciones:
+        return bool(trabajador_id) and any(
+            str(asignacion.get("trabajador_id") or "") == trabajador_id
+            for asignacion in asignaciones
+        )
+    return _es_asignado(registro, user)
+
+
+def _puede_descargar_pdf_general(registro: dict, user: dict) -> bool:
+    if user.get("rol") == "admin":
+        return True
+    if user.get("rol") == SUPERVISOR:
+        return _es_supervisor_asignado(registro, user)
+    return _es_trabajador_asignado_pdf(registro, user)
+
+
 def _puede_ver_art(registro: dict, user: dict) -> bool:
     return (
         user.get("rol") == "admin"
@@ -454,13 +506,23 @@ async def guardar_art(
     guardar_registro(registro)
     guardar_trabajadores_art(id_art, trabajadores_asignados_lista)
     guardar_asignaciones_art(id_art, trabajadores_asignados_lista)
+    try:
+        from backend.src.services import logging_service as _log_svc
+        _log_svc.log_event(_log_svc.ART_CREATED, username=user.get("username", ""), details={"art_id": id_art})
+    except Exception:
+        pass
     for trabajador_user in trabajadores_asignados_lista:
-        add_notification(
-            trabajador_user["username"],
-            f"ART {id_art} asignada",
-            f"{user.get('nombre') or user.get('username')} te asignó una ART para completar y validar.",
-            f"/art/{id_art}",
-        )
+        try:
+            notification = add_notification(
+                trabajador_user["username"],
+                f"ART {id_art} asignada",
+                f"{user.get('nombre') or user.get('username')} te asignó una ART para completar y validar.",
+                f"/art/{id_art}",
+                "ART_CREATED",
+            )
+            await realtime_manager.send_notification(notification)
+        except Exception:
+            logger.exception("art_created_notification_failed art_id=%s user=%s", id_art, trabajador_user["username"])
     logger.info(
         "ART_CREATED_OK art_id=%s created_by=%s supervisor=%s assigned_workers=%s",
         id_art,
@@ -514,7 +576,7 @@ def enviar_art_trabajadores(
             fallidos += 1
             marcar_envio_asignacion(preparada["id"], "envio_fallido")
             logger.error(
-                "EMAIL_FAILED context=art_assignment art_id=%s assignment_id=%s to=%s error=%s",
+                "EMAIL_SENT_FAIL context=art_assignment art_id=%s assignment_id=%s to=%s error=%s",
                 id_art,
                 preparada["id"],
                 preparada.get("email", ""),
@@ -561,7 +623,7 @@ def enviar_art_trabajador(
         )
     else:
         logger.error(
-            "EMAIL_FAILED context=art_assignment art_id=%s assignment_id=%s to=%s error=%s",
+            "EMAIL_SENT_FAIL context=art_assignment art_id=%s assignment_id=%s to=%s error=%s",
             id_art,
             preparada["id"],
             preparada.get("email", ""),
@@ -672,6 +734,7 @@ async def guardar_formulario_trabajador_token(
         firma_imagen_base64.strip(),
         evidencia_archivos,
     )
+    await _notify_supervisor_art_response(registro, asignacion)
     return RedirectResponse(f"/art/trabajador/{token}", status_code=303)
 
 
@@ -738,6 +801,9 @@ async def responder_art_asignada_post(
         firma_imagen_base64.strip(),
         evidencia_archivos,
     )
+    registro = obtener_registro(asignacion["art_id"])
+    if registro:
+        await _notify_supervisor_art_response(registro, asignacion)
     return RedirectResponse(f"/art/asignada/{id_asignacion}/respuesta", status_code=303)
 
 
@@ -806,7 +872,7 @@ def detalle_art(request: Request, id_art: str, user=Depends(get_current_user)):
             "puede_revisar": puede_revisar,
             "puede_editar": _puede_editar_art(registro, user),
             "puede_validar": _puede_validar_art(registro, user),
-            "puede_descargar_pdf": registro.get("estado") in {"aprobada", "rechazada"},
+            "puede_descargar_pdf": _puede_descargar_pdf_general(registro, user),
             "trabajadores_art": trabajadores_art,
             "validacion_actual": validacion_actual,
             "todos_validados": todos_validados,
@@ -1096,14 +1162,9 @@ def descargar_art_pdf(id_art: str, user=Depends(get_current_user)):
         return RedirectResponse("/login", status_code=303)
     registro = obtener_registro(id_art)
     if not registro:
-        return RedirectResponse("/dashboard", status_code=303)
-    supervisor_asignado = _es_supervisor_asignado(registro, user)
-    if not _puede_ver_art(registro, user):
-        return RedirectResponse("/dashboard", status_code=303)
-    if user.get("rol") == SUPERVISOR and not supervisor_asignado:
-        return RedirectResponse("/dashboard", status_code=303)
-    if registro.get("estado") not in {"aprobada", "rechazada"}:
-        raise HTTPException(status_code=400, detail="El PDF estará disponible cuando la ART sea aprobada o rechazada")
+        raise HTTPException(status_code=404, detail="ART no encontrada")
+    if not _puede_descargar_pdf_general(registro, user):
+        raise HTTPException(status_code=403, detail="No tienes permiso para descargar este PDF")
     pdf = generar_art_pdf(registro)  # registro ya trae sus asignaciones
     return Response(
         content=pdf,
