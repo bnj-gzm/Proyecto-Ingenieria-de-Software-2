@@ -105,7 +105,7 @@ _EPP = [
     "Arnés de seguridad",
 ]
 
-MIN_TRABAJADORES_ART = 6
+MIN_TRABAJADORES_ART = 3
 ANSWERED_ASSIGNMENT_STATES = {"respondido", "con_observacion", "aprobado", "rechazado"}
 FINAL_REVIEW_STATES = {"aprobado", "rechazado"}
 
