@@ -150,12 +150,12 @@ class ContentFilterTests(unittest.TestCase):
         with self.assertLogs("dart.content_filter", level="WARNING") as captured:
             with self.assertRaises(HTTPException) as raised:
                 validate_clean_text("eres un idiota", "comentario", "persona")
-        self.assertEqual(raised.exception.detail, PROHIBITED_LANGUAGE_MESSAGE)
-        self.assertEqual(raised.exception.detail, "El contenido ingresado no es válido.")
+        self.assertEqual(raised.exception.detail, "El contenido del campo 'comentario' no es válido.")
         self.assertIn("CONTENT_BLOCKED", "\n".join(captured.output))
 
     def test_does_not_block_allowed_operational_phrase(self):
         self.assertFalse(contains_prohibited_language("Usar pico y pala según procedimiento"))
+        self.assertFalse(contains_prohibited_language("Instalar cono de seguridad en el acceso"))
 
 
 if __name__ == "__main__":

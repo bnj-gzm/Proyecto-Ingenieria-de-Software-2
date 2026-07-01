@@ -125,8 +125,9 @@ PROHIBITED_TERMS: tuple[ProhibitedTerm, ...] = (
     ProhibitedTerm("mamame"),
     ProhibitedTerm("culear"),
     ProhibitedTerm("culiar"),
-    ProhibitedTerm("coño"),
-    ProhibitedTerm("cono"),
+    # "cono" es vocabulario operacional válido (p. ej. cono de seguridad).
+    # No se puede distinguir de "coño" después de eliminar tildes, por lo que
+    # ambos se omiten para evitar bloquear ART legítimas.
     ProhibitedTerm("pija"),
     ProhibitedTerm("verga"),
     ProhibitedTerm("vergon"),
@@ -222,7 +223,10 @@ def validate_clean_text(text: str, field_name: str, user: str = "") -> None:
     if not found:
         return
     logger.warning("CONTENT_BLOCKED field=%s user=%s", field_name, user or "anonymous")
-    raise HTTPException(status_code=400, detail=PROHIBITED_LANGUAGE_MESSAGE)
+    raise HTTPException(
+        status_code=400,
+        detail=f"El contenido del campo '{field_name}' no es válido.",
+    )
 
 
 def validate_clean_fields(fields: dict[str, Any], user: str = "") -> None:

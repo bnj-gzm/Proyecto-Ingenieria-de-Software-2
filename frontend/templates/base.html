@@ -774,7 +774,7 @@
                 window.setTimeout(() => toast.remove(), 6200);
             }
 
-            document.querySelectorAll(".alert-success, .alert-error").forEach((alert) => {
+            document.querySelectorAll(".alert-success:not([data-inline-alert]), .alert-error:not([data-inline-alert])").forEach((alert) => {
                 const message = alert.textContent.trim();
                 if (!message) return;
                 makeToast(message, alert.classList.contains("alert-success") ? "success" : "error");
@@ -786,7 +786,7 @@
     </script>
     <script src="/static/js/content-filter.js"></script>
     <script src="/static/js/app-ui.js?v=20260701.1"></script>
-    <script src="/static/js/risk-table.js?v=20260629.2"></script>
+    <script src="/static/js/risk-table.js?v=20260701.1"></script>
     <script>
         (function () {
             const root = document.documentElement;

@@ -59,6 +59,12 @@ class DynamicRiskRowsTests(unittest.TestCase):
         self.assertIn("risk-table-scroll", self.edit_art)
         self.assertIn("[data-risk-field] { min-height:", self.base)
 
+    def test_creation_serializes_risk_rows_as_a_real_json_array(self):
+        self.assertIn('name="riesgos_json"', self.new_art)
+        self.assertIn("data-risks-json", self.new_art)
+        self.assertIn("JSON.stringify(riskRowsState)", self.risk_ui)
+        self.assertIn('riesgos_json: str = Form("")', inspect.getsource(art.guardar_art))
+
     def test_incomplete_and_empty_rows_block_submission_visually(self):
         self.assertIn('currentRows.length >= 1', self.risk_ui)
         self.assertIn('event.preventDefault()', self.risk_ui)
@@ -68,7 +74,7 @@ class DynamicRiskRowsTests(unittest.TestCase):
         self.assertIn('.risk-field-invalid', self.base)
 
     def test_dedicated_controller_is_cache_busted_and_initialized_once(self):
-        self.assertIn('/static/js/risk-table.js?v=20260629.2', self.base)
+        self.assertIn('/static/js/risk-table.js?v=20260701.1', self.base)
         self.assertIn('riskInitialized', self.risk_ui)
         self.assertNotIn('[data-risk-form]', self.app_ui)
 

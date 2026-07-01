@@ -1,4 +1,5 @@
 from datetime import datetime
+import json
 import logging
 from typing import List, Optional
 import uuid
@@ -384,23 +385,42 @@ def nueva_art(request: Request, user=Depends(get_current_user)):
         return RedirectResponse("/login", status_code=303)
     if not can_create_art(user.get("rol", "")):
         return RedirectResponse("/dashboard", status_code=303)
+    return _render_nueva_art_form(request, user)
+
+
+def _render_nueva_art_form(
+    request: Request,
+    user: dict,
+    *,
+    error: str | None = None,
+    status_code: int = 200,
+    form_values: dict | None = None,
+    form_riesgos: list[dict] | None = None,
+    trabajadores_seleccionados: list[str] | None = None,
+    reglas_seleccionadas: list[str] | None = None,
+    condiciones_seleccionadas: dict[str, str] | None = None,
+):
     csrf_token = create_csrf_token()
-    trabajadores = _usuarios_asignables()
     response = templates.TemplateResponse(
         request,
         "nueva_art.html",
         {
             "request": request,
             "user": user,
-            "trabajadores": trabajadores,
+            "trabajadores": _usuarios_asignables(),
             "min_trabajadores": MIN_TRABAJADORES_ART,
             "fecha_actual": datetime.now().strftime("%Y-%m-%d"),
             "reglas_disponibles": REGLAS_QUE_SALVAN_LA_VIDA,
-            "reglas_seleccionadas": [],
+            "reglas_seleccionadas": reglas_seleccionadas or [],
             "condiciones_supervisor": CONDICIONES_SUPERVISOR,
-            "condiciones_seleccionadas": {},
+            "condiciones_seleccionadas": condiciones_seleccionadas or {},
+            "trabajadores_seleccionados": trabajadores_seleccionados or [],
+            "form_values": form_values or {},
+            "form_riesgos": form_riesgos or [],
+            "form_error": error,
             "csrf_token": csrf_token,
         },
+        status_code=status_code,
     )
     set_csrf_cookie(response, csrf_token)
     return response
@@ -426,6 +446,7 @@ async def guardar_art(
     secuencia: Optional[List[str]] = Form(None),
     riesgo: Optional[List[str]] = Form(None),
     control: Optional[List[str]] = Form(None),
+    riesgos_json: str = Form(""),
     observaciones: str = Form(""),
     evidencia: Optional[List[UploadFile]] = File(None),
     csrf_token: str = Form(...),
@@ -436,8 +457,56 @@ async def guardar_art(
     if not can_create_art(user.get("rol", "")):
         raise HTTPException(status_code=403, detail="No tienes permiso para crear ART")
     validate_csrf_token(request, csrf_token)
-    trabajadores_disponibles = _usuarios_asignables()
     seleccion = list(dict.fromkeys(trabajadores_asignados or trabajador_asignado or []))
+    reglas_seleccionadas = [item for item in (reglas_vida or []) if item in REGLAS_VIDA_IDS]
+    form_values = {
+        "empresa": empresa,
+        "area": area,
+        "tipo_tarea": tipo_tarea,
+        "descripcion": descripcion,
+        "supervisor_asignado": supervisor_asignado,
+        "gerencia": gerencia,
+        "hora_inicio": hora_inicio,
+        "hora_termino": hora_termino,
+        "lugar": lugar,
+        "observaciones": observaciones,
+    }
+    form = await request.form()
+    condiciones_seleccionadas = {
+        pregunta["id"]: str(form.get(f"supervisor_cond_{pregunta['id']}", "")).strip().lower()
+        for pregunta in CONDICIONES_SUPERVISOR
+    }
+
+    def validation_error(message: str, stage: str, riesgos_form: list[dict] | None = None):
+        logger.warning(
+            "ART_CREATE_VALIDATION_FAILED stage=%s user=%s workers=%s risk_rows=%s detail=%s",
+            stage,
+            user.get("username", ""),
+            len(seleccion),
+            len(riesgos_form or []),
+            message,
+        )
+        return _render_nueva_art_form(
+            request,
+            user,
+            error=message,
+            status_code=400,
+            form_values=form_values,
+            form_riesgos=riesgos_form,
+            trabajadores_seleccionados=[str(item) for item in seleccion],
+            reglas_seleccionadas=reglas_seleccionadas,
+            condiciones_seleccionadas=condiciones_seleccionadas,
+        )
+
+    logger.info(
+        "ART_CREATE_VALIDATION_START user=%s workers_received=%s risk_json_present=%s evidence_files=%s",
+        user.get("username", ""),
+        len(seleccion),
+        bool(riesgos_json.strip()),
+        len(evidencia or []),
+    )
+    logger.info("ART_CREATE_VALIDATION stage=trabajadores user=%s", user.get("username", ""))
+    trabajadores_disponibles = _usuarios_asignables()
     ids_asignados = {int(item) for item in seleccion if str(item).isdigit()}
     usernames_asignados = {item for item in seleccion if not str(item).isdigit()}
     trabajadores_asignados_lista = [
@@ -446,41 +515,86 @@ async def guardar_art(
         if trabajador["id"] in ids_asignados or trabajador["username"] in usernames_asignados
     ]
     if len(trabajadores_asignados_lista) < MIN_TRABAJADORES_ART:
-        raise HTTPException(status_code=400, detail=f"Debes seleccionar al menos {MIN_TRABAJADORES_ART} trabajadores registrados")
+        return validation_error(
+            f"Trabajadores asignados: debes seleccionar al menos {MIN_TRABAJADORES_ART} trabajadores activos y distintos.",
+            "trabajadores",
+        )
     supervisor_user = next((u for u in cargar_usuarios_por_rol(SUPERVISOR) if u["username"] == supervisor_asignado), None)
     trabajador = ", ".join(
         trabajador_user.get("nombre_completo") or trabajador_user.get("nombre") or trabajador_user.get("email") or trabajador_user["username"]
         for trabajador_user in trabajadores_asignados_lista
     )
     supervisor = (supervisor_user or {}).get("nombre_completo") or (supervisor_user or {}).get("nombre") or supervisor_asignado
-    riesgos = []
-    for seq, risk, ctrl in zip(secuencia or [], riesgo or [], control or []):
-        if seq.strip() or risk.strip() or ctrl.strip():
-            riesgos.append({"secuencia": seq.strip(), "riesgo": risk.strip(), "control": ctrl.strip()})
-    if not riesgos or any(not item["secuencia"] or not item["riesgo"] or not item["control"] for item in riesgos):
-        raise HTTPException(status_code=400, detail="Debes completar secuencia, riesgo y control")
-    validate_clean_fields(
-        {
-            "empresa": empresa,
-            "area": area,
-            "tipo_tarea": tipo_tarea,
-            "descripcion": descripcion,
-            "observaciones": observaciones,
-            "gerencia": gerencia,
-            "lugar": lugar,
-            "secuencia": [item["secuencia"] for item in riesgos],
-            "riesgo": [item["riesgo"] for item in riesgos],
-            "control": [item["control"] for item in riesgos],
-        },
-        user.get("username", ""),
-    )
-    reglas_seleccionadas = [item for item in (reglas_vida or []) if item in REGLAS_VIDA_IDS]
-    condiciones_supervisor = await _leer_condiciones_supervisor(request)
+    riesgos: list[dict[str, str]] = []
+    logger.info("ART_CREATE_VALIDATION stage=riesgos user=%s", user.get("username", ""))
+    if riesgos_json.strip():
+        try:
+            decoded_risks = json.loads(riesgos_json)
+        except json.JSONDecodeError:
+            return validation_error("Riesgos: el formato recibido no es JSON válido.", "riesgos_json")
+        if not isinstance(decoded_risks, list):
+            return validation_error("Riesgos: se esperaba una lista de filas.", "riesgos_json")
+        for index, item in enumerate(decoded_risks, start=1):
+            if not isinstance(item, dict):
+                return validation_error(f"Riesgos: la fila {index} no tiene un formato válido.", "riesgos_json", riesgos)
+            riesgos.append(
+                {
+                    "secuencia": str(item.get("actividad") or item.get("secuencia") or "").strip(),
+                    "riesgo": str(item.get("riesgo") or "").strip(),
+                    "control": str(item.get("control") or "").strip(),
+                }
+            )
+    else:
+        if not (len(secuencia or []) == len(riesgo or []) == len(control or [])):
+            return validation_error("Riesgos: las columnas llegaron incompletas o desalineadas.", "riesgos_listas")
+        for seq, risk, ctrl in zip(secuencia or [], riesgo or [], control or []):
+            if seq.strip() or risk.strip() or ctrl.strip():
+                riesgos.append({"secuencia": seq.strip(), "riesgo": risk.strip(), "control": ctrl.strip()})
+    if not riesgos:
+        return validation_error("Riesgos: debes agregar al menos una fila.", "riesgos_vacios")
+    for index, item in enumerate(riesgos, start=1):
+        missing = [label for key, label in (("secuencia", "actividad"), ("riesgo", "riesgo"), ("control", "control")) if not item[key]]
+        if missing:
+            return validation_error(
+                f"Error en riesgos, fila {index}: completa {', '.join(missing)}.",
+                "riesgos_campos",
+                riesgos,
+            )
+    logger.info("ART_CREATE_VALIDATION stage=contenido user=%s", user.get("username", ""))
+    try:
+        validate_clean_fields(
+            {
+                "empresa": empresa,
+                "área": area,
+                "tipo de tarea": tipo_tarea,
+                "descripción": descripcion,
+                "observaciones": observaciones,
+                "gerencia": gerencia,
+                "lugar": lugar,
+                **{
+                    f"riesgos, fila {index}, {key}": item[field]
+                    for index, item in enumerate(riesgos, start=1)
+                    for key, field in (("actividad", "secuencia"), ("riesgo", "riesgo"), ("control", "control"))
+                },
+            },
+            user.get("username", ""),
+        )
+    except HTTPException as exc:
+        return validation_error(str(exc.detail), "filtro_contenido", riesgos)
+    logger.info("ART_CREATE_VALIDATION stage=condiciones_supervisor user=%s", user.get("username", ""))
+    try:
+        condiciones_supervisor = await _leer_condiciones_supervisor(request)
+    except HTTPException as exc:
+        return validation_error(str(exc.detail), "condiciones_supervisor", riesgos)
     archivos = []
+    logger.info("ART_CREATE_VALIDATION stage=evidencia user=%s", user.get("username", ""))
     for archivo in evidencia or []:
         if not archivo.filename:
             continue
-        archivos.append(await save_art_image(request.app.state.art_upload_dir, archivo))
+        try:
+            archivos.append(await save_art_image(request.app.state.art_upload_dir, archivo))
+        except HTTPException as exc:
+            return validation_error(f"Evidencia: {exc.detail}", "evidencia", riesgos)
     id_art = str(uuid.uuid4())[:8]
     registro = {
         "id": id_art,

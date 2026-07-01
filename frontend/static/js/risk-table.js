@@ -11,6 +11,7 @@
     const body = form.querySelector("[data-risk-rows]");
     const addButton = form.querySelector("[data-risk-add]");
     const error = form.querySelector("[data-risk-error]");
+    const jsonInput = form.querySelector("[data-risks-json]");
     if (!body || !addButton) return;
 
     const rows = () => Array.from(body.children).filter((row) => row.matches("[data-risk-row]"));
@@ -29,6 +30,7 @@
         control: row.querySelector('[data-risk-field="control"]')?.value.trim() || "",
       }));
       form.dataset.riskRowCount = String(riskRowsState.length);
+      if (jsonInput) jsonInput.value = JSON.stringify(riskRowsState);
 
       currentRows.forEach((row, index) => {
         const number = row.querySelector("[data-risk-number]");

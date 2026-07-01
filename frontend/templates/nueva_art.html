@@ -14,8 +14,15 @@
     <a href="/dashboard" class="btn-secondary">Cancelar</a>
   </div>
 
+  {% if form_error %}
+  <div id="art-form-error" class="alert-error" role="alert" tabindex="-1" data-inline-alert>
+    <strong>No se pudo crear la ART.</strong> {{ form_error }}
+  </div>
+  {% endif %}
+
   <form action="/art/guardar" method="post" enctype="multipart/form-data" class="space-y-6" data-risk-form>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="riesgos_json" value="" data-risks-json>
 
     <section class="app-card">
       <div class="app-card-header">
@@ -25,27 +32,27 @@
       <div class="app-card-body grid gap-5 md:grid-cols-2">
         <div>
           <label class="form-label">Empresa / Contratista</label>
-          <input name="empresa" required class="form-input" placeholder="Ej: Empresa contratista SpA">
+          <input name="empresa" required class="form-input" value="{{ form_values.get('empresa', '') }}" placeholder="Ej: Empresa contratista SpA">
         </div>
         <div>
           <label class="form-label">Área de trabajo</label>
-          <input name="area" required class="form-input" placeholder="Ej: Planta, taller, mina, bodega">
+          <input name="area" required class="form-input" value="{{ form_values.get('area', '') }}" placeholder="Ej: Planta, taller, mina, bodega">
         </div>
         <div>
           <label class="form-label">Gerencia</label>
-          <input name="gerencia" class="form-input" placeholder="Ej: Gerencia de Operaciones">
+          <input name="gerencia" class="form-input" value="{{ form_values.get('gerencia', '') }}" placeholder="Ej: Gerencia de Operaciones">
         </div>
         <div>
           <label class="form-label">Lugar</label>
-          <input name="lugar" class="form-input" placeholder="Ej: Nivel 3, sector norte">
+          <input name="lugar" class="form-input" value="{{ form_values.get('lugar', '') }}" placeholder="Ej: Nivel 3, sector norte">
         </div>
         <div>
           <label class="form-label">Horario inicio</label>
-          <input type="time" name="hora_inicio" class="form-input">
+          <input type="time" name="hora_inicio" value="{{ form_values.get('hora_inicio', '') }}" class="form-input">
         </div>
         <div>
           <label class="form-label">Horario término</label>
-          <input type="time" name="hora_termino" class="form-input">
+          <input type="time" name="hora_termino" value="{{ form_values.get('hora_termino', '') }}" class="form-input">
         </div>
         <div>
           <label class="form-label">Fecha</label>
@@ -54,8 +61,8 @@
         <div>
           <label class="form-label">Tipo de tarea</label>
           <select name="tipo_tarea" required class="form-select">
-            <option value="Rutinaria">Rutinaria</option>
-            <option value="No rutinaria">No rutinaria</option>
+            <option value="Rutinaria" {% if form_values.get('tipo_tarea', 'Rutinaria') == 'Rutinaria' %}selected{% endif %}>Rutinaria</option>
+            <option value="No rutinaria" {% if form_values.get('tipo_tarea') == 'No rutinaria' %}selected{% endif %}>No rutinaria</option>
           </select>
         </div>
         <div>
@@ -70,7 +77,7 @@
         {% endif %}
         <div class="md:col-span-2">
           <label class="form-label">Descripción de la tarea</label>
-          <textarea name="descripcion" required rows="4" class="form-textarea" placeholder="Describe la actividad que se realizará..."></textarea>
+          <textarea name="descripcion" required rows="4" class="form-textarea" placeholder="Describe la actividad que se realizará...">{{ form_values.get('descripcion', '') }}</textarea>
         </div>
       </div>
     </section>
@@ -112,7 +119,7 @@
         <div class="grid gap-3 md:grid-cols-2">
           {% for trabajador in trabajadores %}
           <label class="worker-option flex cursor-pointer items-start gap-4 rounded-lg border border-line bg-white p-4 transition hover:border-cyan-300 hover:bg-cyan-50/40" data-search="{{ trabajador|full_name }} {{ trabajador.username }} {{ trabajador.rut }} {{ trabajador.email }} {{ trabajador.telefono }} {{ trabajador.cargo }} {{ trabajador.area }}">
-            <input type="checkbox" name="trabajadores_asignados" value="{{ trabajador.id }}" class="worker-checkbox mt-1 h-5 w-5">
+            <input type="checkbox" name="trabajadores_asignados" value="{{ trabajador.id }}" class="worker-checkbox mt-1 h-5 w-5" {% if (trabajador.id|string) in trabajadores_seleccionados %}checked{% endif %}>
             <span class="min-w-0 flex-1">
               <span class="block text-base font-black text-dartText">{{ trabajador|full_name }}</span>
               <span class="mt-2 grid gap-1 text-sm text-dartMuted sm:grid-cols-2">
@@ -152,7 +159,11 @@
             </tr>
           </thead>
           <tbody id="riesgos-body" data-risk-rows>
-            {% include "partials/riesgo_row.html" %}
+            {% if form_riesgos %}
+              {% for riesgo_item in form_riesgos %}{% include "partials/riesgo_row.html" %}{% endfor %}
+            {% else %}
+              {% include "partials/riesgo_row.html" %}
+            {% endif %}
           </tbody>
         </table>
       </div>
@@ -189,7 +200,7 @@
         </div>
         <div>
           <label class="form-label">Observaciones generales</label>
-          <textarea name="observaciones" rows="5" class="form-textarea" placeholder="Observaciones administrativas o contexto adicional..."></textarea>
+          <textarea name="observaciones" rows="5" class="form-textarea" placeholder="Observaciones administrativas o contexto adicional...">{{ form_values.get('observaciones', '') }}</textarea>
         </div>
       </div>
     </section>
@@ -201,6 +212,8 @@
   </form>
 </div>
 <script>
+  document.getElementById("art-form-error")?.focus();
+
   (function () {
     const form = document.querySelector("form[action='/art/guardar']");
     const search = document.getElementById("worker-search");
