@@ -18,6 +18,7 @@ from backend.src.services.art_service import (
     actualizar_revision_art,
     cargar_registros,
     cargar_registros_por_supervisor,
+    cargar_nombres_asignaciones,
     cargar_resumenes_asignaciones,
     obtener_registro,
 )
@@ -52,9 +53,10 @@ from backend.src.config.database import _connect
 
 router = APIRouter()
 logger = logging.getLogger("dart.admin")
-IMPORT_COLUMNS = ["nombre", "rut", "email", "rol", "telefono", "cargo", "area"]
+IMPORT_COLUMNS = ["nombre", "apellido", "rut", "email", "rol", "telefono", "cargo", "area"]
 IMPORT_RESULT_COLUMNS = [
     "nombre",
+    "apellido",
     "rut",
     "email",
     "rol",
@@ -189,6 +191,7 @@ def _render_admin_usuarios(request: Request, user: dict, **extra):
 
 def _validar_datos_usuario(
     nombre: str,
+    apellido: str,
     rut: str,
     email: str,
     rol: str,
@@ -200,6 +203,7 @@ def _validar_datos_usuario(
     errors: dict[str, str] = {}
     normalized = {
         "nombre": nombre.strip(),
+        "apellido": apellido.strip(),
         "rut": normalizar_rut(rut),
         "email": email.strip().lower(),
         "rol": rol.strip().lower(),
@@ -223,7 +227,7 @@ def _validar_datos_usuario(
         errors["rol"] = "Rol inválido. Usa admin, supervisor o trabajador."
     if telefono.strip() and not validar_telefono_chile(telefono):
         errors["telefono"] = "El teléfono debe tener formato chileno válido: +56 9 XXXX XXXX."
-    for field_name, value in {"nombre": nombre, "cargo": cargo, "area": area}.items():
+    for field_name, value in {"nombre": nombre, "apellido": apellido, "cargo": cargo, "area": area}.items():
         if find_prohibited_terms(value):
             errors[field_name] = PROHIBITED_LANGUAGE_MESSAGE
     return errors, normalized
@@ -253,8 +257,10 @@ def admin_list_art(request: Request, user=Depends(get_current_user)):
         return RedirectResponse("/", status_code=303)
     registros = cargar_registros(limite=100, con_asignaciones=False) if user.get("rol") == "admin" else cargar_registros_por_supervisor(user["username"], limite=100, con_asignaciones=False)
     resumenes = cargar_resumenes_asignaciones([registro["id"] for registro in registros])
+    nombres_por_art = cargar_nombres_asignaciones([registro["id"] for registro in registros])
     for registro in registros:
         registro["progreso_asignaciones"] = resumenes.get(registro["id"], {})
+        registro["trabajadores_nombres"] = nombres_por_art.get(registro["id"], [])
     csrf_token = create_csrf_token()
     response = templates.TemplateResponse(
         request,
@@ -356,7 +362,8 @@ def admin_descargar_plantilla(user=Depends(get_current_user)):
     writer.writeheader()
     writer.writerow(
         {
-            "nombre": "Juan Pérez",
+            "nombre": "Juan",
+            "apellido": "González",
             "rut": "12.345.678-5",
             "email": "juan.perez@dart-mineria.lat",
             "rol": "trabajador",
@@ -367,7 +374,8 @@ def admin_descargar_plantilla(user=Depends(get_current_user)):
     )
     writer.writerow(
         {
-            "nombre": "María Soto",
+            "nombre": "María",
+            "apellido": "Soto",
             "rut": "11.111.111-1",
             "email": "maria.soto@dart-mineria.lat",
             "rol": "supervisor",
@@ -413,6 +421,7 @@ def admin_update_rol(
 def admin_crear_usuario(
     request: Request,
     nombre: str = Form(...),
+    apellido: str = Form(""),
     rut: str = Form(...),
     email: str = Form(...),
     rol: str = Form(USER),
@@ -429,6 +438,7 @@ def admin_crear_usuario(
     validate_csrf_token(request, csrf_token)
     form_data = {
         "nombre": nombre,
+        "apellido": apellido,
         "rut": rut,
         "email": email,
         "rol": rol,
@@ -437,7 +447,7 @@ def admin_crear_usuario(
         "area": area,
     }
     try:
-        validate_clean_fields({"nombre": nombre, "cargo": cargo, "area": area}, user.get("username", ""))
+        validate_clean_fields({"nombre": nombre, "apellido": apellido, "cargo": cargo, "area": area}, user.get("username", ""))
     except HTTPException:
         return _render_admin_usuarios(
             request,
@@ -445,7 +455,7 @@ def admin_crear_usuario(
             form_errors={"contenido": PROHIBITED_LANGUAGE_MESSAGE},
             form_data=form_data,
         )
-    form_errors, normalized = _validar_datos_usuario(nombre, rut, email, rol, telefono, cargo, area)
+    form_errors, normalized = _validar_datos_usuario(nombre, apellido, rut, email, rol, telefono, cargo, area)
     if form_errors:
         return _render_admin_usuarios(request, user, form_errors=form_errors, form_data=form_data)
     username = _username_desde_email(normalized["email"])
@@ -454,6 +464,7 @@ def admin_crear_usuario(
         password_hash=pwd_context.hash(secrets.token_urlsafe(24)),
         rol=normalized["rol"],
         nombre=normalized["nombre"],
+        apellido=normalized["apellido"],
         email=normalized["email"],
         rut=normalized["rut"],
         telefono=normalized["telefono"],
@@ -574,6 +585,7 @@ async def admin_importar_usuarios(
     emails_en_archivo: set[str] = set()
     for index, row in enumerate(rows, start=2):
         nombre = (row.get("nombre") or "").strip()
+        apellido = (row.get("apellido") or "").strip()
         rut_input = (row.get("rut") or "").strip()
         email = (row.get("email") or "").strip().lower()
         rol = (row.get("rol") or USER).strip().lower()
@@ -586,6 +598,7 @@ async def admin_importar_usuarios(
         estado = "error"
         row_errors, normalized = _validar_datos_usuario(
             nombre,
+            apellido,
             rut_input,
             email,
             rol,
@@ -596,7 +609,7 @@ async def admin_importar_usuarios(
         )
         try:
             validate_clean_fields(
-                {"nombre": nombre, "cargo": cargo, "area": area},
+                {"nombre": nombre, "apellido": apellido, "cargo": cargo, "area": area},
                 user.get("username", ""),
             )
         except HTTPException:
@@ -626,6 +639,7 @@ async def admin_importar_usuarios(
                 password_hash=pwd_context.hash(secrets.token_urlsafe(24)),
                 rol=normalized["rol"],
                 nombre=normalized["nombre"],
+                apellido=normalized["apellido"],
                 email=email_normalizado,
                 rut=rut_normalizado,
                 telefono=telefono_normalizado,
@@ -658,6 +672,7 @@ async def admin_importar_usuarios(
             {
                 "fila": index,
                 "nombre": normalized["nombre"] or nombre,
+                "apellido": normalized["apellido"] or apellido,
                 "rut": rut_normalizado,
                 "email": email_normalizado,
                 "rol": normalized["rol"] or rol,

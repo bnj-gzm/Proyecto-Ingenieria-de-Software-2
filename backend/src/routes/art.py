@@ -24,6 +24,7 @@ from backend.src.services.art_service import (
     cargar_registros,
     cargar_registros_por_supervisor,
     cargar_registros_por_usuario,
+    cargar_nombres_asignaciones,
     cargar_trabajadores_art,
     eliminar_registro,
     guardar_registro,
@@ -367,6 +368,9 @@ def dashboard(request: Request, user=Depends(get_current_user)):
     else:
         registros = []
         art_asignadas = cargar_asignaciones_por_trabajador(user["id"], limite=10)
+    nombres_por_art = cargar_nombres_asignaciones([registro["id"] for registro in registros])
+    for registro in registros:
+        registro["trabajadores_nombres"] = nombres_por_art.get(registro["id"], [])
     return templates.TemplateResponse(
         request,
         "dashboard.html",
@@ -445,10 +449,10 @@ async def guardar_art(
         raise HTTPException(status_code=400, detail=f"Debes seleccionar al menos {MIN_TRABAJADORES_ART} trabajadores registrados")
     supervisor_user = next((u for u in cargar_usuarios_por_rol(SUPERVISOR) if u["username"] == supervisor_asignado), None)
     trabajador = ", ".join(
-        trabajador_user.get("nombre") or trabajador_user.get("email") or trabajador_user["username"]
+        trabajador_user.get("nombre_completo") or trabajador_user.get("nombre") or trabajador_user.get("email") or trabajador_user["username"]
         for trabajador_user in trabajadores_asignados_lista
     )
-    supervisor = (supervisor_user or {}).get("nombre") or supervisor_asignado
+    supervisor = (supervisor_user or {}).get("nombre_completo") or (supervisor_user or {}).get("nombre") or supervisor_asignado
     riesgos = []
     for seq, risk, ctrl in zip(secuencia or [], riesgo or [], control or []):
         if seq.strip() or risk.strip() or ctrl.strip():

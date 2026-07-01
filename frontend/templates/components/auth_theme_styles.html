@@ -58,17 +58,6 @@
     border-color:var(--accent);
     box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent);
   }
-  .btn-primary {
-    display:inline-flex;
-    justify-content:center;
-    border-radius:12px;
-    background:var(--accent);
-    color:white;
-    padding:.82rem 1rem;
-    font-weight:900;
-    transition:transform .16s cubic-bezier(.2,.8,.2,1), background .16s cubic-bezier(.2,.8,.2,1);
-  }
-  .btn-primary:hover { transform:translateY(-1px); background:color-mix(in srgb, var(--accent) 84%, var(--text-primary)); }
   .muted-text, .text-slate-500, .text-slate-600 { color:var(--text-secondary) !important; }
   .surface-muted, .bg-slate-50 { background:color-mix(in srgb, var(--bg-secondary) 82%, transparent) !important; }
   .strength-bar{height:.45rem;border-radius:999px;background:var(--border);overflow:hidden}
@@ -76,3 +65,4 @@
   .alert-error{border:1px solid color-mix(in srgb,var(--danger) 28%,var(--border));background:color-mix(in srgb,var(--danger) 12%,var(--card));color:color-mix(in srgb,var(--danger) 76%,var(--text-primary));}
   .alert-success{border:1px solid color-mix(in srgb,var(--success) 28%,var(--border));background:color-mix(in srgb,var(--success) 12%,var(--card));color:color-mix(in srgb,var(--success) 76%,var(--text-primary));}
 </style>
+{% include "components/global_button_styles.html" %}

@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from backend.src.config.frontend import templates
 from backend.src.middleware.auth import get_current_user, pwd_context
 from backend.src.middleware.csrf import create_csrf_token, set_csrf_cookie, validate_csrf_token
-from backend.src.services.usuario_service import actualizar_foto_perfil, actualizar_password, actualizar_perfil
+from backend.src.services.usuario_service import actualizar_foto_perfil, actualizar_password, actualizar_perfil, nombre_completo
 from backend.src.services.password_policy import validate_password_strength
 from backend.src.services.validation_service import normalizar_telefono_chile, validar_telefono_chile
 from backend.src.services.content_filter import PROHIBITED_LANGUAGE_MESSAGE, validate_clean_fields
@@ -18,7 +18,7 @@ MAX_PROFILE_IMAGE_BYTES = 2 * 1024 * 1024
 
 
 def _initials(user: dict) -> str:
-    source = (user.get("nombre") or user.get("username") or "Usuario").strip()
+    source = (user.get("nombre_completo") or user.get("nombre") or user.get("username") or "Usuario").strip()
     parts = [part for part in source.split() if part]
     if len(parts) >= 2:
         return f"{parts[0][0]}{parts[1][0]}".upper()
@@ -137,6 +137,7 @@ def marcar_notificacion_leida(request: Request, id: str, csrf_token: str = Form(
 async def perfil_update(
     request: Request,
     nombre: str = Form(...),
+    apellido: str = Form(""),
     telefono: str = Form(""),
     cargo: str = Form(""),
     password: str = Form(""),
@@ -149,12 +150,13 @@ async def perfil_update(
         return RedirectResponse("/login", status_code=303)
     validate_csrf_token(request, csrf_token)
     nombre = nombre.strip()
+    apellido = apellido.strip()
     telefono = telefono.strip()
     cargo = cargo.strip()
     if not nombre:
         return _profile_error(request, user, "El nombre no puede estar vacío.")
     try:
-        validate_clean_fields({"nombre": nombre, "cargo": cargo}, user.get("username", ""))
+        validate_clean_fields({"nombre": nombre, "apellido": apellido, "cargo": cargo}, user.get("username", ""))
     except HTTPException:
         return _profile_error(request, user, PROHIBITED_LANGUAGE_MESSAGE)
     if telefono and not validar_telefono_chile(telefono):
@@ -172,7 +174,7 @@ async def perfil_update(
             nueva_foto = await _guardar_foto_perfil(request, foto_perfil, user)
     except HTTPException as exc:
         return _profile_error(request, user, str(exc.detail))
-    actualizar_perfil(user["username"], nombre, telefono, cargo)
+    actualizar_perfil(user["username"], nombre, apellido, telefono, cargo)
     if nueva_foto != (user.get("foto_perfil") or ""):
         actualizar_foto_perfil(user["username"], nueva_foto)
     if password:
@@ -182,7 +184,14 @@ async def perfil_update(
             {
                 "ok": True,
                 "message": "Perfil actualizado correctamente.",
-                "profile": {"nombre": nombre, "telefono": telefono, "cargo": cargo, "foto_perfil": nueva_foto},
+                "profile": {
+                    "nombre": nombre,
+                    "apellido": apellido,
+                    "nombre_completo": nombre_completo({"nombre": nombre, "apellido": apellido, "username": user.get("username", "")}),
+                    "telefono": telefono,
+                    "cargo": cargo,
+                    "foto_perfil": nueva_foto,
+                },
             }
         )
     return RedirectResponse("/perfil", status_code=303)

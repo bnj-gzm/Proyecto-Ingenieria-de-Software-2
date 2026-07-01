@@ -228,6 +228,39 @@ def cargar_resumenes_asignaciones(id_art_list: list[str]) -> dict[str, dict[str,
         conn.close()
 
 
+def cargar_nombres_asignaciones(id_art_list: list[str]) -> dict[str, list[str]]:
+    ids = [id_art for id_art in dict.fromkeys(id_art_list) if id_art]
+    if not ids:
+        return {}
+    conn = _connect()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        cur.execute(
+            """
+            SELECT ata.art_id,
+                   ARRAY_AGG(
+                       COALESCE(
+                           NULLIF(TRIM(CONCAT_WS(' ', NULLIF(u.nombre, ''), NULLIF(u.apellido, ''))), ''),
+                           NULLIF(ata.nombre, ''),
+                           u.username,
+                           'Trabajador'
+                       )
+                       ORDER BY COALESCE(NULLIF(u.nombre, ''), NULLIF(ata.nombre, ''), u.username)
+                   ) AS nombres
+            FROM art_trabajadores_asignados ata
+            LEFT JOIN users u ON u.id = ata.trabajador_id
+            WHERE ata.art_id = ANY(%s)
+            GROUP BY ata.art_id
+            """,
+            (ids,),
+        )
+        result = {row["art_id"]: list(row["nombres"] or []) for row in cur.fetchall()}
+        return {id_art: result.get(id_art, []) for id_art in ids}
+    finally:
+        cur.close()
+        conn.close()
+
+
 def cargar_asignaciones_art(id_art: str) -> list[dict[str, Any]]:
     conn = _connect()
     cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -236,7 +269,7 @@ def cargar_asignaciones_art(id_art: str) -> list[dict[str, Any]]:
             """
             SELECT ata.id, ata.art_id, ata.trabajador_id,
                    COALESCE(NULLIF(ata.email, ''), u.email, '') AS email,
-                   COALESCE(NULLIF(ata.nombre, ''), u.nombre, u.username, '') AS nombre,
+                   COALESCE(NULLIF(TRIM(CONCAT_WS(' ', NULLIF(u.nombre, ''), NULLIF(u.apellido, ''))), ''), NULLIF(ata.nombre, ''), u.username, '') AS nombre,
                    COALESCE(NULLIF(ata.rut, ''), u.rut, '') AS rut,
                    COALESCE(NULLIF(ata.cargo, ''), u.cargo, '') AS cargo,
                    COALESCE(NULLIF(ata.area, ''), u.area, '') AS area,
@@ -284,7 +317,7 @@ def guardar_asignaciones_art(id_art: str, trabajadores: list[dict[str, Any]]) ->
                     id_art,
                     trabajador["id"],
                     trabajador.get("email", ""),
-                    trabajador.get("nombre") or trabajador.get("username", ""),
+                    trabajador.get("nombre_completo") or trabajador.get("nombre") or trabajador.get("username", ""),
                     trabajador.get("rut", ""),
                     trabajador.get("cargo", ""),
                     trabajador.get("area", ""),
@@ -359,7 +392,7 @@ def obtener_asignacion_por_token(token: str) -> dict[str, Any] | None:
             """
             SELECT ata.id, ata.art_id, ata.trabajador_id,
                    COALESCE(NULLIF(ata.email, ''), u.email, '') AS email,
-                   COALESCE(NULLIF(ata.nombre, ''), u.nombre, u.username, '') AS nombre,
+                   COALESCE(NULLIF(TRIM(CONCAT_WS(' ', NULLIF(u.nombre, ''), NULLIF(u.apellido, ''))), ''), NULLIF(ata.nombre, ''), u.username, '') AS nombre,
                    COALESCE(NULLIF(ata.rut, ''), u.rut, '') AS rut,
                    COALESCE(NULLIF(ata.cargo, ''), u.cargo, '') AS cargo,
                    COALESCE(NULLIF(ata.area, ''), u.area, '') AS area,
@@ -391,7 +424,7 @@ def obtener_asignacion_art(id_art: str, id_asignacion: int) -> dict[str, Any] | 
             """
             SELECT ata.id, ata.art_id, ata.trabajador_id,
                    COALESCE(NULLIF(ata.email, ''), u.email, '') AS email,
-                   COALESCE(NULLIF(ata.nombre, ''), u.nombre, u.username, '') AS nombre,
+                   COALESCE(NULLIF(TRIM(CONCAT_WS(' ', NULLIF(u.nombre, ''), NULLIF(u.apellido, ''))), ''), NULLIF(ata.nombre, ''), u.username, '') AS nombre,
                    COALESCE(NULLIF(ata.rut, ''), u.rut, '') AS rut,
                    COALESCE(NULLIF(ata.cargo, ''), u.cargo, '') AS cargo,
                    COALESCE(NULLIF(ata.area, ''), u.area, '') AS area,
@@ -423,7 +456,7 @@ def cargar_asignaciones_por_trabajador(trabajador_id: int, limite: int = 20) -> 
             f"""
             SELECT ata.id, ata.art_id, ata.trabajador_id,
                    COALESCE(NULLIF(ata.email, ''), u.email, '') AS email,
-                   COALESCE(NULLIF(ata.nombre, ''), u.nombre, u.username, '') AS nombre,
+                   COALESCE(NULLIF(TRIM(CONCAT_WS(' ', NULLIF(u.nombre, ''), NULLIF(u.apellido, ''))), ''), NULLIF(ata.nombre, ''), u.username, '') AS nombre,
                    COALESCE(NULLIF(ata.rut, ''), u.rut, '') AS rut,
                    COALESCE(NULLIF(ata.cargo, ''), u.cargo, '') AS cargo,
                    COALESCE(NULLIF(ata.area, ''), u.area, '') AS area,
@@ -461,7 +494,7 @@ def obtener_asignacion_para_trabajador(id_asignacion: int, trabajador_id: int) -
             """
             SELECT ata.id, ata.art_id, ata.trabajador_id,
                    COALESCE(NULLIF(ata.email, ''), u.email, '') AS email,
-                   COALESCE(NULLIF(ata.nombre, ''), u.nombre, u.username, '') AS nombre,
+                   COALESCE(NULLIF(TRIM(CONCAT_WS(' ', NULLIF(u.nombre, ''), NULLIF(u.apellido, ''))), ''), NULLIF(ata.nombre, ''), u.username, '') AS nombre,
                    COALESCE(NULLIF(ata.rut, ''), u.rut, '') AS rut,
                    COALESCE(NULLIF(ata.cargo, ''), u.cargo, '') AS cargo,
                    COALESCE(NULLIF(ata.area, ''), u.area, '') AS area,
@@ -813,7 +846,7 @@ def guardar_trabajadores_art(id_art: str, trabajadores: list[dict[str, Any]]) ->
                 (
                     id_art,
                     trabajador["username"],
-                    trabajador.get("nombre") or trabajador.get("email") or trabajador["username"],
+                    trabajador.get("nombre_completo") or trabajador.get("nombre") or trabajador.get("email") or trabajador["username"],
                     trabajador.get("cargo") or "",
                 ),
             )
@@ -829,10 +862,14 @@ def cargar_trabajadores_art(id_art: str) -> list[dict[str, Any]]:
     try:
         cur.execute(
             """
-            SELECT id, art_id, username, nombre, cargo, condicion_ok, validado_en, observacion
-            FROM art_trabajadores
-            WHERE art_id = %s
-            ORDER BY id ASC
+            SELECT at.id, at.art_id, at.username,
+                   COALESCE(NULLIF(TRIM(CONCAT_WS(' ', NULLIF(u.nombre, ''), NULLIF(u.apellido, ''))), ''), NULLIF(at.nombre, ''), at.username) AS nombre,
+                   COALESCE(NULLIF(u.cargo, ''), at.cargo, '') AS cargo,
+                   at.condicion_ok, at.validado_en, at.observacion
+            FROM art_trabajadores at
+            LEFT JOIN users u ON u.username = at.username
+            WHERE at.art_id = %s
+            ORDER BY at.id ASC
             """,
             (id_art,),
         )
@@ -848,9 +885,13 @@ def obtener_trabajador_art(id_art: str, username: str) -> dict[str, Any] | None:
     try:
         cur.execute(
             """
-            SELECT id, art_id, username, nombre, cargo, condicion_ok, validado_en, observacion
-            FROM art_trabajadores
-            WHERE art_id = %s AND username = %s
+            SELECT at.id, at.art_id, at.username,
+                   COALESCE(NULLIF(TRIM(CONCAT_WS(' ', NULLIF(u.nombre, ''), NULLIF(u.apellido, ''))), ''), NULLIF(at.nombre, ''), at.username) AS nombre,
+                   COALESCE(NULLIF(u.cargo, ''), at.cargo, '') AS cargo,
+                   at.condicion_ok, at.validado_en, at.observacion
+            FROM art_trabajadores at
+            LEFT JOIN users u ON u.username = at.username
+            WHERE at.art_id = %s AND at.username = %s
             """,
             (id_art, username),
         )

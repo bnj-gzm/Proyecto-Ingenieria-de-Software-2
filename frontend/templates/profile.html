@@ -19,7 +19,7 @@
           </div>
           <div class="min-w-0">
             <p class="text-sm font-black uppercase text-techCyan">Perfil operativo</p>
-            <h1 id="profile-display-name" class="mt-2 text-3xl font-black leading-tight text-dartText">{{ user.nombre or user.username or "Sin nombre registrado" }}</h1>
+            <h1 id="profile-display-name" class="mt-2 text-3xl font-black leading-tight text-dartText">{{ user|full_name }}</h1>
             <p class="mt-2 break-all text-sm font-semibold text-dartMuted sm:text-base">{{ user.email or "Sin email registrado" }}</p>
             <div class="mt-4 flex flex-wrap gap-2">
               <span class="status-badge status-{{ user.estado_cuenta or 'activo' }}">{{ user.estado_cuenta or "activo" }}</span>
@@ -140,6 +140,7 @@
         </div>
         <div class="space-y-4">
           <div><label for="profile-modal-name" class="form-label">Nombre</label><input id="profile-modal-name" name="nombre" value="{{ user.nombre or '' }}" class="form-input" required></div>
+          <div><label for="profile-modal-last-name" class="form-label">Apellido</label><input id="profile-modal-last-name" name="apellido" value="{{ user.apellido or '' }}" class="form-input"></div>
           <div><label for="profile-modal-phone" class="form-label">Teléfono</label><input id="profile-modal-phone" name="telefono" value="{{ user.telefono or '+56 9 ' }}" class="form-input" placeholder="+56 9 1234 5678"></div>
           <div><label for="profile-modal-role" class="form-label">Cargo</label><input id="profile-modal-role" name="cargo" value="{{ user.cargo or '' }}" class="form-input"></div>
         </div>
@@ -175,7 +176,7 @@
         const response = await fetch(form.action, { method: "POST", body: new FormData(form), headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" } });
         const data = await response.json();
         if (!response.ok || !data.ok) throw new Error(data.message || "No pudimos actualizar el perfil.");
-        document.getElementById("profile-display-name").textContent = data.profile.nombre;
+        document.getElementById("profile-display-name").textContent = data.profile.nombre_completo;
         document.getElementById("profile-display-phone").textContent = data.profile.telefono || "-";
         document.getElementById("profile-display-role").textContent = data.profile.cargo || "-";
         let avatar = document.getElementById("profile-avatar-image");

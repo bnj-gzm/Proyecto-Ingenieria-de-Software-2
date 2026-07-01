@@ -222,11 +222,13 @@
 
   const supportModal = document.getElementById("support-modal");
   const supportLauncher = document.getElementById("support-launcher");
+  const supportOpeners = document.querySelectorAll("[data-support-open]");
   const supportForm = document.getElementById("support-form");
   const supportClose = document.getElementById("support-close");
   const supportCancel = document.getElementById("support-cancel");
   const supportCsrf = document.getElementById("support-csrf");
   const supportMessage = document.getElementById("support-message");
+  const supportName = document.getElementById("support-name");
   const supportSubmit = document.getElementById("support-submit");
 
   async function ensureSupportCsrf() {
@@ -242,18 +244,21 @@
     if (!supportModal) return;
     supportModal.classList.add("is-open");
     supportModal.setAttribute("aria-hidden", "false");
+    supportLauncher?.setAttribute("aria-expanded", "true");
     document.body.classList.add("modal-open");
     ensureSupportCsrf().catch(() => toast("No pudimos preparar el formulario de soporte.", "error"));
-    window.setTimeout(() => supportMessage?.focus(), 180);
+    window.setTimeout(() => (supportName?.readOnly ? supportMessage : supportName)?.focus(), 180);
   }
 
   function closeSupport() {
     supportModal?.classList.remove("is-open");
     supportModal?.setAttribute("aria-hidden", "true");
+    supportLauncher?.setAttribute("aria-expanded", "false");
     document.body.classList.remove("modal-open");
   }
 
   supportLauncher?.addEventListener("click", openSupport);
+  supportOpeners.forEach((button) => button.addEventListener("click", openSupport));
   supportClose?.addEventListener("click", closeSupport);
   supportCancel?.addEventListener("click", closeSupport);
   supportModal?.addEventListener("click", (event) => {

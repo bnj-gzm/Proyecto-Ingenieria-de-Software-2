@@ -95,7 +95,7 @@
         <div>
           <label class="form-label">Firma digital</label>
           <div class="rounded-lg border border-line bg-slate-50 px-4 py-3">
-            <p class="font-black">{{ user.nombre or user.email or user.username }}</p>
+            <p class="font-black">{{ user|full_name }}</p>
             <p class="text-sm text-dartMuted">Se guardará usuario, nombre, fecha y hora al enviar.</p>
           </div>
         </div>

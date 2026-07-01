@@ -79,13 +79,11 @@
           <div class="info-tile"><p class="text-sm text-dartMuted">Tipo de tarea</p><p class="font-black">{{ registro.tipo_tarea }}</p></div>
           <div class="info-tile">
             <p class="text-sm text-dartMuted">Asignado a</p>
-            <p class="font-black">
-              {% if trabajadores_art %}
-              {{ trabajadores_art | map(attribute='nombre') | join(', ') }}
-              {% else %}
-              {{ registro.trabajador }}
-              {% endif %}
-            </p>
+            {% set detail_worker_names = trabajadores_art | map(attribute='nombre') | list %}
+            <div class="worker-summary mt-1" title="{{ detail_worker_names|join(', ') if detail_worker_names else registro.trabajador }}">
+              <span class="worker-summary-name">{{ detail_worker_names[0] if detail_worker_names else registro.trabajador }}</span>
+              {% if detail_worker_names|length > 1 %}<span class="worker-summary-more">+ {{ detail_worker_names|length - 1 }} más</span>{% endif %}
+            </div>
           </div>
           <div class="info-tile"><p class="text-sm text-dartMuted">Creado</p><p class="font-black">{{ registro.creado_en }}</p></div>
         </div>
@@ -97,7 +95,7 @@
           <p class="mt-1 text-sm text-dartMuted">Seguimiento individual de respuesta, firma y revisión por trabajador.</p>
         </div>
         <div class="overflow-x-auto">
-          <table class="app-table min-w-[1040px]">
+          <table class="app-table responsive-table min-w-[1040px]">
             <thead>
               <tr>
                 <th>Nombre</th>
@@ -113,13 +111,13 @@
               {% for asignacion in registro.asignaciones %}
               {% set respondio = asignacion.estado_respuesta in ['respondido', 'con_observacion', 'aprobado', 'rechazado'] %}
               {% set finalizado = asignacion.estado_respuesta in ['aprobado', 'rechazado'] %}
-              <tr>
-                <td>
+              <tr class="dashboard-table-row">
+                <td data-label="Nombre">
                   <p class="font-black">{{ asignacion.nombre or asignacion.username or "Trabajador" }}</p>
                   <p class="mt-1 text-xs text-dartMuted">{{ asignacion.email or "Sin correo" }}</p>
                 </td>
-                <td>{{ asignacion.cargo or "-" }}</td>
-                <td>
+                <td data-label="Cargo">{{ asignacion.cargo or "-" }}</td>
+                <td data-label="Respuesta">
                   {% if respondio %}
                   <span class="status-badge status-respondido">Respondido</span>
                   {% else %}
@@ -129,9 +127,9 @@
                   <p class="mt-1 text-xs text-dartMuted">{{ asignacion.fecha_respuesta }}</p>
                   {% endif %}
                 </td>
-                <td>
+                <td data-label="Revisión">
                   {% if finalizado %}
-                  <span class="status-badge status-{{ asignacion.estado_respuesta }}">{{ asignacion.estado_respuesta }}</span>
+                  <span class="status-badge status-{{ asignacion.estado_respuesta }}">{{ asignacion.estado_respuesta|replace('_', ' ')|capitalize }}</span>
                   {% else %}
                   <span class="status-badge status-borrador">Sin revisión</span>
                   {% endif %}
@@ -139,17 +137,17 @@
                   <p class="mt-1 text-xs text-dartMuted">{{ asignacion.fecha_revision }}</p>
                   {% endif %}
                 </td>
-                <td>
+                <td data-label="Firma digital">
                   {% if asignacion.firma_valor or asignacion.firma_imagen_base64 %}
                   <span class="status-badge status-aprobada">Recibida</span>
                   {% else %}
                   <span class="status-badge status-pendiente">Pendiente</span>
                   {% endif %}
                 </td>
-                <td class="max-w-[220px]">
+                <td data-label="Observación" class="max-w-[220px]">
                   <p class="truncate text-sm text-dartMuted">{{ asignacion.comentario_revision or asignacion.respuestas.observaciones or "Sin observación" }}</p>
                 </td>
-                <td>
+                <td data-label="Acciones">
                   <div class="flex flex-wrap gap-2">
                     {% if respondio %}
                     <a href="/art/{{ registro.id }}/respuesta/{{ asignacion.id }}" class="btn-secondary px-3 py-2 text-sm">Ver respuesta</a>

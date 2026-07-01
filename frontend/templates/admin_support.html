@@ -8,7 +8,7 @@
     <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
       <div>
         <p class="text-sm font-black uppercase text-techCyan">Operación de soporte</p>
-        <h1 class="mt-2 text-3xl font-black text-dartText sm:text-4xl">Tickets de usuarios</h1>
+        <h1 class="mt-2 text-3xl font-black text-dartText sm:text-4xl">Tickets de soporte y contacto</h1>
         <p class="mt-2 max-w-2xl text-dartMuted">Revisa incidencias, prioriza mejoras y mantén trazabilidad hasta su resolución.</p>
       </div>
       <div class="status-badge status-{{ 'pendiente' if counts.open else 'activo' }}">{{ counts.open }} abiertos</div>
@@ -39,6 +39,7 @@
         <div class="min-w-0">
           <p class="font-black text-dartText">{{ ticket.user_name }}</p>
           <p class="mt-1 break-all text-sm font-semibold text-dartMuted">{{ ticket.email }}</p>
+          {% if ticket.subject %}<p class="mt-4 font-black text-dartText">{{ ticket.subject }}</p>{% endif %}
           <p class="mt-4 whitespace-pre-wrap rounded-xl border border-line bg-slate-50 p-4 text-sm leading-6 text-dartText">{{ ticket.message }}</p>
           <p class="mt-2 truncate text-xs text-dartMuted">ID {{ ticket.id }}</p>
         </div>

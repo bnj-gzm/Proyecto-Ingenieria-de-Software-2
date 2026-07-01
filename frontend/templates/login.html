@@ -98,19 +98,6 @@
     font-size: .68rem;
     color: var(--accent);
   }
-  .btn-primary {
-    display: inline-flex;
-    width: 100%;
-    align-items: center;
-    justify-content: center;
-    border-radius: 14px;
-    background: var(--accent);
-    padding: .9rem 1rem;
-    font-weight: 900;
-    color: white;
-    box-shadow: 0 14px 28px rgba(14,165,233,.20);
-    transition: transform .16s ease, box-shadow .16s ease;
-  }
   .btn-secondary {
     display: inline-flex;
     width: 100%;
@@ -126,7 +113,6 @@
   }
   .btn-secondary:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--accent) 28%, var(--border)); background: color-mix(in srgb, var(--card) 82%, var(--bg-secondary)); }
   .btn-primary:active, .btn-secondary:active { transform: scale(.98); }
-  .btn-primary:hover { background:#0284c7; transform: translateY(-1px); box-shadow: 0 18px 34px rgba(14,165,233,.26); }
   .btn-primary.is-loading { pointer-events:none; opacity:.86; }
   .spinner { display:none; width:1.05rem; height:1.05rem; border:2px solid rgba(255,255,255,.45); border-top-color:white; border-radius:999px; animation: spin .75s linear infinite; }
   .is-loading .spinner { display:inline-block; }
@@ -140,6 +126,7 @@
   .text-green-700 { color: color-mix(in srgb, #16A34A 78%, var(--text-primary)) !important; }
   @keyframes toastIn { from { opacity:0; transform: translateY(-8px); } to { opacity:1; transform: translateY(0); } }
 </style>
+{% include "components/global_button_styles.html" %}
 </head>
 <body>
   <main class="login-shell flex min-h-screen items-center justify-center px-5 py-8">
@@ -169,7 +156,7 @@
             <input class="input" type="password" name="password" placeholder=" " required autocomplete="current-password">
             <label class="floating-label">Contraseña</label>
           </div>
-          <button id="login-button" type="submit" class="btn-primary"><span class="spinner"></span><span class="login-label">Ingresar</span></button>
+          <button id="login-button" type="submit" class="btn-primary w-full"><span class="spinner"></span><span class="login-label">Iniciar sesión</span></button>
         </form>
         <div class="mt-5 grid gap-3">
           <p class="text-center text-sm"><a href="/olvide-password" class="font-black text-slate-900 transition hover:text-sky-500">Olvidé mi contraseña</a></p>

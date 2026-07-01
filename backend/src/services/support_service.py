@@ -12,7 +12,7 @@ SUPPORT_TYPES = {"bug", "error", "mejora", "otro"}
 SUPPORT_STATUSES = {"open", "in_progress", "resolved"}
 
 
-def find_recent_duplicate(user_id: int | None, ticket_type: str, message: str) -> dict[str, Any] | None:
+def find_recent_duplicate(user_id: int | None, email: str, ticket_type: str, subject: str, message: str) -> dict[str, Any] | None:
     conn = _connect()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
@@ -20,12 +20,13 @@ def find_recent_duplicate(user_id: int | None, ticket_type: str, message: str) -
             """
             SELECT id, status, created_at
             FROM support_tickets
-            WHERE user_id = %s AND type = %s AND message = %s
+            WHERE user_id IS NOT DISTINCT FROM %s
+              AND email = %s AND type = %s AND COALESCE(subject, '') = %s AND message = %s
               AND created_at >= CURRENT_TIMESTAMP - INTERVAL '5 minutes'
             ORDER BY created_at DESC
             LIMIT 1
             """,
-            (user_id, ticket_type, message),
+            (user_id, email, ticket_type, subject, message),
         )
         row = cur.fetchone()
         return dict(row) if row else None
@@ -34,18 +35,25 @@ def find_recent_duplicate(user_id: int | None, ticket_type: str, message: str) -
         conn.close()
 
 
-def create_ticket(user_id: int | None, email: str, ticket_type: str, message: str) -> dict[str, Any]:
+def create_ticket(
+    user_id: int | None,
+    email: str,
+    ticket_type: str,
+    message: str,
+    contact_name: str = "",
+    subject: str = "",
+) -> dict[str, Any]:
     ticket_id = str(uuid4())
     conn = _connect()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         cur.execute(
             """
-            INSERT INTO support_tickets (id, user_id, email, type, message, status)
-            VALUES (%s, %s, %s, %s, %s, 'open')
-            RETURNING id, user_id, email, type, message, status, created_at
+            INSERT INTO support_tickets (id, user_id, email, type, message, contact_name, subject, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 'open')
+            RETURNING id, user_id, email, type, message, contact_name, subject, status, created_at
             """,
-            (ticket_id, user_id, email, ticket_type, message),
+            (ticket_id, user_id, email, ticket_type, message, contact_name or None, subject or None),
         )
         ticket = dict(cur.fetchone())
         conn.commit()
@@ -64,8 +72,8 @@ def list_tickets() -> list[dict[str, Any]]:
     try:
         cur.execute(
             """
-            SELECT st.id, st.user_id, st.email, st.type, st.message, st.status, st.created_at,
-                   COALESCE(u.nombre, u.username, 'Usuario') AS user_name
+            SELECT st.id, st.user_id, st.email, st.type, st.message, st.subject, st.status, st.created_at,
+                   COALESCE(u.nombre, u.username, NULLIF(st.contact_name, ''), 'Usuario') AS user_name
             FROM support_tickets st
             LEFT JOIN users u ON u.id = st.user_id
             ORDER BY

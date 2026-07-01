@@ -18,7 +18,7 @@
       <p class="muted-text mt-3 text-sm leading-6">Crea tu contraseña para dejar la cuenta activa.</p>
       {% if error %}<div class="alert-error mt-5 rounded-lg px-4 py-3 text-sm font-bold">{{ error }}</div>{% endif %}
       {% if cuenta %}
-      <div class="surface-muted mt-5 rounded-lg p-4"><p class="font-black">{{ cuenta.nombre or cuenta.username }}</p><p class="muted-text text-sm">{{ cuenta.email }}</p></div>
+      <div class="surface-muted mt-5 rounded-lg p-4"><p class="font-black">{{ cuenta|full_name }}</p><p class="muted-text text-sm">{{ cuenta.email }}</p></div>
       {% endif %}
       <form method="post" action="/activar-cuenta/{{ token }}" class="mt-6 space-y-4">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

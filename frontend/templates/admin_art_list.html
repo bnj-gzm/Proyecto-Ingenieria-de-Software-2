@@ -44,14 +44,23 @@
   <section id="art-card-grid" class="grid gap-4 xl:grid-cols-2">
     {% for r in registros %}
     {% set progreso = r.progreso_asignaciones or {} %}
-    <article class="art-review-card app-card app-card-body" data-state="{{ r.estado }}" data-search="{{ r.id }} {{ r.empresa }} {{ r.tipo_tarea }} {{ r.supervisor }}">
+    <article class="art-review-card app-card app-card-body" data-state="{{ r.estado }}" data-search="{{ r.id }} {{ r.empresa }} {{ r.tipo_tarea }} {{ r.supervisor }} {{ r.trabajadores_nombres|join(' ') }}">
       <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div class="min-w-0">
           <p class="font-mono text-sm font-black text-techCyan">ART {{ r.id }}</p>
           <h2 class="mt-2 truncate text-xl font-black">{{ r.empresa }}</h2>
           <p class="mt-1 text-sm text-dartMuted">{{ r.tipo_tarea }} · {{ r.fecha }}</p>
         </div>
-        <span class="status-badge status-{{ r.estado }}">{{ r.estado }}</span>
+        <span class="status-badge status-{{ r.estado }}">{{ r.estado|capitalize }}</span>
+      </div>
+
+      {% set worker_names = r.trabajadores_nombres or [] %}
+      <div class="mt-4 rounded-xl border border-line bg-slate-50 px-4 py-3">
+        <p class="text-xs font-black uppercase text-dartMuted">Trabajadores</p>
+        <div class="worker-summary mt-2" title="{{ worker_names|join(', ') if worker_names else r.trabajador }}">
+          <span class="worker-summary-name">{{ worker_names[0] if worker_names else (r.trabajador or 'Sin asignar') }}</span>
+          {% if worker_names|length > 1 %}<span class="worker-summary-more">+ {{ worker_names|length - 1 }} más</span>{% endif %}
+        </div>
       </div>
 
       <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -68,7 +77,7 @@
         </div>
         <div class="flex flex-col gap-2 sm:flex-row">
           <a href="/art/{{ r.id }}/pdf" class="btn-dark">Descargar PDF ART General</a>
-          <a href="/art/{{ r.id }}" class="btn-secondary">Ver detalle</a>
+          <a href="/art/{{ r.id }}" class="btn-primary">Ver detalle</a>
         </div>
       </div>
     </article>

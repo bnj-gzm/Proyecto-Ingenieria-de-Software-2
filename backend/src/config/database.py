@@ -169,6 +169,21 @@ def init_db() -> None:
         """)
         cur.execute("CREATE INDEX IF NOT EXISTS idx_support_tickets_status_created ON support_tickets (status, created_at DESC)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_support_tickets_user_type_created ON support_tickets (user_id, type, created_at DESC)")
+        cur.execute("ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS contact_name TEXT")
+        cur.execute("ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS subject TEXT")
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS apellido TEXT DEFAULT ''")
+        cur.execute(
+            """
+            UPDATE users
+            SET apellido = INITCAP(REPLACE(SUBSTRING(username FROM POSITION('.' IN username) + 1), '.', ' '))
+            WHERE COALESCE(apellido, '') = ''
+              AND COALESCE(nombre, '') <> ''
+              AND nombre !~ '\\s'
+              AND username LIKE '%.%'
+              AND POSITION('.' IN username) > 1
+              AND LENGTH(SUBSTRING(username FROM POSITION('.' IN username) + 1)) > 1
+            """
+        )
         cur.execute("SELECT 1 FROM schema_migrations WHERE version = %s", (SCHEMA_VERSION,))
         if cur.fetchone():
             conn.commit()

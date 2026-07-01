@@ -42,10 +42,26 @@ def _foto_perfil_src(value: Any) -> str:
 
 def _normalize_user_row(row: dict[str, Any]) -> dict[str, Any]:
     row["foto_perfil"] = _foto_perfil_src(row.get("foto_perfil") or "")
+    row["nombre_completo"] = nombre_completo(row)
     return row
 
+
+def nombre_completo(user: dict[str, Any] | None, fallback: str = "Usuario") -> str:
+    if not user:
+        return fallback
+    nombre = str(user.get("nombre") or "").strip()
+    apellido = str(user.get("apellido") or "").strip()
+    username = str(user.get("username") or "").strip()
+    if not apellido and nombre and " " not in nombre and "." in username:
+        inferred = username.split(".", 1)[1].replace(".", " ").strip()
+        if inferred:
+            apellido = inferred.title()
+    if apellido and not nombre.casefold().endswith(apellido.casefold()):
+        nombre = f"{nombre} {apellido}".strip()
+    return nombre or username or fallback
+
 _USER_COLUMNS = """
-    id, username, password_hash, rol, nombre, email, rut, telefono, cargo,
+    id, username, password_hash, rol, nombre, apellido, email, rut, telefono, cargo,
     empresa, area, estado_cuenta, debe_cambiar_password, activation_token,
     activation_token_expires_at, reset_token, reset_token_expires_at,
     foto_perfil, created_at
@@ -118,6 +134,7 @@ def cargar_usuarios_asignables() -> list[dict[str, Any]]:
                 username,
                 rol,
                 COALESCE(nombre, '') AS nombre,
+                COALESCE(apellido, '') AS apellido,
                 COALESCE(email, '') AS email,
                 COALESCE(cargo, '') AS cargo
             FROM users
@@ -125,7 +142,7 @@ def cargar_usuarios_asignables() -> list[dict[str, Any]]:
             ORDER BY nombre ASC, username ASC
             """
         )
-        return [dict(row) for row in cur.fetchall()]
+        return [_normalize_user_row(dict(row)) for row in cur.fetchall()]
     finally:
         cur.close()
         conn.close()
@@ -173,7 +190,7 @@ def cargar_usuarios_por_rol(rol: str) -> list[dict[str, Any]]:
     try:
         cur.execute(
             """
-            SELECT id, username, rol, nombre, email, rut, telefono, cargo, empresa,
+            SELECT id, username, rol, nombre, apellido, email, rut, telefono, cargo, empresa,
                    area, estado_cuenta, foto_perfil, created_at
             FROM users WHERE rol = %s ORDER BY nombre ASC, username ASC
             """,
@@ -204,6 +221,7 @@ def guardar_usuario(
     password_hash: str,
     rol: str,
     nombre: str = "",
+    apellido: str = "",
     email: str = "",
     rut: str = "",
     telefono: str = "",
@@ -221,15 +239,16 @@ def guardar_usuario(
         cur.execute(
             """
             INSERT INTO users (
-                username, password_hash, rol, nombre, email, rut, telefono, cargo, empresa, area,
+                username, password_hash, rol, nombre, apellido, email, rut, telefono, cargo, empresa, area,
                 estado_cuenta, debe_cambiar_password, activation_token, activation_token_expires_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 username,
                 password_hash,
                 rol,
                 nombre,
+                apellido,
                 email,
                 rut,
                 telefono,
@@ -248,13 +267,13 @@ def guardar_usuario(
         conn.close()
 
 
-def actualizar_perfil(username: str, nombre: str, telefono: str = "", cargo: str = "") -> None:
+def actualizar_perfil(username: str, nombre: str, apellido: str = "", telefono: str = "", cargo: str = "") -> None:
     conn = _connect()
     cur = conn.cursor()
     try:
         cur.execute(
-            "UPDATE users SET nombre = %s, telefono = %s, cargo = %s WHERE username = %s",
-            (nombre, telefono, cargo, username),
+            "UPDATE users SET nombre = %s, apellido = %s, telefono = %s, cargo = %s WHERE username = %s",
+            (nombre, apellido, telefono, cargo, username),
         )
         conn.commit()
     finally:

@@ -31,6 +31,11 @@
           {% if form_errors and form_errors.nombre %}<p class="mt-2 text-sm font-semibold text-red-600">{{ form_errors.nombre }}</p>{% endif %}
         </div>
         <div>
+          <label class="mb-2 block text-sm font-bold text-slate-700">Apellido</label>
+          <input name="apellido" value="{{ form_data.apellido if form_data else '' }}" class="form-input">
+          {% if form_errors and form_errors.apellido %}<p class="mt-2 text-sm font-semibold text-red-600">{{ form_errors.apellido }}</p>{% endif %}
+        </div>
+        <div>
           <label class="mb-2 block text-sm font-bold text-slate-700">RUT</label>
           <input data-rut-input name="rut" required placeholder="12.345.678-9" value="{{ form_data.rut if form_data else '' }}" class="form-input">
           {% if form_errors and form_errors.rut %}<p class="mt-2 text-sm font-semibold text-red-600">{{ form_errors.rut }}</p>{% endif %}
@@ -70,7 +75,7 @@
       <div class="flex items-center justify-between gap-3">
         <div>
           <h2 class="text-xl font-black">Importar usuarios</h2>
-          <p class="mt-1 text-sm text-slate-500">CSV o Excel con columnas: nombre,rut,email,rol,telefono,cargo,area.</p>
+          <p class="mt-1 text-sm text-slate-500">CSV o Excel con columnas: nombre,apellido,rut,email,rol,telefono,cargo,area.</p>
         </div>
         {% if import_summary %}
         <span class="rounded-full bg-slate-100 px-3 py-1 text-sm font-bold">Creados: {{ import_summary.creados }}</span>
@@ -113,6 +118,7 @@
             <tr>
               <th class="px-3 py-2 text-left">Fila</th>
               <th class="px-3 py-2 text-left">Nombre</th>
+              <th class="px-3 py-2 text-left">Apellido</th>
               <th class="px-3 py-2 text-left">RUT</th>
               <th class="px-3 py-2 text-left">Email</th>
               <th class="px-3 py-2 text-left">Rol</th>
@@ -127,6 +133,7 @@
             <tr class="border-t border-slate-100">
               <td class="px-3 py-2">{{ result.fila }}</td>
               <td class="px-3 py-2">{{ result.nombre }}</td>
+              <td class="px-3 py-2">{{ result.apellido or "-" }}</td>
               <td class="px-3 py-2">{{ result.rut }}</td>
               <td class="px-3 py-2">{{ result.email }}</td>
               <td class="px-3 py-2">{{ result.rol }}</td>
@@ -187,17 +194,17 @@
         </thead>
         <tbody id="users-table-body">
           {% for u in usuarios %}
-          <tr data-role="{{ u.rol }}" data-state="{{ u.estado_cuenta or 'activo' }}" data-search="{{ u.nombre }} {{ u.username }} {{ u.rut }} {{ u.email }} {{ u.area }} {{ u.cargo }}" class="border-t border-slate-100">
+          <tr data-role="{{ u.rol }}" data-state="{{ u.estado_cuenta or 'activo' }}" data-search="{{ u|full_name }} {{ u.username }} {{ u.rut }} {{ u.email }} {{ u.area }} {{ u.cargo }}" class="admin-table-row border-t border-slate-100">
             <td class="px-4 py-3">
               <div class="flex items-center gap-3">
                 {% if u.foto_perfil %}
                 <img src="{{ u.foto_perfil if u.foto_perfil[:5] == 'data:' else '/static/' + u.foto_perfil }}" alt="" class="h-11 w-11 rounded-full object-cover" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
-                <span class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-cyan-100 font-black text-cyan-800" hidden>{{ (u.nombre or u.username)[:2].upper() }}</span>
+                <span class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-cyan-100 font-black text-cyan-800" hidden>{{ (u|full_name)[:2].upper() }}</span>
                 {% else %}
-                <span class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-cyan-100 font-black text-cyan-800">{{ (u.nombre or u.username)[:2].upper() }}</span>
+                <span class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-cyan-100 font-black text-cyan-800">{{ (u|full_name)[:2].upper() }}</span>
                 {% endif %}
                 <div>
-                  <div class="font-black">{{ u.nombre or u.username }}</div>
+                  <div class="font-black">{{ u|full_name }}</div>
                   <div class="text-xs text-slate-500">{{ u.username }}{% if u.rut %} · {{ u.rut }}{% endif %}</div>
                 </div>
               </div>
