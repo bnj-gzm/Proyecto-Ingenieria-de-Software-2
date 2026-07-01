@@ -88,7 +88,7 @@
       </form>
       <div class="mt-3 flex flex-wrap gap-2">
         <a href="/admin/usuarios/plantilla" class="btn-secondary px-4 py-2 text-sm">Descargar plantilla</a>
-        <form method="post" action="/admin/test-email">
+        <form method="post" action="{{ request.url_for('admin_test_email') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <button class="btn-secondary px-4 py-2 text-sm">Probar email</button>
         </form>

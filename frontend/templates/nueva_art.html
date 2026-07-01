@@ -20,7 +20,7 @@
   </div>
   {% endif %}
 
-  <form action="/art/guardar" method="post" enctype="multipart/form-data" class="space-y-6" data-risk-form>
+  <form action="/art/guardar" method="post" enctype="multipart/form-data" class="space-y-6" data-risk-form data-art-schedule-form novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="riesgos_json" value="" data-risks-json>
 
@@ -47,12 +47,14 @@
           <input name="lugar" class="form-input" value="{{ form_values.get('lugar', '') }}" placeholder="Ej: Nivel 3, sector norte">
         </div>
         <div>
-          <label class="form-label">Horario inicio</label>
-          <input type="time" name="hora_inicio" value="{{ form_values.get('hora_inicio', '') }}" class="form-input">
+          <label for="hora-inicio" class="form-label">Horario inicio</label>
+          <input id="hora-inicio" type="time" name="hora_inicio" value="{{ form_values.get('hora_inicio', '') }}" class="form-input" aria-describedby="hora-inicio-error" {% if form_errors.get('hora_inicio') %}aria-invalid="true"{% endif %}>
+          <p id="hora-inicio-error" class="mt-2 text-sm font-semibold text-critical {% if not form_errors.get('hora_inicio') %}hidden{% endif %}" data-time-error="hora_inicio">{{ form_errors.get('hora_inicio', '') }}</p>
         </div>
         <div>
-          <label class="form-label">Horario término</label>
-          <input type="time" name="hora_termino" value="{{ form_values.get('hora_termino', '') }}" class="form-input">
+          <label for="hora-termino" class="form-label">Horario término</label>
+          <input id="hora-termino" type="time" name="hora_termino" value="{{ form_values.get('hora_termino', '') }}" class="form-input" aria-describedby="hora-termino-error" {% if form_errors.get('hora_termino') %}aria-invalid="true"{% endif %}>
+          <p id="hora-termino-error" class="mt-2 text-sm font-semibold text-critical {% if not form_errors.get('hora_termino') %}hidden{% endif %}" data-time-error="hora_termino">{{ form_errors.get('hora_termino', '') }}</p>
         </div>
         <div>
           <label class="form-label">Fecha</label>
@@ -222,6 +224,7 @@
     const counter = document.getElementById("worker-counter");
     const error = document.getElementById("worker-error");
     const minWorkers = Number("{{ min_trabajadores }}");
+    let submitAttempted = false;
     if (!form || !counter) return;
 
     function filterWorkers() {
@@ -240,13 +243,14 @@
       counter.classList.toggle("text-green-800", valid);
       counter.classList.toggle("bg-slate-100", !valid);
       counter.classList.toggle("text-dartText", !valid);
-      error?.classList.toggle("hidden", valid || selected === 0);
+      error?.classList.toggle("hidden", !submitAttempted || valid);
       return valid;
     }
 
     search?.addEventListener("input", filterWorkers);
     checkboxes.forEach((checkbox) => checkbox.addEventListener("change", updateCounter));
     form.addEventListener("submit", (event) => {
+      submitAttempted = true;
       if (!updateCounter()) {
         event.preventDefault();
         error?.classList.remove("hidden");
@@ -275,4 +279,5 @@
     });
   })();
 </script>
+<script src="/static/js/art-form-validation.js?v=20260701.1"></script>
 {% endblock %}

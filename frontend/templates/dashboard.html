@@ -3,10 +3,11 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
-{% set stats = namespace(total=0, pendientes=0, aprobadas=0, rechazadas=0) %}
+{% set stats = namespace(total=0, pendientes=0, completadas=0, aprobadas=0, rechazadas=0) %}
 {% for r in registros %}
   {% set stats.total = stats.total + 1 %}
   {% if r.estado == 'pendiente' %}{% set stats.pendientes = stats.pendientes + 1 %}{% endif %}
+  {% if r.estado == 'completada' %}{% set stats.completadas = stats.completadas + 1 %}{% endif %}
   {% if r.estado == 'aprobada' %}{% set stats.aprobadas = stats.aprobadas + 1 %}{% endif %}
   {% if r.estado == 'rechazada' %}{% set stats.rechazadas = stats.rechazadas + 1 %}{% endif %}
 {% endfor %}
@@ -138,6 +139,11 @@
       <p class="text-sm font-black uppercase text-dartMuted">Pendientes</p>
       <p class="mt-3 text-4xl font-black text-amber-500">{{ stats.pendientes }}</p>
       <p class="mt-2 text-sm text-dartMuted">Requieren seguimiento</p>
+    </div>
+    <div class="metric-card">
+      <p class="text-sm font-black uppercase text-dartMuted">Completadas</p>
+      <p class="mt-3 text-4xl font-black text-green-600">{{ stats.completadas }}</p>
+      <p class="mt-2 text-sm text-dartMuted">Flujo individual cerrado</p>
     </div>
     <div class="metric-card">
       <p class="text-sm font-black uppercase text-dartMuted">Aprobadas</p>
@@ -274,7 +280,7 @@
                 </div>
               </td>
               <td data-label="Fecha">{{ r.fecha }}</td>
-              <td data-label="Estado"><span class="status-badge status-{{ r.estado }}">{{ r.estado|capitalize }}</span></td>
+              <td data-label="Estado"><span class="status-badge status-{{ r.estado }} {% if r.estado == 'completada' %}bg-green-100 text-green-800{% endif %}">{{ r.estado|capitalize }}</span></td>
               <td data-label="Acción"><a href="/art/{{ r.id }}" class="btn-primary px-3 py-2 text-sm">Ver</a></td>
             </tr>
             {% else %}

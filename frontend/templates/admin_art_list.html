@@ -3,10 +3,11 @@
 {% block page_title %}Revisar ART{% endblock %}
 
 {% block content %}
-{% set resumen = namespace(total=0, pendientes=0, aprobadas=0, rechazadas=0) %}
+{% set resumen = namespace(total=0, pendientes=0, completadas=0, aprobadas=0, rechazadas=0) %}
 {% for r in registros %}
   {% set resumen.total = resumen.total + 1 %}
   {% if r.estado == 'pendiente' %}{% set resumen.pendientes = resumen.pendientes + 1 %}{% endif %}
+  {% if r.estado == 'completada' %}{% set resumen.completadas = resumen.completadas + 1 %}{% endif %}
   {% if r.estado == 'aprobada' %}{% set resumen.aprobadas = resumen.aprobadas + 1 %}{% endif %}
   {% if r.estado == 'rechazada' %}{% set resumen.rechazadas = resumen.rechazadas + 1 %}{% endif %}
 {% endfor %}
@@ -24,6 +25,7 @@
         <select id="art-state" class="form-select sm:w-48">
           <option value="">Todos los estados</option>
           <option value="pendiente">Pendiente</option>
+          <option value="completada">Completada</option>
           <option value="aprobada">Aprobada</option>
           <option value="rechazada">Rechazada</option>
         </select>
@@ -34,9 +36,10 @@
     </div>
   </section>
 
-  <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
     <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Total ART</p><p class="mt-3 text-4xl font-black">{{ resumen.total }}</p></div>
     <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Pendientes</p><p class="mt-3 text-4xl font-black text-amber-500">{{ resumen.pendientes }}</p></div>
+    <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Completadas</p><p class="mt-3 text-4xl font-black text-green-600">{{ resumen.completadas }}</p></div>
     <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Aprobadas</p><p class="mt-3 text-4xl font-black text-green-600">{{ resumen.aprobadas }}</p></div>
     <div class="metric-card"><p class="text-sm font-black uppercase text-dartMuted">Rechazadas</p><p class="mt-3 text-4xl font-black text-orange-600">{{ resumen.rechazadas }}</p></div>
   </section>
@@ -51,7 +54,7 @@
           <h2 class="mt-2 truncate text-xl font-black">{{ r.empresa }}</h2>
           <p class="mt-1 text-sm text-dartMuted">{{ r.tipo_tarea }} · {{ r.fecha }}</p>
         </div>
-        <span class="status-badge status-{{ r.estado }}">{{ r.estado|capitalize }}</span>
+        <span class="status-badge status-{{ r.estado }} {% if r.estado == 'completada' %}bg-green-100 text-green-800{% endif %}">{{ r.estado|capitalize }}</span>
       </div>
 
       {% set worker_names = r.trabajadores_nombres or [] %}

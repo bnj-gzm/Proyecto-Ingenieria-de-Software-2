@@ -590,7 +590,7 @@ def guardar_respuesta_asignacion_por_id(
         conn.close()
 
 
-def actualizar_revision_asignacion(id_asignacion: int, estado: str, comentario: str, supervisor_revisor_id: int) -> None:
+def actualizar_revision_asignacion(id_asignacion: int, estado: str, comentario: str, supervisor_revisor_id: int) -> bool:
     conn = _connect()
     cur = conn.cursor()
     try:
@@ -603,10 +603,43 @@ def actualizar_revision_asignacion(id_asignacion: int, estado: str, comentario: 
                 supervisor_revisor_id = %s,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND estado_respuesta IN ('respondido', 'con_observacion')
+            RETURNING art_id
             """,
             (estado, comentario, supervisor_revisor_id, id_asignacion),
         )
+        updated_assignment = cur.fetchone()
+        art_completada = False
+        if updated_assignment:
+            art_id = updated_assignment[0]
+            cur.execute("SELECT id FROM art_records WHERE id = %s FOR UPDATE", (art_id,))
+            cur.fetchone()
+            cur.execute(
+                """
+                UPDATE art_records AS ar
+                SET estado = 'completada'
+                WHERE ar.id = %s
+                  AND ar.estado = 'pendiente'
+                  AND EXISTS (
+                      SELECT 1
+                      FROM art_trabajadores_asignados ata
+                      WHERE ata.art_id = ar.id
+                  )
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM art_trabajadores_asignados ata
+                      WHERE ata.art_id = ar.id
+                        AND ata.estado_respuesta NOT IN ('aprobado', 'rechazado')
+                  )
+                RETURNING ar.id
+                """,
+                (art_id,),
+            )
+            art_completada = cur.fetchone() is not None
         conn.commit()
+        return art_completada
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         cur.close()
         conn.close()

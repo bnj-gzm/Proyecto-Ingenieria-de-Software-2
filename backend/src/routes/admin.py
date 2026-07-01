@@ -6,7 +6,7 @@ import secrets
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
 from backend.src.config.frontend import templates
 from backend.src.config.settings import settings
@@ -299,11 +299,20 @@ async def admin_change_estado(
     if user.get("rol") != "admin" and not _es_supervisor_asignado(registro, user):
         return RedirectResponse("/dashboard", status_code=303)
     # Prevent changing estado once it's finalized
-    if registro.get("estado") in {"aprobada", "rechazada"}:
+    if registro.get("estado") in {"aprobada", "rechazada", "completada"}:
         return RedirectResponse(f"/art/{id_art}", status_code=303)
     if estado not in {"pendiente", "aprobada", "rechazada"}:
         raise HTTPException(status_code=400, detail="Estado de ART inválido")
-    if estado in {"aprobada", "rechazada"} and not comentario_supervisor.strip():
+    if estado == "rechazada" and not comentario_supervisor.strip():
+        return JSONResponse(
+            {
+                "error": "validation_error",
+                "field": "comentario",
+                "message": "Comentario obligatorio para rechazar ART",
+            },
+            status_code=400,
+        )
+    if estado == "aprobada" and not comentario_supervisor.strip():
         raise HTTPException(status_code=400, detail="Debes ingresar un comentario de revisión")
     validate_clean_fields({"comentario_supervisor": comentario_supervisor}, user.get("username", ""))
         
@@ -531,7 +540,7 @@ def admin_reenviar_activacion(
     return _redirect_admin_usuarios(message="No se pudo enviar el correo de activación. Revisa Resend/EMAIL_ENABLED.", type="warning")
 
 
-@router.post("/admin/test-email")
+@router.post("/admin/test-email", name="admin_test_email")
 def admin_test_email(
     request: Request,
     csrf_token: str = Form(...),

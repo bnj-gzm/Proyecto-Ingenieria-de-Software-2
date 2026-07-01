@@ -90,7 +90,6 @@
       window.setTimeout(() => {
         row.remove();
         updateState();
-        if (activeRows().every((item) => validateRow(item, false))) error?.classList.add("hidden");
       }, 180);
     }
 
@@ -100,18 +99,9 @@
       if (!removeButton || !body.contains(removeButton)) return;
       removeRow(removeButton.closest("[data-risk-row]"));
     });
-    body.addEventListener("input", (event) => {
-      const row = event.target.closest("[data-risk-row]");
+    body.addEventListener("input", () => {
       updateState();
-      if (row?.classList.contains("risk-row-invalid")) validateRow(row, true);
-      if (activeRows().every((item) => validateRow(item, false))) error?.classList.add("hidden");
     });
-    form.addEventListener("invalid", (event) => {
-      const row = event.target.closest?.("[data-risk-row]");
-      if (!row) return;
-      validateRow(row, true);
-      error?.classList.remove("hidden");
-    }, true);
     form.addEventListener("submit", (event) => {
       updateState();
       const currentRows = activeRows();

@@ -142,19 +142,111 @@
       {% endif %}
     </div>
     {% else %}
-    <form method="post" action="/art/{{ registro.id }}/trabajador/{{ asignacion.id }}/revision" class="app-card-body space-y-4">
+    <form method="post" action="/art/{{ registro.id }}/trabajador/{{ asignacion.id }}/revision" class="app-card-body space-y-4" data-art-review-form>
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="grid gap-3 sm:grid-cols-2">
         <button type="submit" name="resultado" value="aprobado" class="btn-primary">Aprobar</button>
         <button type="submit" name="resultado" value="rechazado" class="btn-danger">Rechazar</button>
       </div>
       <div>
-        <label class="form-label">Comentario de revisión</label>
-        <textarea name="comentario_revision" rows="4" class="form-textarea" placeholder="Obligatorio si rechazas.">{{ asignacion.comentario_revision or "" }}</textarea>
+        <label class="form-label" for="comentario-revision">
+          Comentario de revisión
+          <span class="hidden text-red-600" data-review-required aria-hidden="true">* obligatorio al rechazar</span>
+        </label>
+        <textarea id="comentario-revision" name="comentario_revision" rows="4" class="form-textarea" placeholder="Obligatorio si rechazas." aria-describedby="comentario-revision-error">{{ asignacion.comentario_revision or "" }}</textarea>
+        <p id="comentario-revision-error" class="mt-2 hidden text-sm font-bold text-red-600" role="alert" data-review-error>
+          Debes ingresar un comentario para rechazar la ART
+        </p>
       </div>
     </form>
     {% endif %}
   </section>
   {% endif %}
 </div>
+<script>
+  (function () {
+    const form = document.querySelector("[data-art-review-form]");
+    if (!form) return;
+
+    const comment = form.querySelector("[name='comentario_revision']");
+    const error = form.querySelector("[data-review-error]");
+    const requiredMarker = form.querySelector("[data-review-required]");
+    const buttons = Array.from(form.querySelectorAll("button[type='submit']"));
+    const clientMessage = "Debes ingresar un comentario para rechazar la ART";
+
+    function showCommentError(message = clientMessage) {
+      comment.required = true;
+      comment.setAttribute("aria-invalid", "true");
+      comment.classList.add("risk-field-invalid");
+      requiredMarker?.classList.remove("hidden");
+      error.textContent = message;
+      error.classList.remove("hidden");
+      comment.focus();
+    }
+
+    function clearCommentError() {
+      comment.removeAttribute("aria-invalid");
+      comment.classList.remove("risk-field-invalid");
+      error.classList.add("hidden");
+    }
+
+    comment.addEventListener("input", () => {
+      if (comment.value.trim()) clearCommentError();
+    });
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        if (button.value === "rechazado") return;
+        comment.required = false;
+        requiredMarker?.classList.add("hidden");
+        clearCommentError();
+      });
+    });
+
+    form.addEventListener("submit", async (event) => {
+      const action = event.submitter?.value;
+      if (action !== "rechazado") return;
+
+      event.preventDefault();
+      requiredMarker?.classList.remove("hidden");
+      if (!comment.value.trim()) {
+        showCommentError();
+        return;
+      }
+
+      clearCommentError();
+      const payload = new FormData(form);
+      payload.set("resultado", action);
+      buttons.forEach((button) => { button.disabled = true; });
+
+      try {
+        const response = await fetch(form.action, {
+          method: "POST",
+          body: payload,
+          credentials: "same-origin",
+          headers: {
+            "Accept": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+        });
+
+        if (response.status === 400) {
+          const contentType = response.headers.get("content-type") || "";
+          const data = contentType.includes("application/json") ? await response.json() : null;
+          showCommentError(data?.message || clientMessage);
+          return;
+        }
+        if (!response.ok) {
+          showCommentError("No pudimos completar el rechazo. Intenta nuevamente.");
+          return;
+        }
+        window.location.assign(response.url || `/art/{{ registro.id }}`);
+      } catch (error) {
+        showCommentError("No pudimos conectar con el servidor. Intenta nuevamente.");
+      } finally {
+        buttons.forEach((button) => { button.disabled = false; });
+      }
+    });
+  })();
+</script>
 {% endblock %}

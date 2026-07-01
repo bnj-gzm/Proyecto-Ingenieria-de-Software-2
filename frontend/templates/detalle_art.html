@@ -16,7 +16,7 @@
       <a href="/dashboard" class="text-sm font-black text-techCyan hover:underline">Volver al dashboard</a>
       <div class="mt-3 flex flex-wrap items-center gap-3">
         <h1 class="text-3xl font-black">ART {{ registro.id }}</h1>
-        <span class="status-badge status-{{ registro.estado }}">{{ registro.estado }}</span>
+        <span class="status-badge status-{{ registro.estado }} {% if registro.estado == 'completada' %}bg-green-100 text-green-800{% endif %}">{{ registro.estado }}</span>
       </div>
       <p class="mt-2 max-w-3xl text-dartMuted">{{ registro.descripcion }}</p>
       </div>
@@ -48,7 +48,7 @@
         <p class="text-sm font-black uppercase text-techCyan">Flujo ART</p>
         <h2 class="mt-1 text-xl font-black">Estado operacional</h2>
       </div>
-      <span class="status-badge status-{{ registro.estado }}">{{ registro.estado }}</span>
+      <span class="status-badge status-{{ registro.estado }} {% if registro.estado == 'completada' %}bg-green-100 text-green-800{% endif %}">{{ registro.estado }}</span>
     </div>
     <div class="timeline-steps mt-5">
       <div class="timeline-step">

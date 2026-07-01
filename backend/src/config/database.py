@@ -184,6 +184,28 @@ def init_db() -> None:
               AND LENGTH(SUBSTRING(username FROM POSITION('.' IN username) + 1)) > 1
             """
         )
+        cur.execute(
+            """
+            DO $$
+            BEGIN
+                IF to_regclass('public.art_records') IS NOT NULL
+                   AND to_regclass('public.art_trabajadores_asignados') IS NOT NULL THEN
+                    UPDATE art_records AS ar
+                    SET estado = 'completada'
+                    WHERE ar.estado = 'pendiente'
+                      AND EXISTS (
+                          SELECT 1 FROM art_trabajadores_asignados ata
+                          WHERE ata.art_id = ar.id
+                      )
+                      AND NOT EXISTS (
+                          SELECT 1 FROM art_trabajadores_asignados ata
+                          WHERE ata.art_id = ar.id
+                            AND ata.estado_respuesta NOT IN ('aprobado', 'rechazado')
+                      );
+                END IF;
+            END $$;
+            """
+        )
         cur.execute("SELECT 1 FROM schema_migrations WHERE version = %s", (SCHEMA_VERSION,))
         if cur.fetchone():
             conn.commit()

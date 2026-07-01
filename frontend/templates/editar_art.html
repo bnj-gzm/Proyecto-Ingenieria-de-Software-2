@@ -13,7 +13,13 @@
     <a href="/art/{{ registro.id }}" class="btn-secondary">Cancelar</a>
   </div>
 
-  <form action="/art/{{ registro.id }}/editar" method="post" enctype="multipart/form-data" class="space-y-6" data-risk-form>
+  {% if form_error %}
+  <div id="art-edit-form-error" class="alert-error" role="alert" tabindex="-1" data-inline-alert>
+    <strong>No se pudieron guardar los cambios.</strong> {{ form_error }}
+  </div>
+  {% endif %}
+
+  <form action="/art/{{ registro.id }}/editar" method="post" enctype="multipart/form-data" class="space-y-6" data-risk-form data-art-schedule-form novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
     <section class="app-card">
@@ -43,12 +49,14 @@
           <input name="lugar" value="{{ registro.lugar or '' }}" class="form-input" placeholder="Ej: Nivel 3, sector norte">
         </div>
         <div>
-          <label class="form-label">Horario inicio</label>
-          <input type="time" name="hora_inicio" value="{{ registro.hora_inicio or '' }}" class="form-input">
+          <label for="hora-inicio" class="form-label">Horario inicio</label>
+          <input id="hora-inicio" type="time" name="hora_inicio" value="{{ registro.hora_inicio or '' }}" class="form-input" aria-describedby="hora-inicio-error" {% if form_errors.get('hora_inicio') %}aria-invalid="true"{% endif %}>
+          <p id="hora-inicio-error" class="mt-2 text-sm font-semibold text-critical {% if not form_errors.get('hora_inicio') %}hidden{% endif %}" data-time-error="hora_inicio">{{ form_errors.get('hora_inicio', '') }}</p>
         </div>
         <div>
-          <label class="form-label">Horario término</label>
-          <input type="time" name="hora_termino" value="{{ registro.hora_termino or '' }}" class="form-input">
+          <label for="hora-termino" class="form-label">Horario término</label>
+          <input id="hora-termino" type="time" name="hora_termino" value="{{ registro.hora_termino or '' }}" class="form-input" aria-describedby="hora-termino-error" {% if form_errors.get('hora_termino') %}aria-invalid="true"{% endif %}>
+          <p id="hora-termino-error" class="mt-2 text-sm font-semibold text-critical {% if not form_errors.get('hora_termino') %}hidden{% endif %}" data-time-error="hora_termino">{{ form_errors.get('hora_termino', '') }}</p>
         </div>
         <div>
           <label class="form-label">Fecha</label>
@@ -170,6 +178,8 @@
   </form>
 </div>
 <script>
+  document.getElementById("art-edit-form-error")?.focus();
+
   (function () {
     const radios = Array.from(document.querySelectorAll(".cond-supervisor"));
     if (!radios.length) return;
@@ -189,4 +199,5 @@
     });
   })();
 </script>
+<script src="/static/js/art-form-validation.js?v=20260701.1"></script>
 {% endblock %}

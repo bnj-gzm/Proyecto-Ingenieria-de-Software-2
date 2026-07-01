@@ -1,12 +1,13 @@
 from datetime import datetime
 import json
 import logging
+import re
 from typing import List, Optional
 import uuid
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
 from backend.src.config.settings import settings
 from backend.src.config.frontend import templates
@@ -110,6 +111,7 @@ _EPP = [
 MIN_TRABAJADORES_ART = 3
 ANSWERED_ASSIGNMENT_STATES = {"respondido", "con_observacion", "aprobado", "rechazado"}
 FINAL_REVIEW_STATES = {"aprobado", "rechazado"}
+_TIME_HHMM_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 
 _WORKER_QUESTIONS = [
     {"id": "condicion_fisica_psicologica", "section": "Condiciones físicas y psicológicas", "text": "¿Me encuentro en condiciones físicas y psicológicas aptas para realizar la actividad?", "critical": True},
@@ -155,6 +157,26 @@ async def _leer_condiciones_supervisor(request: Request) -> list[dict]:
             )
         condiciones.append({"id": pregunta["id"], "pregunta": pregunta["text"], "respuesta": "si"})
     return condiciones
+
+
+def _validar_horario(hora_inicio: str, hora_termino: str) -> dict[str, str]:
+    """Valida un rango horario opcional y devuelve errores asociados a cada campo."""
+    inicio = hora_inicio.strip()
+    termino = hora_termino.strip()
+    errors: dict[str, str] = {}
+    if not inicio and not termino:
+        return errors
+    if not inicio:
+        errors["hora_inicio"] = "Ingresa el horario de inicio."
+    elif not _TIME_HHMM_RE.fullmatch(inicio):
+        errors["hora_inicio"] = "Usa un horario válido en formato HH:MM (00:00 a 23:59)."
+    if not termino:
+        errors["hora_termino"] = "Ingresa el horario de término."
+    elif not _TIME_HHMM_RE.fullmatch(termino):
+        errors["hora_termino"] = "Usa un horario válido en formato HH:MM (00:00 a 23:59)."
+    if not errors and inicio >= termino:
+        errors["hora_termino"] = "El horario de término debe ser posterior al horario de inicio."
+    return errors
 
 
 def _trabajadores_activos() -> list[dict]:
@@ -399,6 +421,7 @@ def _render_nueva_art_form(
     trabajadores_seleccionados: list[str] | None = None,
     reglas_seleccionadas: list[str] | None = None,
     condiciones_seleccionadas: dict[str, str] | None = None,
+    form_errors: dict[str, str] | None = None,
 ):
     csrf_token = create_csrf_token()
     response = templates.TemplateResponse(
@@ -418,6 +441,7 @@ def _render_nueva_art_form(
             "form_values": form_values or {},
             "form_riesgos": form_riesgos or [],
             "form_error": error,
+            "form_errors": form_errors or {},
             "csrf_token": csrf_token,
         },
         status_code=status_code,
@@ -476,8 +500,35 @@ async def guardar_art(
         pregunta["id"]: str(form.get(f"supervisor_cond_{pregunta['id']}", "")).strip().lower()
         for pregunta in CONDICIONES_SUPERVISOR
     }
+    riesgos_recibidos: list[dict[str, str]] = []
+    if riesgos_json.strip():
+        try:
+            decoded_for_render = json.loads(riesgos_json)
+            if isinstance(decoded_for_render, list):
+                riesgos_recibidos = [
+                    {
+                        "secuencia": str(item.get("actividad") or item.get("secuencia") or "").strip(),
+                        "riesgo": str(item.get("riesgo") or "").strip(),
+                        "control": str(item.get("control") or "").strip(),
+                    }
+                    for item in decoded_for_render
+                    if isinstance(item, dict)
+                ]
+        except json.JSONDecodeError:
+            pass
+    else:
+        riesgos_recibidos = [
+            {"secuencia": seq.strip(), "riesgo": risk.strip(), "control": ctrl.strip()}
+            for seq, risk, ctrl in zip(secuencia or [], riesgo or [], control or [])
+            if seq.strip() or risk.strip() or ctrl.strip()
+        ]
 
-    def validation_error(message: str, stage: str, riesgos_form: list[dict] | None = None):
+    def validation_error(
+        message: str,
+        stage: str,
+        riesgos_form: list[dict] | None = None,
+        field_errors: dict[str, str] | None = None,
+    ):
         logger.warning(
             "ART_CREATE_VALIDATION_FAILED stage=%s user=%s workers=%s risk_rows=%s detail=%s",
             stage,
@@ -490,12 +541,13 @@ async def guardar_art(
             request,
             user,
             error=message,
-            status_code=400,
+            status_code=200,
             form_values=form_values,
-            form_riesgos=riesgos_form,
+            form_riesgos=riesgos_form if riesgos_form is not None else riesgos_recibidos,
             trabajadores_seleccionados=[str(item) for item in seleccion],
             reglas_seleccionadas=reglas_seleccionadas,
             condiciones_seleccionadas=condiciones_seleccionadas,
+            form_errors=field_errors,
         )
 
     logger.info(
@@ -560,6 +612,14 @@ async def guardar_art(
                 "riesgos_campos",
                 riesgos,
             )
+    horario_errors = _validar_horario(hora_inicio, hora_termino)
+    if horario_errors:
+        return validation_error(
+            "Revisa los horarios indicados.",
+            "horarios",
+            riesgos,
+            horario_errors,
+        )
     logger.info("ART_CREATE_VALIDATION stage=contenido user=%s", user.get("username", ""))
     try:
         validate_clean_fields(
@@ -1058,10 +1118,20 @@ def revisar_respuesta_trabajador(
     if resultado not in estados_validos:
         raise HTTPException(status_code=400, detail="Resultado de revisión inválido")
     if resultado == "rechazado" and not comentario_revision.strip():
-        raise HTTPException(status_code=400, detail="El comentario es obligatorio al rechazar.")
+        return JSONResponse(
+            {
+                "error": "validation_error",
+                "field": "comentario",
+                "message": "Comentario obligatorio para rechazar ART",
+            },
+            status_code=400,
+        )
     validate_clean_fields({"comentario_revision": comentario_revision}, user.get("username", ""))
-    actualizar_revision_asignacion(id_asignacion, resultado, comentario_revision.strip(), user["id"])
-    message = "Revisión individual aprobada." if resultado == "aprobado" else "Revisión individual rechazada."
+    art_completada = actualizar_revision_asignacion(id_asignacion, resultado, comentario_revision.strip(), user["id"])
+    if art_completada:
+        message = "Revisión registrada. Todas las validaciones finalizaron y la ART quedó completada."
+    else:
+        message = "Revisión individual aprobada." if resultado == "aprobado" else "Revisión individual rechazada."
     return RedirectResponse(f"/art/{id_art}?mensaje={quote(message)}", status_code=303)
 
 
@@ -1092,6 +1162,43 @@ def descargar_respuesta_trabajador_pdf(
     )
 
 
+def _render_editar_art_form(
+    request: Request,
+    user: dict,
+    registro: dict,
+    *,
+    error: str | None = None,
+    form_errors: dict[str, str] | None = None,
+    condiciones_seleccionadas: dict[str, str] | None = None,
+):
+    csrf_token = create_csrf_token()
+    if condiciones_seleccionadas is None:
+        condiciones_seleccionadas = {
+            item.get("id"): item.get("respuesta")
+            for item in registro.get("supervisor_condiciones", [])
+        }
+    response = templates.TemplateResponse(
+        request,
+        "editar_art.html",
+        {
+            "request": request,
+            "user": user,
+            "csrf_token": csrf_token,
+            "registro": registro,
+            "validacion_actual": None,
+            "reglas_disponibles": REGLAS_QUE_SALVAN_LA_VIDA,
+            "reglas_seleccionadas": registro.get("reglas_vida", []),
+            "condiciones_supervisor": CONDICIONES_SUPERVISOR,
+            "condiciones_seleccionadas": condiciones_seleccionadas,
+            "form_error": error,
+            "form_errors": form_errors or {},
+        },
+        status_code=200,
+    )
+    set_csrf_cookie(response, csrf_token)
+    return response
+
+
 @router.get("/art/{id_art}/editar", response_class=HTMLResponse)
 def editar_art_view(request: Request, id_art: str, user=Depends(get_current_user)):
     if not user:
@@ -1119,26 +1226,7 @@ def editar_art_view(request: Request, id_art: str, user=Depends(get_current_user
     if not _puede_editar_art(registro, user):
         return RedirectResponse("/dashboard", status_code=303)
     
-    response = templates.TemplateResponse(
-        request,
-        "editar_art.html",
-        {
-            "request": request,
-            "user": user,
-            "csrf_token": csrf_token,
-            "registro": registro,
-            "validacion_actual": None,
-            "reglas_disponibles": REGLAS_QUE_SALVAN_LA_VIDA,
-            "reglas_seleccionadas": registro.get("reglas_vida", []),
-            "condiciones_supervisor": CONDICIONES_SUPERVISOR,
-            "condiciones_seleccionadas": {
-                item.get("id"): item.get("respuesta")
-                for item in registro.get("supervisor_condiciones", [])
-            },
-        },
-    )
-    set_csrf_cookie(response, csrf_token)
-    return response
+    return _render_editar_art_form(request, user, registro)
 
 
 @router.post("/art/{id_art}/editar")
@@ -1173,6 +1261,13 @@ async def editar_art_post(
     if not _puede_editar_art(registro_existente, user):
         raise HTTPException(status_code=403, detail="No tienes permiso para editar esta ART")
 
+    form = await request.form()
+    condiciones_seleccionadas = {
+        pregunta["id"]: str(form.get(f"supervisor_cond_{pregunta['id']}", "")).strip().lower()
+        for pregunta in CONDICIONES_SUPERVISOR
+    }
+    reglas_seleccionadas = [item for item in (reglas_vida or []) if item in REGLAS_VIDA_IDS]
+
     supervisor_user = next((u for u in cargar_usuarios_por_rol(SUPERVISOR) if u["username"] == supervisor_asignado), None)
     trabajador = registro_existente.get("trabajador") or user.get("nombre") or user["username"]
     supervisor = (supervisor_user or {}).get("nombre") or supervisor_asignado
@@ -1181,31 +1276,65 @@ async def editar_art_post(
     for seq, risk, ctrl in zip(secuencia or [], riesgo or [], control or []):
         if seq.strip() or risk.strip() or ctrl.strip():
             riesgos.append({"secuencia": seq.strip(), "riesgo": risk.strip(), "control": ctrl.strip()})
+    registro_form = {
+        **registro_existente,
+        "empresa": empresa,
+        "area": area,
+        "tipo_tarea": tipo_tarea,
+        "descripcion": descripcion,
+        "supervisor_asignado": supervisor_asignado,
+        "gerencia": gerencia,
+        "hora_inicio": hora_inicio,
+        "hora_termino": hora_termino,
+        "lugar": lugar,
+        "observaciones": observaciones,
+        "riesgos": riesgos,
+        "reglas_vida": reglas_seleccionadas,
+    }
+
+    def validation_error(message: str, field_errors: dict[str, str] | None = None):
+        return _render_editar_art_form(
+            request,
+            user,
+            registro_form,
+            error=message,
+            form_errors=field_errors,
+            condiciones_seleccionadas=condiciones_seleccionadas,
+        )
+
+    horario_errors = _validar_horario(hora_inicio, hora_termino)
+    if horario_errors:
+        return validation_error("Revisa los horarios indicados.", horario_errors)
     if not riesgos or any(not item["secuencia"] or not item["riesgo"] or not item["control"] for item in riesgos):
-        raise HTTPException(status_code=400, detail="Debes completar secuencia, riesgo y control")
-    validate_clean_fields(
-        {
-            "empresa": empresa,
-            "area": area,
-            "tipo_tarea": tipo_tarea,
-            "descripcion": descripcion,
-            "observaciones": observaciones,
-            "gerencia": gerencia,
-            "lugar": lugar,
-            "secuencia": [item["secuencia"] for item in riesgos],
-            "riesgo": [item["riesgo"] for item in riesgos],
-            "control": [item["control"] for item in riesgos],
-        },
-        user.get("username", ""),
-    )
-    reglas_seleccionadas = [item for item in (reglas_vida or []) if item in REGLAS_VIDA_IDS]
-    condiciones_supervisor = await _leer_condiciones_supervisor(request)
+        return validation_error("Completa actividad, riesgo y control en cada fila.")
+    try:
+        validate_clean_fields(
+            {
+                "empresa": empresa,
+                "area": area,
+                "tipo_tarea": tipo_tarea,
+                "descripcion": descripcion,
+                "observaciones": observaciones,
+                "gerencia": gerencia,
+                "lugar": lugar,
+                "secuencia": [item["secuencia"] for item in riesgos],
+                "riesgo": [item["riesgo"] for item in riesgos],
+                "control": [item["control"] for item in riesgos],
+            },
+            user.get("username", ""),
+        )
+        condiciones_supervisor = await _leer_condiciones_supervisor(request)
+    except HTTPException as exc:
+        return validation_error(str(exc.detail))
 
     archivos = registro_existente.get("evidencia", []).copy()
     for archivo in evidencia or []:
         if not archivo.filename:
             continue
-        archivos.append(await save_art_image(request.app.state.art_upload_dir, archivo))
+        try:
+            archivos.append(await save_art_image(request.app.state.art_upload_dir, archivo))
+        except HTTPException as exc:
+            return validation_error(f"Evidencia: {exc.detail}")
         
     registro_actualizado = {
         "empresa": empresa,

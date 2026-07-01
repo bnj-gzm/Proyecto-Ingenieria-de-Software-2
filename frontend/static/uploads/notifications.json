@@ -360,5 +360,35 @@
     "event_type": "ART_CREATED",
     "read": false,
     "created_at": "2026-07-01T00:49:11.697058"
+  },
+  {
+    "id": "2fb85fe4-57ec-4147-9368-2edd721512c5",
+    "user": "prueba1",
+    "title": "ART 9c90478a asignada",
+    "message": "ADMIN te asignó una ART para completar y validar.",
+    "action_url": "/art/9c90478a",
+    "event_type": "ART_CREATED",
+    "read": false,
+    "created_at": "2026-07-01T10:09:14.949344"
+  },
+  {
+    "id": "67979d1c-af16-40cd-a9b8-021408182c21",
+    "user": "benjamin.guzman",
+    "title": "ART 9c90478a asignada",
+    "message": "ADMIN te asignó una ART para completar y validar.",
+    "action_url": "/art/9c90478a",
+    "event_type": "ART_CREATED",
+    "read": false,
+    "created_at": "2026-07-01T10:09:14.961725"
+  },
+  {
+    "id": "42e675e7-9626-4cab-83af-a9f8900434a1",
+    "user": "prueba2",
+    "title": "ART 9c90478a asignada",
+    "message": "ADMIN te asignó una ART para completar y validar.",
+    "action_url": "/art/9c90478a",
+    "event_type": "ART_CREATED",
+    "read": false,
+    "created_at": "2026-07-01T10:09:14.972366"
   }
 ]

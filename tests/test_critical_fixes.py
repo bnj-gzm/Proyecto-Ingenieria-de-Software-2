@@ -3,6 +3,9 @@ from pathlib import Path
 import unittest
 from unittest.mock import MagicMock, patch
 
+from starlette.requests import Request
+
+from backend.app import _protected_static_file_response
 from backend.src.routes import admin, auth
 from backend.src.services import usuario_service
 
@@ -74,6 +77,32 @@ class FrontendCriticalFixTests(unittest.TestCase):
         self.assertIn('id="art-image-lightbox"', self.base)
         self.assertIn('event.target.closest?.("img.art-visual")', self.app_ui)
         self.assertIn("image.currentSrc || image.src", self.app_ui)
+
+
+class SensitiveStaticFileAccessTests(unittest.TestCase):
+    @staticmethod
+    def _request(path: str) -> Request:
+        return Request({"type": "http", "method": "GET", "path": path, "headers": [], "query_string": b""})
+
+    def test_notifications_storage_is_not_public(self):
+        response = _protected_static_file_response(self._request("/static/uploads/notifications.json"))
+
+        self.assertIsNotNone(response)
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.headers["cache-control"], "no-store")
+
+    def test_static_art_pdf_uses_protected_download_endpoint(self):
+        response = _protected_static_file_response(self._request("/static/uploads/art-abc12345.pdf"))
+
+        self.assertIsNotNone(response)
+        self.assertEqual(response.status_code, 307)
+        self.assertEqual(response.headers["location"], "/art/abc12345/pdf")
+        self.assertEqual(response.headers["cache-control"], "no-store")
+
+    def test_regular_static_images_are_unchanged(self):
+        response = _protected_static_file_response(self._request("/static/img/logo-dart.png"))
+
+        self.assertIsNone(response)
 
 
 if __name__ == "__main__":

@@ -1,9 +1,11 @@
 import logging
+import posixpath
+import re
 import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from backend.src.config.database import init_db, _connect
@@ -28,6 +30,31 @@ app = FastAPI(title="ART/AST Digital")
 app.state.upload_dir = _UPLOAD_DIR
 app.state.art_upload_dir = _ART_UPLOAD_DIR
 app.state.profile_upload_dir = _PROFILE_UPLOAD_DIR
+
+_STATIC_UPLOADS_PREFIX = "/static/uploads/"
+_STATIC_ART_PDF_RE = re.compile(r"^art-([a-z0-9_-]+)\.pdf$")
+
+
+def _protected_static_file_response(request: Request):
+    """Impide que respaldos privados sean servidos por StaticFiles."""
+    normalized_path = "/" + posixpath.normpath(request.url.path.replace("\\", "/")).lstrip("/")
+    normalized_path = normalized_path.casefold()
+
+    if normalized_path == f"{_STATIC_UPLOADS_PREFIX}notifications.json":
+        return Response(status_code=404, headers={"Cache-Control": "no-store"})
+
+    if normalized_path.startswith(_STATIC_UPLOADS_PREFIX) and normalized_path.endswith(".pdf"):
+        filename = normalized_path.rsplit("/", 1)[-1]
+        match = _STATIC_ART_PDF_RE.fullmatch(filename)
+        if not match:
+            return Response(status_code=404, headers={"Cache-Control": "no-store"})
+        return RedirectResponse(
+            url=f"/art/{match.group(1)}/pdf",
+            status_code=307,
+            headers={"Cache-Control": "no-store"},
+        )
+
+    return None
 
 
 def _prefers_html(request: Request) -> bool:
@@ -97,6 +124,9 @@ async def log_errors(request: Request, call_next):
 
 @app.middleware("http")
 async def security_and_cache_headers(request: Request, call_next):
+    protected_response = _protected_static_file_response(request)
+    if protected_response is not None:
+        return protected_response
     response = await call_next(request)
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
