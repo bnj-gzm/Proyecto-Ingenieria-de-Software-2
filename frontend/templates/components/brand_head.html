@@ -1,6 +1,8 @@
-{% from "components/brand_assets.html" import logo_url with context %}
-<link rel="icon" type="image/png" sizes="32x32" href="{{ logo_url('3') }}">
-<link rel="icon" type="image/png" sizes="16x16" href="{{ logo_url('3') }}">
+{% from "components/brand_assets.html" import favicon_png_url, favicon_svg_url with context %}
+<link rel="icon" type="image/svg+xml" href="{{ favicon_svg_url() }}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ favicon_png_url(32) }}">
+<link rel="icon" type="image/png" sizes="16x16" href="{{ favicon_png_url(16) }}">
+<link rel="shortcut icon" type="image/png" href="{{ favicon_png_url(32) }}">
 <style>
   .brand-logo-container {
     --brand-logo-size: 56px;

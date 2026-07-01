@@ -1,3 +1,11 @@
-{% macro logo_url(version='2') -%}
-{{ url_for('static', path='img/logo-dart.png') }}?v={{ version }}
+{% macro logo_url(version='4') -%}
+/static/img/logo-dart.png?v={{ version }}
+{%- endmacro %}
+
+{% macro favicon_svg_url(version='4') -%}
+/static/img/favicon-dart.svg?v={{ version }}
+{%- endmacro %}
+
+{% macro favicon_png_url(size, version='4') -%}
+/static/img/favicon-dart-{{ size }}.png?v={{ version }}
 {%- endmacro %}
