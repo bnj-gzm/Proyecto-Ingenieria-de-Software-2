@@ -1,0 +1,53 @@
+{% from "components/brand_assets.html" import logo_url with context %}
+<link rel="icon" type="image/png" sizes="32x32" href="{{ logo_url('3') }}">
+<link rel="icon" type="image/png" sizes="16x16" href="{{ logo_url('3') }}">
+<style>
+  .brand-logo-container {
+    --brand-logo-size: 56px;
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    box-sizing: border-box;
+    width: var(--brand-logo-size);
+    height: var(--brand-logo-size);
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: transparent !important;
+    box-shadow: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, padding 0.2s ease;
+  }
+
+  .brand-logo-container--navbar { --brand-logo-size: 60px; }
+  .brand-logo-container--sidebar { --brand-logo-size: 48px; }
+  .brand-logo-container--login { --brand-logo-size: 96px; }
+  .brand-logo-container--auth { --brand-logo-size: 84px; }
+  .brand-logo-container--footer { --brand-logo-size: 56px; }
+
+  :root[data-theme="dark"] .brand-logo-container,
+  .brand-logo-container--sidebar {
+    padding: 6px;
+    border-color: rgba(15, 23, 42, 0.12);
+    background: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+  }
+
+  .brand-logo-container .brand-logo {
+    display: block;
+    width: auto;
+    height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+    transform: none;
+    filter: none !important;
+  }
+
+  @media (max-width: 640px) {
+    .brand-logo-container--navbar { --brand-logo-size: 56px; }
+    .brand-logo-container--login { --brand-logo-size: 84px; }
+    .brand-logo-container--auth { --brand-logo-size: 76px; }
+    .brand-logo-container--footer { --brand-logo-size: 48px; }
+  }
+</style>

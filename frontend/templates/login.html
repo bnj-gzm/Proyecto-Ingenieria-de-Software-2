@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Iniciar sesión · D.A.R.T</title>
+{% include "components/brand_head.html" %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -146,9 +147,7 @@
       <div class="login-card p-7 sm:p-8">
         <div class="mb-7 text-center">
           <div class="inline-flex">
-            {% set brand_logo_size = 'md' %}
-            {% set brand_logo_theme = 'light' %}
-            {% set brand_logo_compact = true %}
+            {% set brand_logo_context = 'login' %}
             {% include "components/brand_logo.html" with context %}
           </div>
           <h1 class="mt-5 text-3xl font-black">Iniciar sesión</h1>

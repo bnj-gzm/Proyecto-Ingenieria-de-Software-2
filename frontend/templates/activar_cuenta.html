@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Activar cuenta</title>
+{% include "components/brand_head.html" %}
 <script src="https://cdn.tailwindcss.com"></script>
 {% include "components/theme_engine.html" %}
 {% include "components/auth_theme_styles.html" %}
@@ -11,9 +12,7 @@
 <body>
   <main class="flex min-h-screen items-center justify-center px-5 py-10">
     <section class="card w-full max-w-md p-8">
-      {% set brand_logo_size = 'md' %}
-      {% set brand_logo_theme = 'light' %}
-      {% set brand_logo_compact = true %}
+      {% set brand_logo_context = 'auth' %}
       {% include "components/brand_logo.html" with context %}
       <h1 class="mt-5 text-3xl font-black">Activar cuenta</h1>
       <p class="muted-text mt-3 text-sm leading-6">Crea tu contraseña para dejar la cuenta activa.</p>

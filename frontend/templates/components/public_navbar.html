@@ -1,9 +1,7 @@
 <nav class="public-navbar border-b border-white/60 bg-white/80 px-4 py-2.5 backdrop-blur-xl">
     <div class="mx-auto flex max-w-7xl items-center justify-between gap-4">
         <a href="/" class="brand-lockup inline-flex min-w-0 items-center gap-3 font-black">
-            {% set brand_logo_size = 'sm' %}
-            {% set brand_logo_theme = 'light' %}
-            {% set brand_logo_compact = true %}
+            {% set brand_logo_context = 'navbar' %}
             {% include "components/brand_logo.html" with context %}
         </a>
 

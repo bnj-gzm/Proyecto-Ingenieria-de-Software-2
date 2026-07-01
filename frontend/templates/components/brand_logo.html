@@ -1,34 +1,5 @@
-{% set brand_logo_size = brand_logo_size if brand_logo_size is defined else 'md' %}
-{% set brand_logo_theme = brand_logo_theme if brand_logo_theme is defined else 'light' %}
-{% set brand_logo_compact = brand_logo_compact if brand_logo_compact is defined else False %}
-{% set brand_logo_size_token = {
-  'xs': 'logo-xs',
-  'sm': 'logo-sm',
-  'md': 'logo-md',
-  'lg': 'logo-lg'
-}.get(brand_logo_size, 'logo-md') %}
-{% if brand_logo_compact %}
-  {% set brand_logo_wrap_classes = {
-    'xs': 'h-8 w-8',
-    'sm': 'h-11 w-11',
-    'md': 'h-12 w-12',
-    'lg': 'h-16 w-16'
-  }.get(brand_logo_size, 'h-12 w-12') %}
-  {% set brand_logo_img_classes = 'brand-logo-img block h-full w-full object-contain' %}
-{% else %}
-  {% set brand_logo_wrap_classes = {
-    'xs': 'h-8 w-16',
-    'sm': 'h-11 w-24',
-    'md': 'h-12 w-28',
-    'lg': 'h-16 w-36'
-  }.get(brand_logo_size, 'h-12 w-28') %}
-  {% set brand_logo_img_classes = 'brand-logo-img block h-full w-full object-contain' %}
-{% endif %}
-{% if brand_logo_theme == 'dark' %}
-  {% set brand_logo_wrap_classes = brand_logo_wrap_classes ~ ' app-logo ' ~ brand_logo_size_token ~ ' inline-flex items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/95 p-1.5 shadow-sm' %}
-{% else %}
-  {% set brand_logo_wrap_classes = brand_logo_wrap_classes ~ ' app-logo ' ~ brand_logo_size_token ~ ' inline-flex items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm' %}
-{% endif %}
-<span class="{{ brand_logo_wrap_classes }}">
-  <img src="{{ url_for('static', path='img/logo-dart.png') }}" alt="Logo oficial" class="{{ brand_logo_img_classes }}">
+{% from "components/brand_assets.html" import logo_url with context %}
+{% set brand_logo_context = brand_logo_context if brand_logo_context is defined else 'default' %}
+<span class="brand-logo-container brand-logo-container--{{ brand_logo_context }}">
+  <img src="{{ logo_url() }}" alt="Logo D.A.R.T" class="brand-logo" width="512" height="512">
 </span>

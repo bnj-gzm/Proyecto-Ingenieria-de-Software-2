@@ -2,9 +2,7 @@
     <div class="mx-auto grid max-w-7xl gap-8 px-5 py-10 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
         <div>
             <a href="/" class="inline-flex items-center gap-3 font-black">
-                {% set brand_logo_size = 'sm' %}
-                {% set brand_logo_theme = 'light' %}
-                {% set brand_logo_compact = true %}
+                {% set brand_logo_context = 'footer' %}
                 {% include "components/brand_logo.html" with context %}
             </a>
             <p class="mt-4 max-w-sm text-sm leading-6 text-dartMuted">Gestión interna de ART, validación preventiva y respaldo operacional.</p>
